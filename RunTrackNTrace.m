@@ -16,8 +16,7 @@ if testMode(1)
     end
 end
     
-%% Compute positions
-% disp('fitting now')
+% %% Compute positions
 % posFit_list = cell(0);
 % for i=1:numel(movie_list)
 %     movie_name = movie_list{i};

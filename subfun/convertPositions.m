@@ -24,11 +24,13 @@ nrFrames = size(fitData,3);
 
 switch(method)
     case('simpletracker') %NNT, simpletracker by Jean-Yves Tinevez, released 2011 on Matlab file exchange
+        %init cell array
         pos = cell(nrFrames,1);
         for i=1:nrFrames
-            pos_frame_now = squeeze(fitData(1:probDim,:,i)).';
-            valid_pos = any(pos_frame_now,2);
-            pos(i) = {pos_frame_now(valid_pos,:)}; %1D cell array with nrFrames lines, each cell containing 2D array [x,y] or bigger array [x,y,amp], [x,y,amp,background], ...
+            pos_frame_now = squeeze(fitData(1:5,:,i)).'; %get x,y,amp,backround,sigma
+            pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
+            valid_pos = any(pos_frame_now,2); %get valid positions, zero positions count!
+            pos(i) = {pos_frame_now(valid_pos,1:probDim)}; %1D cell array with nrFrames lines, each cell containing 2D array [x,y] or bigger array [x,y,amp], [x,y,amp,background], ...
         end
         
     case('utrack') %complex tracker searching for global optimum, VERY memory intensive for large number of particles
@@ -49,7 +51,7 @@ switch(method)
     case('track_cg') %NNT, Crocker and Grier, 1994
         nrPos = zeros(nrFrames,1);
         for i=1:nrFrames
-            nrPos(i) = sum(any(squeeze(fitData(1,:,i)),1));
+            nrPos(i) = sum(any(squeeze(fitData(3,:,i)),1));
         end
         pos = zeros(sum(nrPos),4);
         
@@ -61,4 +63,5 @@ switch(method)
             pos(idx_start:idx_end,:) = [fitData(1:3,1:nrPos(i),i).',repmat(i,nrPos(i),1)];
             idx_start = idx_end+1;
         end
+        pos(pos==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
 end
