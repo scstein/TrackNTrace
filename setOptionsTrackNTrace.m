@@ -30,8 +30,8 @@ candidateOptions.corrThresh = 0.5; %double [0,1], threshold for cross correlatio
 
 %...for intensity filtering
 candidateOptions.particleRadius = 3; %integer, expected radius of particles in [pixel] for intensity weighted filtering
-candidateOptions.intensityThreshold = 5; %integer [0,100), only top X% of pixel intensity values are considered as candidates. Lower means fewer but better candiates
-candidateOptions.intensityPtestVar = 0.02; %double [0,1], pixel is compared to Gaussian background at significance value of (1-X)*100%. Lower means fewer but better candidates
+candidateOptions.intensityThreshold = 20; %integer [0,100), only top X% of pixel intensity values are considered as candidates. Lower means fewer but better candiates
+candidateOptions.intensityPtestVar = 0.01; %double [0,1], pixel is compared to Gaussian background at significance value of (1-X)*100%. Lower means fewer but better candidates
 candidateOptions.backgroundCalculationInterval = 10; %integer, local background gets calculated every X frames to improve performance
 
 
