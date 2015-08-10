@@ -57,9 +57,9 @@ halfw = round(4*candidateOptions.sigma); %fitting routine window
 % Trace first frame
 if calc_once %if candidate search only takes place once, an average image is calculated to achieve higher SNR
     if fit_forward
-        img = mean(double(movie(:,:,1:candidateOptions.windowSize)));
+        img = mean(double(movie(:,:,1:candidateOptions.averagingWindowSize)),3);
     else
-        img = mean(double(movie(:,:,end:-1:end-candidateOptions.windowSize+1)));
+        img = mean(double(movie(:,:,end:-1:end-candidateOptions.averagingWindowSize+1)),3);
     end
 else
     if fit_forward

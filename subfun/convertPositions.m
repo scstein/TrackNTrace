@@ -15,7 +15,7 @@ function [pos] = convertPositions(pos_file,method,probDim)
 % if pos_file is not a path but an array, it's a fitData array and we're in
 % test mode, so we don't need to read anything
 if ischar(pos_file)
-    load(pos_file);
+    load(pos_file, '-mat'); % '-mat' forces loading as MAT-file
 else
     fitData = pos_file;
 end
@@ -28,8 +28,8 @@ switch(method)
         pos = cell(nrFrames,1);
         for i=1:nrFrames
             pos_frame_now = squeeze(fitData(1:5,:,i)).'; %get x,y,amp,backround,sigma
+            valid_pos = any(pos_frame_now(:,3),2); %get valid positions, zero positions count!
             pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
-            valid_pos = any(pos_frame_now,2); %get valid positions, zero positions count!
             pos(i) = {pos_frame_now(valid_pos,1:probDim)}; %1D cell array with nrFrames lines, each cell containing 2D array [x,y] or bigger array [x,y,amp], [x,y,amp,background], ...
         end
         
@@ -37,7 +37,7 @@ switch(method)
         pos = repmat(struct('xCoord',[],'yCoord',[],'amp',[],'sigma',[]),nrFrames,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
         for i=1:nrFrames
             pos_frame_now = squeeze(fitData(1:5,:,i)).';
-            valid_pos = any(pos_frame_now,2);
+            valid_pos = any(pos_frame_now(:,3),2);
             nCand = sum(valid_pos);
             pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
             if nCand>0
