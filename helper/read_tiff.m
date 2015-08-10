@@ -37,7 +37,7 @@ end
 if strcmp(ext, '.tif') == 0
     filename = [filename '.tif'];
 end
-
+warning('off','all');
 t = Tiff(filename,'r');
 cleanupTrigger = onCleanup(@() cleanupFunc(t));
 
@@ -56,8 +56,9 @@ end
 
 
 % -- Count number of frames for pre-allocation --
-warning('off','all');
+warning('on','all');
 not(t.lastDirectory); % this forces the Tiff object to read the first frames tag data and check for errors.
+warning('off','all');
 if isempty(minmax_frame)
     % Count number of frames in tiff file
     while not(t.lastDirectory)
