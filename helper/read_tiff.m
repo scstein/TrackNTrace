@@ -9,7 +9,8 @@ function imgdata = read_tiff(filename, convert2double, minmax_frame)
 %   filename: Tiff file to read
 %   convert2double: Datatype conversion to double after reading | default: true
 %   minmax_frame: [minframe,maxframe] to read. If only one number is specified,
-%                 it is assumed to be maxframe and [1, maxframe] is read.| default: read whole movie
+%                 it is assumed to be maxframe and [1, maxframe] is read.
+%                 If maxframe==inf the file is read from minframe to the end.| default: read whole movie
 %
 % NOTE: Deactivate double conversion if not neccessary, reading the same datatype used in the Tiff file.
 %       This potentially saves a lot of memory (factor 4 for 16-bit Tiff movies) and thus increased performance.
@@ -59,19 +60,36 @@ end
 warning('on','all');
 not(t.lastDirectory); % this forces the Tiff object to read the first frames tag data and check for errors.
 warning('off','all');
+
+% If no interval was given, determine number of frames and read whole file
 if isempty(minmax_frame)
-    % Count number of frames in tiff file
+        % Count number of frames in tiff file
+        while not(t.lastDirectory)
+            t.nextDirectory;
+        end
+        last_frame = t.currentDirectory;
+        minmax_frame = [1, last_frame];
+% If one number was given, treat as maxframe
+elseif numel(minmax_frame)==1 
+        minmax_frame = [1,minmax_frame];
+% If maxframe is 0, start at minframe and count to end of file
+elseif (numel(minmax_frame)==2) && (minmax_frame(2) == inf)
+    try
+        t.setDirectory(minmax_frame(1));
+    catch err
+        error('Minimum frame cannot be read. Movie shorter than minframe?')
+    end
+    
+    % Count number of frames from minframe to end of file
     while not(t.lastDirectory)
         t.nextDirectory;
     end
-    nr_frames = t.currentDirectory;
-    minmax_frame = [1, nr_frames];
-else
-    if numel(minmax_frame)==1 % If one number was given, treat as maxframe
-       minmax_frame = [1,minmax_frame];
-    end
-    nr_frames = minmax_frame(2)-minmax_frame(1)+1;
+    last_frame = t.currentDirectory;
+    minmax_frame = [minmax_frame(1), last_frame];
 end
+% nr_frames
+nr_frames = minmax_frame(2)-minmax_frame(1)+1;
+
 
 % -- pre allocate memory according to datatype --
 switch sampleFormat
@@ -141,11 +159,15 @@ for iFrame = 1:nr_frames
     end
     imgdata(:,:,iFrame) = t.read();
     
-    if (t.lastDirectory)
-       warning('on','all');
-       fprintf('\n');
-       warning('File has less frames than specified. Read %i frames.\n',iFrame);
-       imgdata = imgdata(:,:,1:iFrame);
+    % Check if the last frame has been reached
+    if (t.lastDirectory && iFrame ~= nr_frames)
+       nr_frames = iFrame;
+       imgdata = imgdata(:,:,1:nr_frames); 
+       
+       % warning output
+       warning('on','all');       
+       fprintf('\n >> WARNING <<: File has less frames than specified. Read %i frames.\n',nr_frames);
+       rewPrintf('\n >> WARNING <<: File has less frames than specified. Read %i frames.\n',nr_frames); % output twice to prevent warning deleted by rewindMessages()               
        break;
     end
     

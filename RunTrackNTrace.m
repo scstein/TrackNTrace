@@ -1,55 +1,115 @@
-%% Get filenames
-filename.movies = 'U:\Jan Thiart\dicty\2015-07-17\';
-filename.dark_movies = [];
-[movie_list,dark_stack] = readMovies_TrackNTrace(filename);
+%% Add required folders and subfolders to path
+addpath(genpath('external'));
+addpath(genpath('helper'));
+addpath(genpath('subfun'));
+addpath(genpath('testing'));
 
-%% Configure options
-testMode = [true,1]; %enable/disable testMode by setting demoMode(1) true/false. A small portion of the movie at position demoMode(2) of movie_list is run through by the tracking algorithm to
-[candidateOptions,fittingOptions,trackingOptions] = setOptionsTrackNTrace();
+%% Load and adjust the default settings for this batch
+GUIinputs.titleText = 'Please select a list of movies to process.';
+GUIinputs.fileText  = 'Default settings for this batch';
+GUIinputs.singleFileMode = false;
+[generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def] = setDefaultOptions();
+[generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIinputs);
 
-%% Test settings if desired
-if testMode(1)
-    run_again = true;
-    movie = read_tiff(movie_list{testMode(2)}, false, 50);
-    if ~isempty(dark_stack)
-        if sum([size(movie,1),size(movie,2)]==[size(dark_stack,1),size(dark_stack,2)])~=2 || size(movie,3)<=1
-            dark_stack = [];
-        end
+%% Adjust options for each movie and test settings if desired
+GUIinputs.singleFileMode = true; % No editing of movie list possible
+
+% [movie_list,dark_stack] = getMovieFilenames(generalOptions.filename_movies, generalOptions.filename_dark_movie);
+movie_list = generalOptions_def.filename_movies;
+% Calculate default dark image if given
+dark_img_def = [];
+if(~isempty(generalOptions_def.filename_dark_movie))
+    dark_img_def = CalculateDark(read_tiff(generalOptions_def.filename_dark_movie));
+end
+
+% Get timestamp for output files
+time = clock;
+timestamp = sprintf('%i-m%i-d%i-%ih%i',time(1),time(2),time(3),time(4),time(5));
+
+posFit_list = cell(0);
+for i=1:numel(movie_list)
+    filename_movie = movie_list{i};
+    [path,filename,~] = fileparts(filename_movie);
+    filename_fitData = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
+    
+    
+    %     Skip nonsensical input
+    [T,movie] = evalc(['read_tiff(''',filename_movie,''',false,[1,2])']); % Read 2 frames. note: evalc suppresses output
+    if size(movie,3)<=1
+       continue; 
     end
-    while run_again
-        [run_again] = testTrackerSettings(movie,dark_stack,candidateOptions,fittingOptions,trackingOptions);
-        rehash;
-        [candidateOptions,fittingOptions,trackingOptions] = setOptionsTrackNTrace();
+    
+    % Set options to default for this batch
+    generalOptions = generalOptions_def;
+    candidateOptions = candidateOptions_def;
+    fittingOptions = fittingOptions_def;
+    trackingOptions = trackingOptions_def;
+    dark_img = dark_img_def;
+    
+    % Does the user want to adjust the settings per movie?
+    if not(GUIreturns.useSettingsForAll)
+        % Show filename in GUI
+        GUIinputs.fileText = filename_movie;
+        
+        GUIinputs.titleText = 'Adjust movie specific options.';
+        [generalOptions, candidateOptions,fittingOptions,trackingOptions] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+        
+        
+        % Check if different dark movie was given
+        if(~strcmp(generalOptions_def.filename_dark_movie, generalOptions.filename_dark_movie))
+            if(~isempty(generalOptions.filename_dark_movie))
+                dark_img   = CalculateDark(read_tiff(generalOptions.filename_dark_movie));
+            end
+        end
+        
+        % If test mode is enabled, analyze first X frames and show GUI
+        if generalOptions.previewMode
+            run_again = true;
+            first_run = true;
+            firstFrameTesting = 0;
+            lastFrameTesting  = 0;
+            filename_dark_movie = generalOptions.filename_dark_movie;
+            while run_again
+                if not(first_run); [generalOptions, candidateOptions,fittingOptions,trackingOptions] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs); end;
+                if not(generalOptions.previewMode); break; end; % If test mode was disabled by user in the settingsGUI
+                % Check if requested frame interval has changed -> re-read movie if neccessary
+                if (firstFrameTesting ~= generalOptions.firstFrameTesting) || (lastFrameTesting ~= generalOptions.lastFrameTesting)
+                    firstFrameTesting = generalOptions.firstFrameTesting;
+                    lastFrameTesting  = generalOptions.lastFrameTesting;
+                    movie = read_tiff(filename_movie, false, [firstFrameTesting, lastFrameTesting]);
+                end
+                % Check if different dark movie was given
+                if(~strcmp(filename_dark_movie, generalOptions.filename_dark_movie))
+                    if(~isempty(generalOptions.filename_dark_movie))
+                        dark_img   = CalculateDark(read_tiff(generalOptions.filename_dark_movie));
+                    end
+                    filename_dark_movie = generalOptions.filename_dark_movie;
+                end
+                [run_again] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions);
+                first_run = false;
+            end
+        end
         
     end
+    % Save options
+    save(filename_fitData,'filename_movie','generalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
+    posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
 end
 
 %% Compute positions
-posFit_list = cell(0);
-for i=1:numel(movie_list)
-    movie_name = movie_list{i};
+clearvars -except posFit_list
+for i=1:numel(posFit_list)
+    filename_fitData = posFit_list{i};
+    load(filename_fitData,'-mat');
     
-    % Read movie
-    movie = read_tiff(movie_list{i}, false);
-    movie = movie(:,:,candidateOptions.firstFrame:min(candidateOptions.lastFrame,size(movie,3)));
-    
-    % Skip nonsensical input
-    if ~isempty(dark_stack)
-        if sum([size(movie,1),size(movie,2)]==[size(dark_stack,1),size(dark_stack,2)])~=2 || size(movie,3)<=1
-            continue
-        end
-    end
-    
-    % Test candidate search
-%     testCandidateSearch(movie, dark_stack(:,:,1), candidateOptions,1000); %last value: frame where seach is tested
+    % Read movie  
+    movie = read_tiff(filename_movie, false, [generalOptions.firstFrame,generalOptions.lastFrame]);
     
     % Compute the positions
-    fitData = locateParticles(movie, dark_stack, candidateOptions, fittingOptions);
+    fitData = locateParticles(movie, dark_img, candidateOptions, fittingOptions); %#ok<NASGU>
     
     % Save positions
-    filename_fitData = [movie_name(1:end-4),'_TNT'];
-    save(filename_fitData,'candidateOptions','fittingOptions','fitData');
-    posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
+    save(filename_fitData,'fitData','-append');
 end
 
 clear fitData movie
@@ -62,10 +122,17 @@ clear fitData movie
 
 %% Compute trajectories
 for i=1:numel(posFit_list)
+    load(posFit_list{i},'trackingOptions','fitData');
+    
+    % If no tracking is desired for this movie, continue
+    if (~trackingOptions.enableTracking)
+        continue
+    end
+    
     % Compute trajectories
-    trajectoryData = trackParticles(posFit_list{i},trackingOptions);
+    trajectoryData = trackParticles(fitData,trackingOptions);
     
     %Save trajectories
-    save(posFit_list{i},'trajectoryData','trackingOptions','-append');
+    save(posFit_list{i},'trajectoryData','-append');
 end
 

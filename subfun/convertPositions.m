@@ -15,7 +15,7 @@ function [pos] = convertPositions(pos_file,method,probDim)
 % if pos_file is not a path but an array, it's a fitData array and we're in
 % test mode, so we don't need to read anything
 if ischar(pos_file)
-    load(pos_file, '-mat'); % '-mat' forces loading as MAT-file
+    load(pos_file, 'fitData', '-mat'); % '-mat' forces loading as MAT-file
 else
     fitData = pos_file;
 end
@@ -64,4 +64,7 @@ switch(method)
             idx_start = idx_end+1;
         end
         pos(pos==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
+        
+    otherwise 
+        error('Unknown tracker ''%s''',method);
 end

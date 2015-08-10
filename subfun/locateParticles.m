@@ -78,17 +78,29 @@ if cand_corr %find candidates either by cross correlation or intensity filtering
 else
     candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,true,false); %0: disable neughbours 
 end
+
 nrCandidates = size(candidatePos,1);
+
 if calc_once
-    fitData = zeros(6,nrCandidates,nrFrames); 
+    if nrCandidates > 0
+        fitData = zeros(6,nrCandidates,nrFrames); 
+    else
+        fitData = zeros(6,100,nrFrames);
+    end
 else
-    fitData = zeros(6,10*nrCandidates,nrFrames); %blow up array, delete nonsensical entries later
+    if nrCandidates > 0
+        fitData = zeros(6,10*nrCandidates,nrFrames); %blow up array, delete nonsensical entries later
+    else
+        fitData = zeros(6,100,nrFrames);
+    end
 end
 
-if fit_forward
-    fitData(:,1:nrCandidates,1) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
-else
-    fitData(:,1:nrCandidates,nrFrames) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+if nrCandidates>0
+    if fit_forward
+        fitData(:,1:nrCandidates,1) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+    else
+        fitData(:,1:nrCandidates,nrFrames) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+    end
 end
 
 
@@ -178,8 +190,7 @@ end
 
 rewindMessages();
 rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iF*(nrFrames-iF)/60),  floor(mod(elapsedTime/iF*(nrFrames-iF),60)))
-rewPrintf('Fitting frame %i/%i',iF,nrFrames)
-rewPrintf(' .. done\n')
+rewPrintf('Fitting done.\n');
 
 
     function rewPrintf(msg, varargin)

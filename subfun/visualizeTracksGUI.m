@@ -1,7 +1,7 @@
 function [h_main, selected_option] = visualizeTracksGUI(movie, trajectoryData, FPS, traj_lifetime, n_colors, use_bw, show_RunAgain)
 % USAGE: visualizeTracksGUI(movie, trajectoryData)
 % [ Full USAGE: visualizeTracksGUI(movie, trajectoryData, FPS, traj_lifetime, n_colors, use_bw) ]
-% 
+%
 % Visualizer for tracks computed by the tracker.
 %
 % Input:
@@ -13,7 +13,7 @@ function [h_main, selected_option] = visualizeTracksGUI(movie, trajectoryData, F
 %   traj_lifetime: trajectories are kept for #traj_lifetime frames after
 %                  the particle has vanished. | default: 0
 %   n_colors: number of colors used to display trajectories | default: 20
-%             Colors are generated using distinguishable_colors.m by 
+%             Colors are generated using distinguishable_colors.m by
 %             Timothy E. Holy (Matlab File Exchange).
 %   use_bw: black/white image, otherwise colormap hot | default false
 %   show_RunAgain: Display run again dialog after closing. Used by tracker
@@ -80,8 +80,13 @@ warning('on','MATLAB:TIMER:RATEPRECISION');
 % -- Preparation of plotting --
 % Convert data into cell array which is better for plotting
 % Each cell saves frame|x|y for one track
-id_tracks = unique(trajectoryData(:,1));
-n_tracks = numel(id_tracks);
+if isempty(trajectoryData)
+    id_tracks = [];
+    n_tracks = 0;
+else
+    id_tracks = unique(trajectoryData(:,1));
+    n_tracks = numel(id_tracks);
+end
 
 cell_traj = cell(n_tracks ,1);
 cnt = 1;
@@ -91,7 +96,7 @@ for iTrack = 1:n_tracks
 end
 
 % Create the color pool
-if use_bw 
+if use_bw
     bg = {'k','w'}; % background color
 else
     bg = {'r','w'};
@@ -127,8 +132,8 @@ end
 
 % --- Nested Functions (mostly callbacks) ---
 
-    % The main function of the application. This plays the movie if the
-    % timer is running
+% The main function of the application. This plays the movie if the
+% timer is running
     function timed_update(timer, event)
         frame = frame+1;
         if(frame >= size(movie,3))
@@ -159,8 +164,8 @@ end
         set(h_all.but_play,'String','Play');
     end
 
-    % Used to display the current frame as selected by the 'frame' variable
-    % Also this sets and saves the axis states (e.g. for zooming);
+% Used to display the current frame as selected by the 'frame' variable
+% Also this sets and saves the axis states (e.g. for zooming);
     function updateFrameDisplay()
         xl = xlim;
         yl = ylim;
@@ -173,7 +178,7 @@ end
         caxis(zl);
     end
 
-    % Plots the frame with the input index
+% Plots the frame with the input index
     function plotFrame(iF)
         imagesc(movie(:,:,iF)); axis image; colormap gray;
         if use_bw
@@ -195,10 +200,10 @@ end
         hold off;
     end
 
-    % Switch play/pause by button
+% Switch play/pause by button
     function playCallback(hObj, eventdata)
         if frame == size(movie,3)
-           frame = 1; 
+            frame = 1;
         end
         if strcmp(get(h_all.timer, 'Running'), 'off')
             start(h_all.timer);
@@ -207,7 +212,7 @@ end
         end
     end
 
-    % Stop playing, adjust contrast, continue
+% Stop playing, adjust contrast, continue
     function contrastCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -230,7 +235,7 @@ end
         end
     end
 
-    % Switch black-white and hot display mode
+% Switch black-white and hot display mode
     function bwCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -257,7 +262,7 @@ end
         
     end
 
-    % Update the movie FPS
+% Update the movie FPS
     function fpsCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -283,7 +288,7 @@ end
         end
     end
 
-    % Update the lifetime of tracks
+% Update the lifetime of tracks
     function lifetimeCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -303,7 +308,7 @@ end
         end
     end
 
-    % Recompute the colors
+% Recompute the colors
     function colorCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -333,7 +338,7 @@ end
         end
     end
 
-    % This is called after letting the slider go
+% This is called after letting the slider go
     function sliderCallback(hObj, eventdata)
         %
     end
@@ -361,12 +366,12 @@ end
         elapsed_time = elapsed_time + toc(tic_start)- timePerFrame;
     end
 
-    % Sets top text according to the current frame
+% Sets top text according to the current frame
     function updateTopText()
         set(h_all.toptext,'String',[sprintf('frame =  %i/%i',frame,size(movie,3))])
     end
 
-    % Parse input variables
+% Parse input variables
     function parse_inputs()
         % input parsing
         if num_argin <3 || isempty(FPS)
@@ -390,13 +395,13 @@ end
         end
         
         if num_argin < 7 || isempty(show_RunAgain)
-           show_RunAgain = false;
-           selected_option = 'No';
+            show_RunAgain = false;
+            selected_option = 'No';
         end
         
     end
 
-    % Cleanup function. This is neccessary to delete the timer!
+% Cleanup function. This is neccessary to delete the timer!
     function onAppClose(hObj, event)
         if strcmp(get(h_all.timer, 'Running'), 'on')
             stop(h_all.timer);
@@ -406,21 +411,21 @@ end
         % Dialog used in DEMO mode for getting return values.
         if show_RunAgain
             d = dialog('Position',[300 300 220 100],'Name','Run again?','WindowStyle','normal');
-
+            
             txt = uicontrol('Parent',d,...
-                       'Style','text',...
-                       'Position',[5 40 210 40],...
-                       'String',sprintf('Run demo again?\n Adjust options BEFORE CLICKING!'));
-
+                'Style','text',...
+                'Position',[5 40 210 40],...
+                'String',sprintf('Run again to adjust settings?'));
+            
             btn_yes = uicontrol('Parent',d,...
-                       'Position',[30 10 70 25],...
-                       'String','Yes',...
-                       'Callback',@buttonPress);
-                   
+                'Position',[30 10 70 25],...
+                'String','Yes',...
+                'Callback',@buttonPress);
+            
             btn_no = uicontrol('Parent',d,...
-                       'Position',[120 10 70 25],...
-                       'String','No',...
-                       'Callback',@buttonPress);
+                'Position',[120 10 70 25],...
+                'String','No',...
+                'Callback',@buttonPress);
             selected_option = 'No';
             uiwait(d);
         end

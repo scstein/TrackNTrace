@@ -319,6 +319,9 @@ switch method
             trajData = trajData(idx,:);
         end
         %FINISHED track_cg
+        
+    otherwise
+        error('Unknown tracker ''%s''',method);
 end
 
 end
