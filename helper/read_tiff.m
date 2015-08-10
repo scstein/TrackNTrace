@@ -1,11 +1,15 @@
-function imgdata = read_tiff(filename, convert2double, allwarn)
-% Usage: imgdata = read_tiff(filename, convert2double, allwarn)
+function imgdata = read_tiff(filename, convert2double, minmax_frame)
+% Usage: imgdata = read_tiff(filename, convert2double, minmax_frame)
 %
-% Loads an image or image stack from a Tiff file.
+% Loads an image or image stack from a Tiff file. It possible to read only
+% a specified part of the file. File can be read in their original format
+% (instead of converting to double).
 %
-% filename: Tiff file to read
-% convert2double: Datatype conversion to double after reading | default: true
-% allwarn : Show warnings for all slices, not only first one | default: false
+% Input:
+%   filename: Tiff file to read
+%   convert2double: Datatype conversion to double after reading | default: true
+%   minmax_frame: [minframe,maxframe] to read. If only one number is specified,
+%                 it is assumed to be maxframe and [1, maxframe] is read.| default: read whole movie
 %
 % NOTE: Deactivate double conversion if not neccessary, reading the same datatype used in the Tiff file.
 %       This potentially saves a lot of memory (factor 4 for 16-bit Tiff movies) and thus increased performance.
@@ -13,7 +17,7 @@ function imgdata = read_tiff(filename, convert2double, allwarn)
 %         Example: imgdata = double( read_tiff(filename) );
 
 % By
-% Simon Christoph Stein - August 2014
+% Simon Christoph Stein - August 2015
 % E-Mail: scstein@phys.uni-goettingen.de
 %
 
@@ -23,8 +27,8 @@ if nargin < 2 || isempty(convert2double)
     convert2double = true;
 end
 
-if nargin < 3 || isempty(allwarn)
-    allwarn = false;
+if nargin < 3
+    minmax_frame = [];
 end
 
 % -- Create Tiff object --
@@ -33,8 +37,10 @@ end
 if strcmp(ext, '.tif') == 0
     filename = [filename '.tif'];
 end
+
 t = Tiff(filename,'r');
 cleanupTrigger = onCleanup(@() cleanupFunc(t));
+
 
 % -- Extract header information --
 rows = t.getTag('ImageLength'); % 1
@@ -49,16 +55,22 @@ if samplesPerPixel > 1
 end
 
 
-
 % -- Count number of frames for pre-allocation --
+warning('off','all');
 not(t.lastDirectory); % this forces the Tiff object to read the first frames tag data and check for errors.
-if not(allwarn), warning('off','all');  end; % disable warnings for counting
-while not(t.lastDirectory)
-    t.nextDirectory;
+if isempty(minmax_frame)
+    % Count number of frames in tiff file
+    while not(t.lastDirectory)
+        t.nextDirectory;
+    end
+    nr_frames = t.currentDirectory;
+    minmax_frame = [1, nr_frames];
+else
+    if numel(minmax_frame)==1 % If one number was given, treat as maxframe
+       minmax_frame = [1,minmax_frame];
+    end
+    nr_frames = minmax_frame(2)-minmax_frame(1)+1;
 end
-nr_frames = t.currentDirectory;
-warning('on','all');
-
 
 % -- pre allocate memory according to datatype --
 switch sampleFormat
@@ -102,39 +114,46 @@ end
 spacing = '    ';
 fprintf('%sRows: %i\n',spacing,rows)
 fprintf('%sColumns: %i\n',spacing,cols)
-fprintf('%sFrames: %i\n',spacing,nr_frames)
+fprintf('%sMax Frame: %i\n',spacing,nr_frames)
 fprintf('%sBitdepth: %i\n',spacing,bitdepth)
 fprintf('%sDatatype: %s\n',spacing,sampleFormatName)
 
-%  -- Rewind to the first frame and read it --
-t.setDirectory(1);
+
+%  -- Rewind to the first frame that should be read --
+try
+   t.setDirectory(minmax_frame(1));
+catch err
+    error('Minimum frame cannot be read. Movie shorter than minframe?')
+end
 msgAccumulator = ''; % needed for one-line printing
-rewPrintf('Reading Frame %i/%i ..',1, nr_frames);
-imgdata(:,:,1) = t.read();
 
 % -- read rest of the stack --
 startTime = tic;
 lastElapsedTime = 0;
 
-if not(allwarn), warning('off','all');  end; % Disable warnings after first slice (we could miss something important here, but usually they just repeat)
-for IFD = 2:nr_frames
-    elapsedTime = toc(startTime);    
+for iFrame = 1:nr_frames
+    elapsedTime = toc(startTime);
     if( (elapsedTime-lastElapsedTime)>0.25) % output every 0.25 seconds
         rewindMessages()
-        rewPrintf('\nReading Frame %i/%i ..',IFD, nr_frames);
+        rewPrintf('\nReading Frame %i/%i ..',iFrame, nr_frames);
         lastElapsedTime = elapsedTime;
     end
+    imgdata(:,:,iFrame) = t.read();
     
+    if (t.lastDirectory)
+       warning('on','all');
+       fprintf('\n');
+       warning('File has less frames than specified. Read %i frames.\n',iFrame);
+       imgdata = imgdata(:,:,1:iFrame);
+       break;
+    end
     
-    t.nextDirectory;
-    imgdata(:,:,IFD) = t.read();
+    if ~(iFrame == nr_frames)
+        t.nextDirectory;
+    end
 end
 rewindMessages()
 rewPrintf('\nReading Frame %i/%i .. done\n',nr_frames, nr_frames);
-warning('on','all'); % Restore warnings
-
-t.close;
-
 
 if convert2double
     imgdata = double(imgdata);

@@ -10,7 +10,7 @@ testMode = [true,1]; %enable/disable testMode by setting demoMode(1) true/false.
 %% Test settings if desired
 if testMode(1)
     run_again = true;
-    movie = read_tiff_DEMO(movie_list{testMode(2)}, false, [1,50]);
+    movie = read_tiff(movie_list{testMode(2)}, false, 50);
     if ~isempty(dark_stack)
         if sum([size(movie,1),size(movie,2)]==[size(dark_stack,1),size(dark_stack,2)])~=2 || size(movie,3)<=1
             dark_stack = [];
