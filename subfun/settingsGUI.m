@@ -36,27 +36,27 @@ set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
 % % General options
 % edit_movieList
 % edit_darkMovie
-set(h_all.edit_firstFrame,'Callback',@callback_positiveIntEdit);
-set(h_all.edit_lastFrame,'Callback',@callback_positiveIntEdit);
+set(h_all.edit_firstFrame,'Callback',{@callback_positiveIntEdit,1,inf});
+set(h_all.edit_lastFrame,'Callback',{@callback_positiveIntEdit,1,inf});
 set(h_all.cbx_previewMode, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_firstFrameTesting,'Callback',@callback_positiveIntEdit);
-set(h_all.edit_lastFrameTesting,'Callback',@callback_positiveIntEdit);
+set(h_all.edit_firstFrameTesting,'Callback',{@callback_positiveIntEdit,1,inf});
+set(h_all.edit_lastFrameTesting,'Callback',{@callback_positiveIntEdit,1,inf});
 set(h_all.button_movieList, 'Callback', @callback_selectMovieList);
 set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
 
 % % Candidate Options
 set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_stddev, 'Callback', @callback_positiveFloatEdit);
+set(h_all.edit_stddev, 'Callback', {@callback_positiveFloatEdit,0,inf});
 % popup_fitDirection
 set(h_all.cbx_calcOnce, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_avgWinSize, 'Callback', @callback_positiveIntEdit);
+set(h_all.edit_avgWinSize, 'Callback', {@callback_positiveIntEdit,1,inf});
 % Only for correlation
-set(h_all.edit_corrThreshold,'Callback', @callback_positiveFloatEdit);
+set(h_all.edit_corrThreshold,'Callback', {@callback_positiveFloatEdit,0,1});
 % Only for intensity filtering
-set(h_all.edit_particleRadius,'Callback', @callback_positiveIntEdit);
-set(h_all.edit_intensityThreshold,'Callback', @callback_positiveIntEdit);
-set(h_all.edit_pTest,'Callback', @callback_positiveFloatEdit);
-set(h_all.edit_bgInterval,'Callback', @callback_positiveIntEdit);
+set(h_all.edit_particleRadius,'Callback', {@callback_positiveIntEdit,1,inf});
+set(h_all.edit_intensityThreshold,'Callback', {@callback_positiveIntEdit,0,100});
+set(h_all.edit_pTest,'Callback', {@callback_positiveFloatEdit,0,1});
+set(h_all.edit_bgInterval,'Callback', {@callback_positiveIntEdit,1,inf});
 
 
 % % Fitting options
@@ -67,11 +67,11 @@ set(h_all.edit_bgInterval,'Callback', @callback_positiveIntEdit);
 % % Tracking
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
 set(h_all.popup_trackerMethod, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_trackerRadius,'Callback', @callback_positiveFloatEdit);
-set(h_all.edit_maxGap,'Callback', @callback_positiveIntEdit);
+set(h_all.edit_trackerRadius,'Callback', {@callback_positiveFloatEdit,0,inf});
+set(h_all.edit_maxGap,'Callback', {@callback_positiveIntEdit,0,inf});
 % popup_linkingMethod % Only for simpletracker
-set(h_all.edit_minTrackLength,'Callback',@callback_positiveIntEdit);
-set(h_all.edit_splitMovieParts, 'Callback', @callback_positiveIntEdit);
+set(h_all.edit_minTrackLength,'Callback',{@callback_positiveIntEdit,2,inf});
+set(h_all.edit_splitMovieParts, 'Callback', {@callback_positiveIntEdit,1,inf});
 % cbx_verbose
 
 % GUI main
@@ -188,25 +188,43 @@ uiwait(h_main);
         set(h_all.edit_darkMovie,'String',[path,darkMovie]);
     end
 
-    function callback_positiveFloatEdit(hObj,event)
+    function callback_positiveFloatEdit(hObj,event, minVal, maxVal)
+        if nargin<3 || isempty(minVal);
+            minVal=0; 
+        end
+        if nargin<4 || isempty(maxVal);
+            maxVal=inf; 
+        end
+        
         value = str2num(get(hObj, 'String'));
-        if isempty(value) || value < 0
+        if isempty(value)
             set(hObj,'ForegroundColor','r');
             set(hObj,'String','INVALID');
             uicontrol(hObj);
         else
+            value = max(minVal,value);
+            value = min(maxVal,value);
             set(hObj,'ForegroundColor','k');
             set(hObj,'String',sprintf('%.2f',value));
         end
     end
 
-    function callback_positiveIntEdit(hObj,event)
+    function callback_positiveIntEdit(hObj,event, minVal,maxVal)
+        if nargin<3 || isempty(minVal);
+            minVal=0; 
+        end
+        if nargin<4 || isempty(maxVal);
+            maxVal=inf; 
+        end
+            
         value = round(str2num(get(hObj,'String')));
-        if isempty(value) || value < 0
+        if isempty(value)
             set(hObj,'ForegroundColor','r');
             set(hObj,'String','INVALID');
             uicontrol(hObj);
         else
+            value = max(minVal,value);
+            value = min(maxVal,value);
             set(hObj,'ForegroundColor','k');
             set(hObj,'String',sprintf('%i',value));
         end

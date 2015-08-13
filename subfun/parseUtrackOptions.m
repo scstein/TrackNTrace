@@ -1,9 +1,16 @@
 function [gapCloseParam,costMatrices,kalmanFunctions] = parseUtrackOptions(trackingOptions)
 %taken from utrack: scriptTrackGeneral.m
 
+%%%%%DO NOT EVER CHANGE THIS VALUE
 gapCloseParam.timeWindow = trackingOptions.maxGap+1; %maximum allowed time gap (in frames) between a track segment end and a track segment start that allows linking them.
+%%%%%
+
 gapCloseParam.mergeSplit = 0; %1 if merging and splitting are to be considered, 2 if only merging is to be considered, 3 if only splitting is to be considered, 0 if no merging or splitting are to be considered.
+
+%%%%DO NOT EVER CHANGE THIS VALUE
 gapCloseParam.minTrackLen = trackingOptions.minTrackLength; %minimum length of track segments from linking to be used in gap closing.
+%%%%%
+
 
 %optional input:
 gapCloseParam.diagnostics = 0; %1 to plot a histogram of gap lengths in the end; 0 or empty otherwise.
@@ -16,7 +23,12 @@ costMatrices(1).funcName = 'costMatRandomDirectedSwitchingMotionLink';
 %parameters
 parameters.linearMotion = 0; %use linear motion Kalman filter.
 parameters.minSearchRadius = 2; %minimum allowed search radius. The search radius is calculated on the spot in the code given a feature's motion parameters. If it happens to be smaller than this minimum, it will be increased to the minimum.
+
+%%%%%DO NOT EVER CHANGE THIS VALUE
 parameters.maxSearchRadius = trackingOptions.maxRadius; %maximum allowed search radius. Again, if a feature's calculated search radius is larger than this maximum, it will be reduced to this maximum.
+%%%%%
+
+
 parameters.brownStdMult = 3; %multiplication factor to calculate search radius from standard deviation.
 
 parameters.useLocalDensity = 1; %1 if you want to expand the search radius of isolated features in the linking (initial tracking) step.
