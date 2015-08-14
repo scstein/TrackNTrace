@@ -106,7 +106,7 @@ for i=1:numel(posFit_list)
     movie = read_tiff(filename_movie, false, [generalOptions.firstFrame,generalOptions.lastFrame]);
     
     % Compute the positions
-    fprintf('\n######\nLocating particles in movie %s.\n',posFit_list{i});
+    fprintf('\n######\nLocating particles in movie %s.\n',filename_movie);
     fitData = locateParticles(movie, dark_img, candidateOptions, fittingOptions); %#ok<NASGU>
     
     % Save positions
@@ -131,7 +131,7 @@ for i=1:numel(posFit_list)
     end
     
     % Compute trajectories
-    fprintf('\n######\nTracking particles in movie %s.\n',posFit_list{i});
+    fprintf('\n######\nTracking particles in movie %s.\n',filename_movie);
     trajectoryData = trackParticles(fitData,trackingOptions);
     
     %Save trajectories
