@@ -54,7 +54,7 @@ set(h_all.edit_avgWinSize, 'Callback', {@callback_positiveIntEdit,1,inf});
 set(h_all.edit_corrThreshold,'Callback', {@callback_positiveFloatEdit,0,1});
 % Only for intensity filtering
 set(h_all.edit_particleRadius,'Callback', {@callback_positiveIntEdit,1,inf});
-set(h_all.edit_intensityThreshold,'Callback', {@callback_positiveIntEdit,0,100});
+set(h_all.edit_intensityThreshold,'Callback', {@callback_positiveFloatEdit,0,100});
 set(h_all.edit_pTest,'Callback', {@callback_positiveFloatEdit,0,1});
 set(h_all.edit_bgInterval,'Callback', {@callback_positiveIntEdit,1,inf});
 
