@@ -49,7 +49,7 @@ switch method
 
         %collect complete list of positions with amplitude and frame as
         %simpletracker does not return either
-        global_pos = convertPositions(pos_file,'track_cg',3); %automatically gives 2D array of global positions [x y amp frame]
+        global_pos = convertPositions(pos_file,'track_cg',5); %automatically gives 2D array of global positions [x y amp b sigma frame]
         
         
         for iDiv = 1:n_split %slice position array if memory not large enough
@@ -69,7 +69,7 @@ switch method
                 track_len = size(track_points,1);
                 
                 %index with relative id but write global id
-                cell_coord_tracks{iTrack} = [repmat(traj_id+iTrack,track_len,1),track_points(:,[4 1 2 3])]; %[id, frame,x,y,amp]
+                cell_coord_tracks{iTrack} = [repmat(traj_id+iTrack,track_len,1),track_points(:,[end,1:5])]; %[id, [frame,x,y,amp,b,sigma]]
             end
             
             %finally save data
@@ -117,9 +117,12 @@ switch method
                     end
                     
                     traj_id = traj_id+traj_update; %...and finally update the global id
+                else
+                    traj_id = traj_id+n_tracks; %we are not in the first slice and there's nothing to reconnect. it's time to update the global id
                 end %if n_tracks_sliced>0
+            else 
+                traj_id = traj_id+n_tracks; %if in very first slice, there's nothing to reconnect. then just update the global id
             end %if iDiv>1
-            traj_id = traj_id+n_tracks; %if nothing is reconnected or sliced, just add the number of tracks in new slice
         end %for iDiv=1:n_split
         
         % if the movie was split, result array has to be sorted by
@@ -223,9 +226,12 @@ switch method
                         end
                     end
                     traj_id = traj_id+traj_update; %...and finally update the global id
+                else
+                    traj_id = traj_id+n_tracks; %we are not in the first slice and there's nothing to reconnect. it's time to update the global id
                 end %if n_tracks_sliced>0
+            else 
+                traj_id = traj_id+n_tracks; %if in very first slice, there's nothing to reconnect. then just update the global id
             end %if iDiv>1
-            traj_id = traj_id+n_tracks; %if nothing is reconnected or sliced, just add the number of tracks in new slice
         end %for iDiv=1:n_split
         
         %remove NaNs resulting from closed gaps
@@ -307,9 +313,12 @@ switch method
                         end
                     end
                     traj_id = traj_id+traj_update; %...and finally update the global id
+                else
+                    traj_id = traj_id+n_tracks; %we are not in the first slice and there's nothing to reconnect. it's time to update the global id
                 end %if n_tracks_sliced>0
+            else 
+                traj_id = traj_id+n_tracks; %if in very first slice, there's nothing to reconnect. then just update the global id
             end %if iDiv>1
-            traj_id = traj_id+n_tracks; %if nothing is reconnected or sliced, just add the number of tracks in new slice
         end %for iDiv=1:n_split
         
         % if the movie was split, result array has to be sorted by

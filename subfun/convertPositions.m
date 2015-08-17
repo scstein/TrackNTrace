@@ -27,8 +27,8 @@ switch(method)
         %init cell array
         pos = cell(nrFrames,1);
         for i=1:nrFrames
-            pos_frame_now = squeeze(fitData(1:5,:,i)).'; %get x,y,amp,backround,sigma
-            valid_pos = any(pos_frame_now(:,3),2); %get valid positions, zero positions count!
+            pos_frame_now = squeeze(fitData(1:6,:,i)).'; %get x,y,amp,backround,sigma
+            valid_pos = pos_frame_now(:,6)==1; %get valid positions, zero positions count!
             pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
             pos(i) = {pos_frame_now(valid_pos,1:probDim)}; %1D cell array with nrFrames lines, each cell containing 2D array [x,y] or bigger array [x,y,amp], [x,y,amp,background], ...
         end
@@ -36,8 +36,8 @@ switch(method)
     case('utrack') %complex tracker searching for global optimum, VERY memory intensive for large number of particles
         pos = repmat(struct('xCoord',[],'yCoord',[],'amp',[],'sigma',[]),nrFrames,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
         for i=1:nrFrames
-            pos_frame_now = squeeze(fitData(1:5,:,i)).';
-            valid_pos = any(pos_frame_now(:,3),2);
+            pos_frame_now = squeeze(fitData(:,:,i)).';
+            valid_pos = pos_frame_now(:,6)==1; %error flag is 1?
             nCand = sum(valid_pos);
             pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
             if nCand>0
@@ -51,16 +51,16 @@ switch(method)
     case('track_cg') %NNT, Crocker and Grier, 1994
         nrPos = zeros(nrFrames,1);
         for i=1:nrFrames
-            nrPos(i) = sum(any(squeeze(fitData(3,:,i)),1));
+            nrPos(i) = sum(squeeze(fitData(6,:,i)==1)); %error flag is 1?
         end
-        pos = zeros(sum(nrPos),4);
+        pos = zeros(sum(nrPos),6);
         
         idx_start = 1;
         for i=1:nrFrames
             idx_end = sum(nrPos(1:i));
             
-            %2D double array [x,y,amp,frame] with data from several frames stacked vertically. probDim is ignored here and dealt with later
-            pos(idx_start:idx_end,:) = [fitData(1:3,1:nrPos(i),i).',repmat(i,nrPos(i),1)];
+            %2D double array [x,y,amp,B,sigma,frame] with data from several frames stacked vertically. probDim is ignored here and dealt with later
+            pos(idx_start:idx_end,:) = [fitData(1:5,fitData(6,:,i)==1,i).',repmat(i,nrPos(i),1)];
             idx_start = idx_end+1;
         end
         pos(pos==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
