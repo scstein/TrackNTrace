@@ -123,7 +123,7 @@ clear fitData movie
 
 %% Compute trajectories
 for i=1:numel(posFit_list)
-    load(posFit_list{i},'trackingOptions','fitData');
+    load(posFit_list{i},'trackingOptions','fitData','filename_movie');
     
     % If no tracking is desired for this movie, continue
     if (~trackingOptions.enableTracking)
