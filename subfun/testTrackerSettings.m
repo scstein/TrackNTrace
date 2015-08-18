@@ -16,10 +16,15 @@ trackingOptions.splitMovieParts = 1;
 
 %get particle positions, track them
 fitData = locateParticles(movie, dark_stack, candidateOptions, fittingOptions);
-trajectoryData = trackParticles(fitData,trackingOptions);
+if trackingOptions.enableTracking
+    trajectoryData = trackParticles(fitData,trackingOptions);
+end
 
 %visualize all trajectories
-[hGUI, selected_option] = visualizeTracksGUI(movie,trajectoryData,5,[],[],[],true);
+if trackingOptions.enableTracking
+    [hGUI, run_again] = visualizeTracksGUI(movie,trajectoryData,5,[],[],[],[],true);
+else
+    [hGUI, run_again] = visualizeFitDataGUI(movie,fitData,5,[],true);
+end
 
-run_again = strcmp(selected_option,'Yes');
 

@@ -1,27 +1,25 @@
-function [h_main, run_again] = visualizeTracksGUI(movie, trajectoryData, FPS, traj_lifetime, n_colors, use_bw, traj_displayLength, show_RunAgain)
-% USAGE: visualizeTracksGUI(movie, trajectoryData)
-% [ Full USAGE: visualizeTracksGUI(movie, trajectoryData, FPS, traj_lifetime, n_colors, use_bw) ]
+function [h_main, run_again] = visualizeFitDataGUI(movie, fitData, FPS, use_bw, show_RunAgain)
+% USAGE: visualizeFitDataGUI(movie, trajectoryData)
+% [ Full USAGE: visualizeFitDataGUI(movie, fitData, FPS, use_bw, show_RunAgain) ]
 %
-% Visualizer for tracks computed by the tracker.
+% Visualizer for fit results (fitData).
 %
 % Input:
 %   movie: 3D matrix (rows,cols,frames) of the analyzed movie
-%   trajectoryData: 2D matrix with columns particleID|frame|x|y|...
-%                   This is the output of the tracker
-% Inputs also adjustable by GUI:
+%   fitData: 3D array of Gaussian distribution parameters
+%     (param,particle,frame) for all found particles. The line order is
+%     [x;y;A;B;sigma;flag], the column order is the particle index and the
+%     slice order is the movie frame. The positions x (column) and y (row)
+%     are not corrected by a middle pixel shift, the center of the top left
+%     pixel is [1.0,1.0]. A is the unnormalized amplitude of a Gaussian
+%     distribution A*exp(...)+B with constant background B. flag is the
+%     exit flag of the fitting routine, see psfFit_Image.m for details.
 %   FPS: frames per second to play movie with | default: 30
-%   traj_lifetime: trajectories are kept for #traj_lifetime frames after
-%                  the particle has vanished. | default: 0
-%   n_colors: number of colors used to display trajectories | default: 20
-%             Colors are generated using distinguishable_colors.m by
-%             Timothy E. Holy (Matlab File Exchange).
-%   use_bw: black/white image, otherwise colormap hot | default: false
-%   trajDisplayLength: Only the positions in the last trajDisplayLength
-%                      frames of each trajectory are shown | default: inf
+%   use_bw: black/white image, otherwise colormap hot | default false
 %   show_RunAgain: Display run again dialog after closing. Used by tracker
 %                  preview mode.
 %
-%  Inputs (except movie) can be left empty [] for default values.
+%  Inputs (except movie, fitData) can be left empty [] for default values.
 %
 % Output:
 %   h_main - Handle to the GUI figure
@@ -34,8 +32,8 @@ function [h_main, run_again] = visualizeTracksGUI(movie, trajectoryData, FPS, tr
 %
 
 % Parse given inputs. For clarity we outsource this in a function.
-if nargin<1 || isempty(movie)
-    fprintf(' Need input movie!\n');
+if nargin<2 || isempty(movie) || isempty(fitData)
+    fprintf(' Need input (movie,fitData)!\n');
     return
 end
 parse_inputs(nargin);
@@ -43,8 +41,8 @@ run_again = false;
 
 
 % -- Preparing the GUI --
-h_main = openfig('visualizeTracksGUI_Layout.fig');
-set(h_main,'handleVisibility','on');       % Make figure visible to Matlab (might not be the case)
+h_main = openfig('visualizeFitDataGUI_Layout.fig');
+set(h_main,'handleVisibility','on'); % Make figure visible to Matlab (might not be the case)
 set(h_main,'CloseRequestFcn',@onAppClose); % Executed on closing for cleanup
 set(h_main,'Toolbar','figure');   % Add toolbar needed for zooming
 set(h_main, 'DoubleBuffer', 'on') % Helps against flickering
@@ -65,18 +63,18 @@ hLstn = handle.listener(h_all.slider,'ActionEvent',@updateSlider); % Add event l
 
 % Edit fields
 set(h_all.edit_FPS,'String',sprintf('%i',FPS), 'Callback', @fpsCallback);
-set(h_all.edit_lifetime,'String',sprintf('%i',traj_lifetime), 'Callback', @lifetimeCallback);
-set(h_all.edit_colors,'String',sprintf('%i',n_colors), 'Callback', @colorCallback);
-set(h_all.edit_trajDisplayLength,'String',sprintf('%i', traj_displayLength), 'Callback', @dispLengthCallback);
+set(h_all.edit_ampThresh, 'Callback', @callback_FloatEdit_Plus_Update);
+setNum(h_all.edit_ampThresh, 0);
+set(h_all.edit_snrThresh, 'Callback', @callback_FloatEdit_Plus_Update);
+setNum(h_all.edit_snrThresh, 0);
 
 % Checkbox
 set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
 
-
 % Timer -> this controls playing the movie
 h_all.timer = timer(...
     'ExecutionMode', 'fixedDelay', ...    % Run timer repeatedly
-    'Period', round(1/FPS*1000)/1000, ... % Initial period is 1 sec. Limit to millisecond precision
+    'Period', round(1/FPS*1000)/1000, ... % Initial period is 1 sec. Limited to millisecond precision
     'TimerFcn', @onTimerUpdate, ...
     'StartFcn', @onTimerStart, ...
     'StopFcn',  @onTimerStop); % Specify callback
@@ -84,26 +82,17 @@ h_all.timer = timer(...
 
 
 % -- Preparation for plotting --
-% Convert data into cell array which is better for plotting
-% Each cell saves frame|x|y for one track
-if isempty(trajectoryData)
-    id_tracks = [];
-    n_tracks = 0;
-else
-    id_tracks = unique(trajectoryData(:,1));
-    n_tracks = numel(id_tracks);
-end
+% Convert data into format better for plotting
+% (for Matlabs column major memory layout)
+fitData_xCoords = squeeze(fitData(1,:,:));
+fitData_yCoords = squeeze(fitData(2,:,:));
+fitData_Amplitude = squeeze(fitData(3,:,:));
+fitData_Background = squeeze(fitData(4,:,:));
+fitData_SNR = fitData_Amplitude./fitData_Background;
 
-cell_traj = cell(n_tracks ,1);
-cnt = 1;
-for iTrack = 1:n_tracks
-    cell_traj{iTrack} = trajectoryData( trajectoryData(:,1)== id_tracks(cnt) , 2:4);
-    cnt = cnt+1;
-end
-
-% Create the color pool
-track_colors = [];
-drawColors(n_colors);
+% Draw the marker color depending on background color
+marker_color = [];
+drawColors();
 
 
 % Plot first frame to get limits right
@@ -132,6 +121,51 @@ end
 
 
 % --- Nested Functions ---
+
+% Get numeric value of edit field
+    function value = getNum(hObj)
+        value = str2num(get(hObj,'String'));
+    end
+
+% Set numeric value of edit field
+    function setNum(hObj,value,isInteger)
+        %         value = num2str(value);
+        if nargin<3 || isempty(isInteger)
+            isInteger = false;
+        end
+        
+        if isInteger
+            set(hObj,'String',sprintf('%i',value));
+        else
+            set(hObj,'String',sprintf('%.2f',value));
+        end
+    end
+
+% Callback for an edit field taking only values between minVal and maxVal
+% Causes the plot to be redrawn
+    function callback_FloatEdit_Plus_Update(hObj,event, minVal, maxVal)
+        if nargin<3 || isempty(minVal);
+            minVal=-inf;
+        end
+        if nargin<4 || isempty(maxVal);
+            maxVal=inf;
+        end
+        
+        % Check if a valid number was entered
+        value = str2num(get(hObj, 'String'));
+        if isempty(value)
+            set(hObj,'ForegroundColor','r');
+            set(hObj,'String','INVALID');
+            uicontrol(hObj);
+        else
+            value = max(minVal,value);
+            value = min(maxVal,value);
+            set(hObj,'ForegroundColor','k');
+            set(hObj,'String',sprintf('%.2f',value));
+        end
+        
+        updateFrameDisplay();
+    end
 
 % The main function of the application. This plays the movie if the
 % timer is running
@@ -165,7 +199,6 @@ end
 
     function onTimerStop(timer, event)
         set(h_all.but_play,'String','Play');
-        elapsed_time = 0;
     end
 
 % Used to display the current frame as selected by the 'frame' variable
@@ -184,10 +217,7 @@ end
         drawnow; % Important! Or Matlab will skip drawing for high FPS
     end
 
-% Plots the frame with the input index
-% Note: probably a huge speedup can be achieved by implementing incremental
-% plotting (only adding new data) and manually keeping track of the
-% trajectories beeing drawn (for deletion)
+    % Plots the frame with the input index
     function plotFrame(iF)
         imagesc(movie(:,:,iF)); axis image; colormap gray;
         if use_bw
@@ -197,30 +227,32 @@ end
         end
         %     title(sprintf('Frame %i/%i',iF,size(movie,3)));
         
-        % Draw the tracks of currently visible particles
-        hold on;
-        for iTr = 1:n_tracks
-            % skip tracks not yet visible (iF <...) or not visible any more
-            % (iF > ...). If traj_lifetime>0 the tracks are displayed for
-            % the given number of frames longer.
-            if iF < cell_traj{iTr}(1,1) || iF > cell_traj{iTr}(end,1) + traj_lifetime
-                continue
-            end
-            % Plot trajectories a) only the last traj_displayLength positoins AND  b) up to the current frame
-            mask_toPlot = ((cell_traj{iTr}(:,1)>iF-traj_displayLength) & cell_traj{iTr}(:,1)<=iF);
-            plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:));
+        % By default all particels are drawn
+        ampMask = ones(size(fitData_Amplitude,1),1);
+        snrMask = ones(size(fitData_Amplitude,1),1);
+        
+        % If thresholds are specified we filter the list of particles
+        ampThresh = getNum(h_all.edit_ampThresh);
+        snrThresh = getNum(h_all.edit_snrThresh);
+        if( ~isempty(ampThresh) && ~(ampThresh==0) )
+            ampMask = fitData_Amplitude(:,iF)>ampThresh;
         end
+        if( ~isempty(ampThresh) && ~(snrThresh==0) )
+            snrMask = fitData_SNR(:,iF)>snrThresh;
+        end
+        toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-noise
+
+        % Draw all particles above the given tresholds
+        hold on;            
+        plot(fitData_xCoords(toPlotMask,iF), fitData_yCoords(toPlotMask, iF), 'o','Color',marker_color);
         hold off;        
     end
 
-% Switch play/pause by button
+    % Switch play/pause by button
     function playCallback(hObj, eventdata)
-        % Replay movie if at end
         if frame == size(movie,3)
             frame = 1;
         end
-        
-        % switch the timer state
         if strcmp(get(h_all.timer, 'Running'), 'off')
             start(h_all.timer);
         else
@@ -262,7 +294,7 @@ end
         
         use_bw = ~use_bw;
         
-        drawColors(n_colors); % Recompute colors
+        drawColors(); % Recompute colors
         
         if isTimerOn
             start(h_all.timer);
@@ -272,7 +304,18 @@ end
         
     end
 
-    % Update the movie FPS
+    % Recompute the colors based on the current background
+    function drawColors()
+        if use_bw
+            bg = {'k'}; % background color
+        else
+            bg = {'r'};
+        end
+        
+        marker_color = distinguishable_colors(1, bg);
+    end
+
+% Update the movie FPS
     function fpsCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -298,83 +341,8 @@ end
         end
     end
 
-    % Update the lifetime of tracks
-    function lifetimeCallback(hObj, eventdata)
-        isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
-        if isTimerOn
-            stop(h_all.timer);
-        end
-        
-        traj_lifetime = round(str2num(get(h_all.edit_lifetime,'String')));
-        if traj_lifetime<=0 || isempty(traj_lifetime)
-            traj_lifetime = 0;
-        end
-        set(h_all.edit_lifetime,'String',sprintf('%i%',traj_lifetime));
-        
-        if isTimerOn
-            start(h_all.timer);
-        else
-            updateFrameDisplay();
-        end
-    end
-
-    % Update the displayed length of trajectories
-    function dispLengthCallback(hObj, eventdata)
-        isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
-        if isTimerOn
-            stop(h_all.timer);
-        end
-        
-        traj_displayLength = round(str2num(get(h_all.edit_trajDisplayLength,'String')));
-        if traj_displayLength<=0 || isempty(traj_displayLength)
-            traj_displayLength = 0;
-        end
-        set(h_all.edit_trajDisplayLength,'String',sprintf('%i%',traj_displayLength));
-        
-        if isTimerOn
-            start(h_all.timer);
-        else
-            updateFrameDisplay();
-        end
-    end
-
-    % The user entered a different number of colors -> update color pool
-    function colorCallback(hObj, eventdata)
-        isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
-        if isTimerOn
-            stop(h_all.timer);
-        end
-        
-        n_colors = round(str2num(get(h_all.edit_colors,'String')));
-        if n_colors<=0 || isempty(n_colors)
-            n_colors = 1;
-        end
-        set(h_all.edit_colors,'String',sprintf('%i%',n_colors));
-        
-        drawColors(n_colors);
-        
-        if isTimerOn
-            start(h_all.timer);
-        else
-            updateFrameDisplay();
-        end
-    end
-
-    % Recompute the colors based on the current background
-    function drawColors(num_colors)
-        % create colors
-        if use_bw % background color
-            bg = {'k','w'};
-        else
-            bg = {'r','w'};
-        end
-        
-        track_colors = repmat( distinguishable_colors(num_colors, bg), ceil(n_tracks/num_colors) ,1);
-        track_colors = track_colors(1:n_tracks,:);
-    end
-
-    % This is called after letting the slider go. We update the frame display 
-    % once more, otherwise synchronisation issues can occur.
+% This is called after letting the slider go. We update the frame display
+% once more, otherwise synchronisation issues can occur.
     function sliderCallback(hObj, eventdata)
         updateFrameDisplay();
         elapsed_time = 0;
@@ -415,27 +383,11 @@ end
             FPS = 30;
         end
         
-        if num_argin <4 || isempty(traj_lifetime)
-            traj_lifetime = 0;
-        else
-            traj_lifetime = round(traj_lifetime);
-        end
-        
-        if num_argin < 5 || isempty(n_colors) || n_colors<=1
-            n_colors = 20;
-        else
-            n_colors = round(n_colors);
-        end
-        
-        if num_argin <6 || isempty(use_bw)
+        if num_argin <4 || isempty(use_bw)
             use_bw = false;
         end
         
-        if num_argin < 7 || isempty(traj_displayLength)
-            traj_displayLength = inf;
-        end
-        
-        if num_argin < 8 || isempty(show_RunAgain)
+        if num_argin < 5 || isempty(show_RunAgain)
             show_RunAgain = false;
         end
         
@@ -448,7 +400,7 @@ end
         end
         delete(h_all.timer);
         
-        % Dialog used in preview  mode for getting return values.
+        % Dialog used in DEMO mode for getting return values.
         if show_RunAgain
             d = dialog('Position',[300 300 220 100],'Name','Run again?','WindowStyle','normal');
             
