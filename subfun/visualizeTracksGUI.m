@@ -364,9 +364,9 @@ end
     function drawColors(num_colors)
         % create colors
         if use_bw % background color
-            bg = {'k','w'};
+            bg = {'k'};
         else
-            bg = {'r','w'};
+            bg = {'r'};
         end
         
         track_colors = repmat( distinguishable_colors(num_colors, bg), ceil(n_tracks/num_colors) ,1);

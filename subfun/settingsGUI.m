@@ -15,12 +15,13 @@ end
 
 % struct for communication of the GUI to the outside world
 GUIreturns.useSettingsForAll = false;
+GUIreturns.userExit = false;
 
 
 % -- Preparing the GUI --
 h_main = openfig('settingsGUI_Layout.fig');
 set(h_main,'handleVisibility','on'); % Make figure visible to Matlab (might not be the case)
-set(h_main,'CloseRequestFcn',@callback_CloseApp); % For cleanup
+set(h_main,'CloseRequestFcn',@onAppClose); % For cleanup
 
 h_all = guihandles(h_main);
 
@@ -30,7 +31,7 @@ set(h_all.text_title, 'String', GUIinputs.titleText);
 set(h_all.edit_title, 'String', [filename,fileext]);
 set(h_all.button_save, 'Callback', @callback_saveSettings);
 set(h_all.button_load, 'Callback', @callback_loadSettings);
-set(h_all.button_continue, 'Callback',@callback_CloseApp);
+set(h_all.button_continue, 'Callback',@callback_continue);
 set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
 
 % % General options
@@ -127,7 +128,7 @@ uiwait(h_main);
 
     function callback_continueForAll(hObj,event)
         GUIreturns.useSettingsForAll = true;
-        callback_CloseApp(hObj,event); 
+        callback_continue(hObj,event); 
     end
 
     function callback_saveSettings(hObj, event)
@@ -374,9 +375,15 @@ uiwait(h_main);
 
 
 % Cleanup function. This is neccessary to delete the timer!
-    function callback_CloseApp(hObj, event)
+    function callback_continue(hObj, event)
         storeOptions(); % Store the options before closing
         delete(h_main);
+    end
+
+    function onAppClose(hObj, event)
+       storeOptions();
+       GUIreturns.userExit = true;
+       delete(h_main);
     end
 
 end

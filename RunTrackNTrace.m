@@ -9,7 +9,8 @@ GUIinputs.titleText = 'Please select a list of movies to process.';
 GUIinputs.fileText  = 'Default settings for this batch';
 GUIinputs.singleFileMode = false;
 [generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def] = setDefaultOptions();
-[generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIinputs);
+[generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns_def] = settingsGUI(generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIinputs);
+if GUIreturns_def.userExit; error('User abort. Stopping TrackNTrace.'); end;
 
 %% Adjust options for each movie and test settings if desired
 GUIinputs.singleFileMode = true; % No editing of movie list possible
@@ -47,13 +48,13 @@ for i=1:numel(movie_list)
     dark_img = dark_img_def;
     
     % Does the user want to adjust the settings per movie?
-    if not(GUIreturns.useSettingsForAll)
+    if not(GUIreturns_def.useSettingsForAll)
         % Show filename in GUI
         GUIinputs.fileText = filename_movie;
         
         GUIinputs.titleText = 'Adjust movie specific options.';
-        [generalOptions, candidateOptions,fittingOptions,trackingOptions] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
-        
+        [generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+        if GUIreturns.userExit; error(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.')); end;
         
         % Check if different dark movie was given
         if(~strcmp(generalOptions_def.filename_dark_movie, generalOptions.filename_dark_movie))
@@ -70,7 +71,11 @@ for i=1:numel(movie_list)
             lastFrameTesting  = 0;
             filename_dark_movie = generalOptions.filename_dark_movie;
             while run_again
-                if not(first_run); [generalOptions, candidateOptions,fittingOptions,trackingOptions] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs); end;
+                if not(first_run);
+                    [generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+                    if GUIreturns.userExit; error(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.')); end;
+                end;
+            
                 if not(generalOptions.previewMode); break; end; % If test mode was disabled by user in the settingsGUI
                 % Check if requested frame interval has changed -> re-read movie if neccessary
                 if (firstFrameTesting ~= generalOptions.firstFrameTesting) || (lastFrameTesting ~= generalOptions.lastFrameTesting)
