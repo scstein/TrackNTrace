@@ -16,6 +16,15 @@ end
 % struct for communication of the GUI to the outside world
 GUIreturns.useSettingsForAll = false;
 GUIreturns.userExit = false;
+GUIreturns.generalOptionsChanged = false;
+GUIreturns.candidateOptionsChanged = false;
+GUIreturns.trackingOptionsChanged  = false;
+
+% Save options at startup
+generalOptions_atStartup = generalOptions; 
+candidateOptions_atStartup = candidateOptions;
+fittingOptions_atStartup = fittingOptions;
+trackingOptions_atStartup = trackingOptions;
 
 
 % -- Preparing the GUI --
@@ -142,12 +151,23 @@ uiwait(h_main);
     end
 
     function callback_loadSettings(hObj,event)
+        % In single file mode, the list of movies to process should not be
+        % changed, we store it and restore after loading the settings
+        if(GUIinputs.singleFileMode)
+           filename_movies = generalOptions.filename_movies;
+        end
+        
        [infile, path] = uigetfile('.mat');
-       if isfloat(infile); return; end; % User clicked cancel
+       if isfloat(infile);
+           return;
+       end; % User clicked cancel
        % Note: Loading has to be done this way, as variables "can not be
        % added to a static workspace" (e.g. the one of this GUI).
        allOptions = load([path,infile],'generalOptions', 'candidateOptions','fittingOptions','trackingOptions');
        generalOptions   = allOptions.generalOptions;
+       if(GUIinputs.singleFileMode)
+          generalOptions.filename_movies = filename_movies;
+       end       
        candidateOptions = allOptions.candidateOptions;
        fittingOptions   = allOptions.fittingOptions;
        trackingOptions  = allOptions.trackingOptions;
@@ -371,6 +391,15 @@ uiwait(h_main);
         trackingOptions.linkingMatrix = getPopup(h_all.popup_linkingMethod); % Only for simpletracker
         trackingOptions.minTrackLength = getNum(h_all.edit_minTrackLength);
         trackingOptions.splitMovieParts = getNum(h_all.edit_splitMovieParts);        
+        
+        
+        %Check if options were changed compared to intial ones
+        GUIreturns.generalOptionsChanged   = ~isequaln(generalOptions_atStartup, generalOptions);
+        GUIreturns.candidateOptionsChanged = ~isequaln(candidateOptions_atStartup, candidateOptions);
+        GUIreturns.fittingOptionsChanged   = ~isequaln(fittingOptions_atStartup, fittingOptions);
+        GUIreturns.trackingOptionsChanged  = ~isequaln(trackingOptions_atStartup, trackingOptions);
+        %Check if preview window changed
+        GUIreturns.testWindowChanged = (generalOptions_atStartup.firstFrameTesting ~= generalOptions.firstFrameTesting) || (generalOptions_atStartup.lastFrameTesting ~= generalOptions.lastFrameTesting);
     end
 
 

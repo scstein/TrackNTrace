@@ -25,7 +25,7 @@ end
 
 % Get timestamp for output files
 time = clock;
-timestamp = sprintf('%i-m%i-d%i-%ih%i',time(1),time(2),time(3),time(4),time(5));
+timestamp = sprintf('%i-m%02i-d%02i-%ih%i',time(1),time(2),time(3),time(4),time(5));
 
 posFit_list = cell(0);
 for i=1:numel(movie_list)
@@ -67,8 +67,6 @@ for i=1:numel(movie_list)
         if generalOptions.previewMode
             run_again = true;
             first_run = true;
-            firstFrameTesting = 0;
-            lastFrameTesting  = 0;
             filename_dark_movie = generalOptions.filename_dark_movie;
             while run_again
                 if not(first_run);
@@ -78,10 +76,8 @@ for i=1:numel(movie_list)
             
                 if not(generalOptions.previewMode); break; end; % If test mode was disabled by user in the settingsGUI
                 % Check if requested frame interval has changed -> re-read movie if neccessary
-                if (firstFrameTesting ~= generalOptions.firstFrameTesting) || (lastFrameTesting ~= generalOptions.lastFrameTesting)
-                    firstFrameTesting = generalOptions.firstFrameTesting;
-                    lastFrameTesting  = generalOptions.lastFrameTesting;
-                    movie = read_tiff(filename_movie, false, [firstFrameTesting, lastFrameTesting]);
+                if first_run || GUIreturns.testWindowChanged
+                    movie = read_tiff(filename_movie, false, [generalOptions.firstFrameTesting, generalOptions.lastFrameTesting]);
                 end
                 % Check if different dark movie was given
                 if(~strcmp(filename_dark_movie, generalOptions.filename_dark_movie))
@@ -90,7 +86,13 @@ for i=1:numel(movie_list)
                     end
                     filename_dark_movie = generalOptions.filename_dark_movie;
                 end
-                [run_again] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions);
+                % IF: this is the first run, the preview window changed or the fitting/candidate options changed locate and
+                % track particles and save fitData. ELSE: reuse fitData acquired in the last run without re-fitting
+                if  first_run || GUIreturns.testWindowChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged
+                    [run_again, fitData_test] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions);
+                else
+                    [run_again] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions, fitData_test);
+                end
                 first_run = false;
             end
         end

@@ -42,6 +42,10 @@ traj_id = 0; %global traj_id, keeps track of every slice
 trajData = [];
 
 
+if ~verbose
+    fprintf('Tracking particles using %s ..\n',method);
+end
+
 switch method
     case 'simpletracker'
         n_frames = size(pos,1); %number of frames
@@ -331,6 +335,10 @@ switch method
         
     otherwise
         error('Unknown tracker ''%s''',method);
+end
+
+if ~verbose
+    fprintf('\b done\n');
 end
 
 end
