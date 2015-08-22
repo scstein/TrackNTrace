@@ -1,4 +1,20 @@
 function [] = TrackNTraceBatch(movie_list,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions,filterOptions)
+% TrackNTraceBatch(movie_list,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions,filterOptions)
+% The function complements RunTrackNTrace in that it can be used to handle
+% a large batch of movies by directly giving all relevant settings and
+% movie names. See RunTrackNTrace for details.
+% 
+% INPUT:
+%     movie_list: cell array of full movie path strings
+%     
+%     dark_img: dark stack correction image
+%     
+%     <default>Options: settings structs
+%     
+%     filterOptions: struct for filtering
+%         .fun: filter function name (must be in search path) .args: cell
+%         array of arguments
+    
 addpath(genpath('external'));
 addpath(genpath('helper'));
 addpath(genpath('subfun'));
@@ -21,7 +37,7 @@ for i=1:numel(movie_list)
     end
     
     % Save options
-    save(filename_fitData,'filename_movie','generalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
+    save(filename_fitData,'filename_movie','generalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img','filterOptions');
     posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
 end
 
@@ -39,11 +55,11 @@ for i=1:numel(posFit_list)
     fitData = locateParticles(movie, dark_img, candidateOptions, fittingOptions);
     
     if ~isempty(filterOptions)
-        filter_eval_string = [filterOptions.fun,'('];
+        filter_eval_string = [filterOptions.fun,'(fitData,'];
         for iArgs=1:numel(filterOptions.args)-1
             filter_eval_string = [filter_eval_string,filterOptions.args{iArgs},',']; %#ok<AGROW>
         end
-        filter_eval_string = [filter_eval_string,filterOptions.args{end},')']; %#ok<AGROW>
+        filter_eval_string = [filter_eval_string,num2str(filterOptions.args{end}),')']; %#ok<AGROW>
         
         fitData = eval(filter_eval_string);
     end
