@@ -117,6 +117,7 @@ frame = 1;
 % calling the GUI until the figure is closed
 if(show_RunAgain)
     uiwait(h_main);
+    drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 end
 
 

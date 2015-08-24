@@ -87,6 +87,7 @@ set(h_all.edit_splitMovieParts, 'Callback', {@callback_positiveIntEdit,1,inf});
 % GUI main
 setOptions();
 uiwait(h_main);
+drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 
     % Update GUI based on currently set values
     function callback_updateGUIstate(hObj, event)        
