@@ -333,6 +333,9 @@ switch method
         end
         %FINISHED track_cg
         
+    case('nn_cpp')       
+        trajData = nn_tracker_cpp(pos,tlen_min,r_max,r_max,gap,[],verbose).';
+        
     otherwise
         error('Unknown tracker ''%s''',method);
 end

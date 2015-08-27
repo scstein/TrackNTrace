@@ -65,6 +65,22 @@ switch(method)
         end
         pos(pos==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
         
+    case('nn_cpp')
+        nrPos = zeros(nrFrames,1);
+        for i=1:nrFrames
+            nrPos(i) = sum(squeeze(fitData(6,:,i)==1)); %error flag is 1?
+        end
+        pos = zeros(6,sum(nrPos));
+        
+        nrPos_cs = [0;cumsum(nrPos)];
+        
+        for jFrame = 1:nrFrames           
+            pos_frame_now = squeeze(fitData(:,:,jFrame));
+            valid_pos = pos_frame_now(6,:)==1; %error flag is 1?
+            pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
+            pos(:,nrPos_cs(jFrame)+1:nrPos_cs(jFrame+1)) = [repmat(jFrame,1,nrPos(jFrame));pos_frame_now(1:5,valid_pos)];
+        end
+        
     otherwise 
         error('Unknown tracker ''%s''',method);
 end
