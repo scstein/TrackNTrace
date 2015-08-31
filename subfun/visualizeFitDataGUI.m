@@ -56,17 +56,20 @@ set(h_all.toptext,'String',sprintf('frame = 1/%i',size(movie,3)));
 % Buttons
 set(h_all.but_play,'Callback',@playCallback);
 set(h_all.but_contrast,'Callback',@contrastCallback);
+set(h_all.but_distribution,'Callback',@distributionCallback);
 
 % Slider
 set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(movie,3) 1/size(movie,3)],'Callback', @sliderCallback);
 hLstn = handle.listener(h_all.slider,'ActionEvent',@updateSlider); % Add event listener for continous update of the shown slider value
 
 % Edit fields
-set(h_all.edit_FPS,'String',sprintf('%i',FPS), 'Callback', @fpsCallback);
-set(h_all.edit_ampThresh, 'Callback', @callback_FloatEdit_Plus_Update);
+set(h_all.edit_FPS,'String',sprintf('%i',FPS), 'Callback', {@fpsCallback,1e-3,1000});
+set(h_all.edit_ampThresh, 'Callback', {@callback_FloatEdit_Plus_Update,0,inf});
 setNum(h_all.edit_ampThresh, 0);
-set(h_all.edit_snrThresh, 'Callback', @callback_FloatEdit_Plus_Update);
+set(h_all.edit_snrThresh, 'Callback', {@callback_FloatEdit_Plus_Update,0,inf});
 setNum(h_all.edit_snrThresh, 0);
+set(h_all.edit_distributionBins, 'Callback', {@callback_intEdit,1,inf});
+setNum(h_all.edit_distributionBins, 30, true);
 
 % Checkbox
 set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
@@ -112,6 +115,10 @@ caxis(zl);
 timePerFrame = round(1/FPS*1000)/1000; % limit to millisecond precision
 elapsed_time = 0;
 frame = 1;
+
+% Filter out data with errorflag == 1 (successful fit)
+% Used for plotting distributions of the values
+valid_fitData = fitData(:,squeeze(fitData(6,:,:)==1));
 
 % In case the RunAgain dialog should be displayed, we stop scripts/functions
 % calling the GUI until the figure is closed
@@ -167,6 +174,28 @@ end
         
         updateFrameDisplay();
     end
+
+    function callback_intEdit(hObj,event, minVal,maxVal)
+        if nargin<3 || isempty(minVal);
+            minVal=0; 
+        end
+        if nargin<4 || isempty(maxVal);
+            maxVal=inf; 
+        end
+            
+        value = round(str2num(get(hObj,'String')));
+        if isempty(value)
+            set(hObj,'ForegroundColor','r');
+            set(hObj,'String','INVALID');
+            uicontrol(hObj);
+        else
+            value = max(minVal,value);
+            value = min(maxVal,value);
+            set(hObj,'ForegroundColor','k');
+            set(hObj,'String',sprintf('%i',value));
+        end
+    end
+
 
 % The main function of the application. This plays the movie if the
 % timer is running
@@ -284,6 +313,18 @@ end
         if isTimerOn
             start(h_all.timer);
         end
+    end
+
+    function distributionCallback(hObj, eventdata)
+        selected_parameter = get(h_all.popup_distribution,'Value');
+        choices = get(h_all.popup_distribution,'String');
+        selected_string = choices{selected_parameter};
+        selected_parameter = selected_parameter+2; % fitData is x,y,A,BG,sigma but popup only A,BG,sigma
+        
+        figure;
+        hist(valid_fitData(selected_parameter,:), getNum(h_all.edit_distributionBins));
+        xlabel(selected_string);
+        ylabel('frequency');
     end
 
     % Switch black-white and hot display mode
