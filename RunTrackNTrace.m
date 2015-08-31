@@ -99,6 +99,7 @@ for i=1:numel(movie_list)
         
     end
     % Save options
+    generalOptions.filename_movies = {filename_movie}; % Save only name of this file in its settings (important when loading options)
     save(filename_fitData,'filename_movie','generalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
     posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
 end

@@ -80,7 +80,7 @@ set(h_all.popup_trackerMethod, 'Callback', @callback_updateGUIstate);
 set(h_all.edit_trackerRadius,'Callback', {@callback_positiveFloatEdit,0,inf});
 set(h_all.edit_maxGap,'Callback', {@callback_positiveIntEdit,0,inf});
 % popup_linkingMethod % Only for simpletracker
-set(h_all.edit_minTrackLength,'Callback',{@callback_positiveIntEdit,2,inf});
+set(h_all.edit_minTrackLength,'Callback',{@callback_positiveIntEdit,1,inf});
 set(h_all.edit_splitMovieParts, 'Callback', {@callback_positiveIntEdit,1,inf});
 % cbx_verbose
 
