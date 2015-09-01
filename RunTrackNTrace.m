@@ -137,7 +137,7 @@ for i=1:numel(posFit_list)
     if (~trackingOptions.enableTracking)
         continue
     end
-    
+
     % Compute trajectories
     fprintf('######\nTracking particles in movie %s.\n',filename_movie);
     trajectoryData = trackParticles(fitData,trackingOptions);

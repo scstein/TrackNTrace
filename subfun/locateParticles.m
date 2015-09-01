@@ -1,5 +1,5 @@
 function [ fitData ] = locateParticles( movie, img_dark, candidateOptions, fittingOptions)
-% function [ fitData ] = locateParticles( movieStack, imgCorrection, candidateOptions, fittingOptions)
+% [ fitData ] = locateParticles( movieStack, imgCorrection, candidateOptions, fittingOptions) 
 % Find locations of bright spots in an image, in this case a movie of
 % fluorescent molecules, and fit a Gaussian distribution to these spots to
 % obtain position, amplitude, background level and standard deviation.
@@ -21,16 +21,14 @@ function [ fitData ] = locateParticles( movie, img_dark, candidateOptions, fitti
 % 
 %     
 % OUTPUT:
-%     fitData: 3D array of Gaussian distribution parameters
-%     (param,particle,frame) for all found particles. The line order is
-%     [x;y;A;B;sigma;flag], the column order is the particle index and the
-%     slice order is the movie frame. The positions x (column) and y (row)
-%     are not corrected by a middle pixel shift, the center of the top left
-%     pixel is [1.0,1.0]. A is the unnormalized amplitude of a Gaussian
-%     distribution A*exp(...)+B with constant background B. flag is the
-%     exit flag of the fitting routine, see psfFit_Image.m for details.
-
-%TODO: multi-gaussian fitting
+%     fitData: 1D cell array of of Gaussian distribution parameters for all
+%     found particles with one cell per frame. The line order in one cell
+%     is [x;y;A;B;sigma;flag], the column order is the particle index. The
+%     positions x (column) and y (row) are not corrected by a middle pixel
+%     shift, the center of the top left pixel is [1.0,1.0]. A is the
+%     unnormalized amplitude of a Gaussian distribution A*exp(...)+B with
+%     constant background B. flag is the exit flag of the fitting routine,
+%     see psfFit_Image.m for details.
 
 % Parse inputs
 global img_bck_mean img_bck_std %global variable is needed for intensity weighted filtering to improve performance as background is only calculated every bck_interval frames
@@ -80,26 +78,16 @@ else
 end
 
 nrCandidates = size(candidatePos,1);
-
-if calc_once
-    if nrCandidates > 0
-        fitData = zeros(6,nrCandidates,nrFrames); 
-    else
-        fitData = zeros(6,100,nrFrames);
-    end
-else
-    if nrCandidates > 0
-        fitData = zeros(6,10*nrCandidates,nrFrames); %blow up array, delete nonsensical entries later
-    else
-        fitData = zeros(6,100,nrFrames);
-    end
-end
+fitData = cell(nrFrames,1);
 
 if nrCandidates>0
+    fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );    
     if fit_forward
-        fitData(:,1:nrCandidates,1) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+        fitData(1) = {fitData_temp(:,fitData_temp(end,:)==1)}; %only keep fits with positive exit flag
+        nrCandidates = size(fitData{1},2);
     else
-        fitData(:,1:nrCandidates,nrFrames) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+        fitData(nrFrames) = {fitData_temp(:,fitData_temp(end,:)==1)};
+        nrCandidates = size(fitData{nrFrames},2);
     end
 end
 
@@ -131,7 +119,8 @@ if(fit_forward)
         end
         
         if calc_once %in this case, fitted positions of the last frame serve as candidates for this frame
-            fitData(:,:,iF) = psfFit_Image( img, fitData(:,:,iF-1), [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+            fitData_temp = psfFit_Image( img, fitData{iF-1}, [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
         else %otherwise, find new candidates
             if cand_corr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
@@ -144,7 +133,8 @@ if(fit_forward)
                 nrCandidates = nrCandidatesNew;
             end
             if nrCandidatesNew>0
-                fitData(:,1:nrCandidatesNew,iF) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
             end
         end   
     end
@@ -168,7 +158,8 @@ else %otherwise, we go backward in time
         end
         
         if calc_once
-            fitData(:,:,iF) = psfFit_Image( img, fitData(:,:,iF+1), [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+            fitData_temp = psfFit_Image( img, fitData{iF+1}, [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
         else
             if cand_corr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
@@ -181,7 +172,8 @@ else %otherwise, we go backward in time
                 nrCandidates = nrCandidatesNew;
             end
             if nrCandidatesNew>0
-                fitData(:,1:nrCandidatesNew,iF) = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
             end
         end          
     end
@@ -209,7 +201,6 @@ rewPrintf('Fitting done.\n');
         msgAccumulator = '';
     end
 
-fitData = fitData(:,1:nrCandidates,:); %remove empty entries
 clear global img_bck_mean img_bck_std %get rid of global variables again
 end
 

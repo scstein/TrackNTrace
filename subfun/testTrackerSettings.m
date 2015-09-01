@@ -12,11 +12,11 @@ function [run_again, fitData] = testTrackerSettings(movie,dark_stack,candidateOp
 % end
 
 
-% slicing up a small movie diesn't make sense, so don't
+% slicing up a small movie doesn't make sense, so don't
 trackingOptions.splitMovieParts = 1;
 
 % if not supplied by the user, get the particle positions
-if nargin < 6 || isempty(fitData)
+if nargin < 6 || isempty(vertcat(fitData{:}))
    fitData = locateParticles(movie, dark_stack, candidateOptions, fittingOptions);    
 end
 % track the particles
