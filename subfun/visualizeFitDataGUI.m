@@ -57,7 +57,7 @@ else
     fitData_yCoords = squeeze(fitData(2,:,:));
     fitData_Amplitude = squeeze(fitData(3,:,:));
     fitData_Background = squeeze(fitData(4,:,:));
-    fitData_SNR = fitData_Amplitude./sqrt(fitData_Background);
+    fitData_SBR = fitData_Amplitude./fitData_Background;
     
     % Filter out data with errorflag == 1 (successful fit)
     % Used for plotting distributions of the values
@@ -187,12 +187,12 @@ end
 
     function callback_intEdit(hObj,event, minVal,maxVal)
         if nargin<3 || isempty(minVal);
-            minVal=0; 
+            minVal=0;
         end
         if nargin<4 || isempty(maxVal);
-            maxVal=inf; 
+            maxVal=inf;
         end
-            
+        
         value = round(str2num(get(hObj,'String')));
         if isempty(value)
             set(hObj,'ForegroundColor','r');
@@ -257,7 +257,7 @@ end
         drawnow; % Important! Or Matlab will skip drawing for high FPS
     end
 
-    % Plots the frame with the input index
+% Plots the frame with the input index
     function plotFrame(iF)
         imagesc(movie(:,:,iF)); axis image; colormap gray;
         if use_bw
@@ -266,20 +266,21 @@ end
             colormap hot;
         end
         %     title(sprintf('Frame %i/%i',iF,size(movie,3)));
+               
+        % If thresholds are specified we filter the list of particles
+        ampThresh = getNum(h_all.edit_ampThresh);
+        snrThresh = getNum(h_all.edit_snrThresh);
         
         if (LEGACY)
             % By default all particels are drawn
             ampMask = ones(size(fitData_Amplitude,1),1);
             snrMask = ones(size(fitData_Amplitude,1),1);
             
-            % If thresholds are specified we filter the list of particles
-            ampThresh = getNum(h_all.edit_ampThresh);
-            snrThresh = getNum(h_all.edit_snrThresh);
             if( ~isempty(ampThresh) && ~(ampThresh==0) )
                 ampMask = fitData_Amplitude(:,iF)>ampThresh;
             end
             if( ~isempty(ampThresh) && ~(snrThresh==0) )
-                snrMask = fitData_SNR(:,iF)>snrThresh;
+                snrMask = fitData_SBR(:,iF)>snrThresh;
             end
             toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-noise
             
@@ -288,13 +289,27 @@ end
             plot(fitData_xCoords(toPlotMask,iF), fitData_yCoords(toPlotMask, iF), 'o','Color',marker_color);
             hold off;
         else
+            if(isempty(fitData{iF})); return; end; % Jump empty frames
+            
+            % By default all particels are drawn
+            ampMask = ones(size(fitData{iF},1),1);
+            snrMask = ones(size(fitData{iF},1),1);
+            
+            if( ~isempty(ampThresh) && ~(ampThresh==0) )
+                ampMask = fitData{iF}(:,3)>ampThresh;
+            end
+            if( ~isempty(ampThresh) && ~(snrThresh==0) )
+                snrMask = (fitData{iF}(:,3)./fitData{iF}(:,4))>snrThresh;
+            end
+            toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-background
+            
             hold on;
-            plot(fitData{iF}(:,1), fitData{iF}(:,2), 'o','Color',marker_color);
-            hold off;            
+            plot(fitData{iF}(toPlotMask,1), fitData{iF}(toPlotMask,2), 'o','Color',marker_color);
+            hold off;
         end
     end
 
-    % Switch play/pause by button
+% Switch play/pause by button
     function playCallback(hObj, eventdata)
         if frame == size(movie,3)
             frame = 1;
@@ -306,7 +321,7 @@ end
         end
     end
 
-    % Stop playing, adjust contrast, continue
+% Stop playing, adjust contrast, continue
     function contrastCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -336,8 +351,8 @@ end
         choices = get(h_all.popup_distribution,'String');
         selected_string = choices{selected_parameter};
         selected_parameter = selected_parameter+2; % fitData is x,y,A,BG,sigma but popup only A,BG,sigma
-
-        figure;        
+        
+        figure;
         if(LEGACY)
             hist(valid_fitData(selected_parameter,:), getNum(h_all.edit_distributionBins));
         else
@@ -351,7 +366,7 @@ end
         ylabel('frequency');
     end
 
-    % Switch black-white and hot display mode
+% Switch black-white and hot display mode
     function bwCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -370,7 +385,7 @@ end
         
     end
 
-    % Recompute the colors based on the current background
+% Recompute the colors based on the current background
     function drawColors()
         if use_bw
             bg = {'k'}; % background color
