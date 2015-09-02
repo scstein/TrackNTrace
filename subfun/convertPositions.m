@@ -22,38 +22,40 @@ end
 nrFrames = size(fitData,1);
 
 
-switch(method)        
+switch(method)
     case('utrack') %complex tracker searching for global optimum, VERY memory intensive for large number of particles
         pos = repmat(struct('xCoord',[],'yCoord',[],'amp',[],'sigma',[]),nrFrames,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
         for iFrame=1:nrFrames
+            if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
             pos_frame_now = fitData{iFrame};
             valid_pos = pos_frame_now(:,6)==1; %error flag is 1?
             nCand = sum(valid_pos);
             pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
-            if nCand>0
-                pos(iFrame).xCoord = [pos_frame_now(valid_pos,1),zeros(nCand,1)]; %careful, check if error should be >0!
-                pos(iFrame).yCoord = [pos_frame_now(valid_pos,2),zeros(nCand,1)];
-                pos(iFrame).amp = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
-                pos(iFrame).sigma = [pos_frame_now(valid_pos,5),zeros(nCand,1)];
-            end
+            
+            pos(iFrame).xCoord = [pos_frame_now(valid_pos,1),zeros(nCand,1)]; %careful, check if error should be >0!
+            pos(iFrame).yCoord = [pos_frame_now(valid_pos,2),zeros(nCand,1)];
+            pos(iFrame).amp = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
+            pos(iFrame).sigma = [pos_frame_now(valid_pos,5),zeros(nCand,1)];
         end
         
     case('nn_cpp')
         nrPos = zeros(nrFrames,1);
-        for i=1:nrFrames
-            nrPos(i) = sum((fitData{i}(:,6)==1)); %error flag is 1?
+        for iFrame=1:nrFrames
+            if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
+            nrPos(iFrame) = sum((fitData{iFrame}(:,6)==1)); %error flag is 1?
         end
         pos = zeros(6,sum(nrPos));
         
         nrPos_cs = [0;cumsum(nrPos)];
         
-        for jFrame = 1:nrFrames           
-            pos_frame_now = fitData{jFrame}.';
+        for iFrame = 1:nrFrames
+            if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
+            pos_frame_now = fitData{iFrame}.';
             valid_pos = pos_frame_now(6,:)==1; %error flag is 1?
             pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
-            pos(:,nrPos_cs(jFrame)+1:nrPos_cs(jFrame+1)) = [repmat(jFrame,1,nrPos(jFrame));pos_frame_now(1:5,valid_pos)];
+            pos(:,nrPos_cs(iFrame)+1:nrPos_cs(iFrame+1)) = [repmat(iFrame,1,nrPos(iFrame));pos_frame_now(1:5,valid_pos)];
         end
         
-    otherwise 
+    otherwise
         error('Unknown tracker ''%s''',method);
 end
