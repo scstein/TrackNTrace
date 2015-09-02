@@ -84,11 +84,14 @@ if nrCandidates>0
     fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );    
     if fit_forward
         fitData(1) = {fitData_temp(:,fitData_temp(end,:)==1).'}; %only keep fits with positive exit flag
-        nrCandidates = size(fitData{1},1);
     else
         fitData(nrFrames) = {fitData_temp(:,fitData_temp(end,:)==1).'};
-        nrCandidates = size(fitData{nrFrames},1);
     end
+else
+    if calc_once
+        fprintf('No particles in first frame, switching to always calc. candidates.\n');
+    end
+    calc_once = false;
 end
 
 
