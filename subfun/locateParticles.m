@@ -22,9 +22,9 @@ function [ fitData ] = locateParticles( movie, img_dark, candidateOptions, fitti
 %     
 % OUTPUT:
 %     fitData: 1D cell array of of Gaussian distribution parameters for all
-%     found particles with one cell per frame. The line order in one cell
-%     is [x;y;A;B;sigma;flag], the column order is the particle index. The
-%     positions x (column) and y (row) are not corrected by a middle pixel
+%     found particles with one cell per frame. The column order in one cell
+%     is [x,y,A,B,sigma,flag], the line order is the particle index. The
+%     positions x (img column) and y (img row) are not corrected by a middle pixel
 %     shift, the center of the top left pixel is [1.0,1.0]. A is the
 %     unnormalized amplitude of a Gaussian distribution A*exp(...)+B with
 %     constant background B. flag is the exit flag of the fitting routine,
@@ -83,11 +83,11 @@ fitData = cell(nrFrames,1);
 if nrCandidates>0
     fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );    
     if fit_forward
-        fitData(1) = {fitData_temp(:,fitData_temp(end,:)==1)}; %only keep fits with positive exit flag
-        nrCandidates = size(fitData{1},2);
+        fitData(1) = {fitData_temp(:,fitData_temp(end,:)==1).'}; %only keep fits with positive exit flag
+        nrCandidates = size(fitData{1},1);
     else
-        fitData(nrFrames) = {fitData_temp(:,fitData_temp(end,:)==1)};
-        nrCandidates = size(fitData{nrFrames},2);
+        fitData(nrFrames) = {fitData_temp(:,fitData_temp(end,:)==1).'};
+        nrCandidates = size(fitData{nrFrames},1);
     end
 end
 
@@ -119,8 +119,8 @@ if(fit_forward)
         end
         
         if calc_once %in this case, fitted positions of the last frame serve as candidates for this frame
-            fitData_temp = psfFit_Image( img, fitData{iF-1}, [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
-            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
+            fitData_temp = psfFit_Image( img, fitData{iF-1}.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
         else %otherwise, find new candidates
             if cand_corr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
@@ -129,12 +129,9 @@ if(fit_forward)
             end
             
             nrCandidatesNew = size(candidatePos,1); %to remove empty entries, let's keep track of the largest amount of particles in one frame
-            if nrCandidatesNew > nrCandidates
-                nrCandidates = nrCandidatesNew;
-            end
             if nrCandidatesNew>0
                 fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
-                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
+                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
             end
         end   
     end
@@ -158,8 +155,8 @@ else %otherwise, we go backward in time
         end
         
         if calc_once
-            fitData_temp = psfFit_Image( img, fitData{iF+1}, [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
-            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
+            fitData_temp = psfFit_Image( img, fitData{iF+1}.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
+            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
         else
             if cand_corr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
@@ -168,12 +165,9 @@ else %otherwise, we go backward in time
             end
             
             nrCandidatesNew = size(candidatePos,1);
-            if nrCandidatesNew > nrCandidates
-                nrCandidates = nrCandidatesNew;
-            end
             if nrCandidatesNew>0
                 fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLErefine, halfw, candidateOptions.sigma );
-                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1)};
+                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
             end
         end          
     end

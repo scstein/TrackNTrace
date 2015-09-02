@@ -3,8 +3,7 @@ function [trajData] = trackParticles(pos_file,trackingOptions)
 % This function loads particle positions within movies obtained by the
 % TrackNTrace routine "locateParticles" and passes them to a particle
 % tracking rountine to obtain trajectories. 
-% Supported trackers are: simpletracker, uTrack, track.m by Crocker and
-% Grier
+% Supported trackers are: u-track by Danuser lab, nn_cpp
 % 
 % The position file is loaded and an array suitable for the respective
 % tracker is created. If needed, the file is split up into several parts
@@ -13,9 +12,9 @@ function [trajData] = trackParticles(pos_file,trackingOptions)
 % tracking the two frames adjacent to the split "border"
 % 
 % INPUT:
-%     posFilename: string, Full path of .mat file where result of
-%     locateParticles routine is stored trackingOptions: struct, options for
-%     trackers
+%     posFilename: Either string to TNG MAT file or fitData cell array
+%     containing fitted positions.
+%     trackingOptions: struct, options for trackers
 %     
 % OUTPUT:
 %     trajData: 2D double array, list of trajectories in a suitable format
