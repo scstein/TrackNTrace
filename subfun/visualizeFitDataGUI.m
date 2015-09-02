@@ -31,6 +31,8 @@ function [h_main, run_again] = visualizeFitDataGUI(movie, fitData, FPS, use_bw, 
 % Date: 2015
 %
 
+% TODO: Remove LEGACY Code in future versions
+
 % Parse given inputs. For clarity we outsource this in a function.
 if nargin<2 || isempty(movie) || isempty(fitData)
     fprintf(' Need input (movie,fitData)!\n');
@@ -38,6 +40,29 @@ if nargin<2 || isempty(movie) || isempty(fitData)
 end
 parse_inputs(nargin);
 run_again = false;
+
+% Check if we load the old (matrix) or the new (cell per frame) fitData format
+if( iscell(fitData) )
+    LEGACY = false;
+    
+    % This variable is computed on demand if the user wants to plot
+    % distributions of parameters
+    allFramesData = [];
+else
+    LEGACY = true;
+    % -- Preparation for plotting --
+    % Convert data into format better for plotting
+    % (for Matlabs column major memory layout)
+    fitData_xCoords = squeeze(fitData(1,:,:));
+    fitData_yCoords = squeeze(fitData(2,:,:));
+    fitData_Amplitude = squeeze(fitData(3,:,:));
+    fitData_Background = squeeze(fitData(4,:,:));
+    fitData_SNR = fitData_Amplitude./sqrt(fitData_Background);
+    
+    % Filter out data with errorflag == 1 (successful fit)
+    % Used for plotting distributions of the values
+    valid_fitData = fitData(:,squeeze(fitData(6,:,:)==1));
+end
 
 
 % -- Preparing the GUI --
@@ -69,7 +94,7 @@ setNum(h_all.edit_ampThresh, 0);
 set(h_all.edit_snrThresh, 'Callback', {@callback_FloatEdit_Plus_Update,0,inf});
 setNum(h_all.edit_snrThresh, 0);
 set(h_all.edit_distributionBins, 'Callback', {@callback_intEdit,1,inf});
-setNum(h_all.edit_distributionBins, 30, true);
+setNum(h_all.edit_distributionBins, 50, true);
 
 % Checkbox
 set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
@@ -81,17 +106,6 @@ h_all.timer = timer(...
     'TimerFcn', @onTimerUpdate, ...
     'StartFcn', @onTimerStart, ...
     'StopFcn',  @onTimerStop); % Specify callback
-
-
-
-% -- Preparation for plotting --
-% Convert data into format better for plotting
-% (for Matlabs column major memory layout)
-fitData_xCoords = squeeze(fitData(1,:,:));
-fitData_yCoords = squeeze(fitData(2,:,:));
-fitData_Amplitude = squeeze(fitData(3,:,:));
-fitData_Background = squeeze(fitData(4,:,:));
-fitData_SNR = fitData_Amplitude./fitData_Background;
 
 % Draw the marker color depending on background color
 marker_color = [];
@@ -115,10 +129,6 @@ caxis(zl);
 timePerFrame = round(1/FPS*1000)/1000; % limit to millisecond precision
 elapsed_time = 0;
 frame = 1;
-
-% Filter out data with errorflag == 1 (successful fit)
-% Used for plotting distributions of the values
-valid_fitData = fitData(:,squeeze(fitData(6,:,:)==1));
 
 % In case the RunAgain dialog should be displayed, we stop scripts/functions
 % calling the GUI until the figure is closed
@@ -257,25 +267,31 @@ end
         end
         %     title(sprintf('Frame %i/%i',iF,size(movie,3)));
         
-        % By default all particels are drawn
-        ampMask = ones(size(fitData_Amplitude,1),1);
-        snrMask = ones(size(fitData_Amplitude,1),1);
-        
-        % If thresholds are specified we filter the list of particles
-        ampThresh = getNum(h_all.edit_ampThresh);
-        snrThresh = getNum(h_all.edit_snrThresh);
-        if( ~isempty(ampThresh) && ~(ampThresh==0) )
-            ampMask = fitData_Amplitude(:,iF)>ampThresh;
+        if (LEGACY)
+            % By default all particels are drawn
+            ampMask = ones(size(fitData_Amplitude,1),1);
+            snrMask = ones(size(fitData_Amplitude,1),1);
+            
+            % If thresholds are specified we filter the list of particles
+            ampThresh = getNum(h_all.edit_ampThresh);
+            snrThresh = getNum(h_all.edit_snrThresh);
+            if( ~isempty(ampThresh) && ~(ampThresh==0) )
+                ampMask = fitData_Amplitude(:,iF)>ampThresh;
+            end
+            if( ~isempty(ampThresh) && ~(snrThresh==0) )
+                snrMask = fitData_SNR(:,iF)>snrThresh;
+            end
+            toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-noise
+            
+            % Draw all particles above the given tresholds
+            hold on;
+            plot(fitData_xCoords(toPlotMask,iF), fitData_yCoords(toPlotMask, iF), 'o','Color',marker_color);
+            hold off;
+        else
+            hold on;
+            plot(fitData{iF}(:,1), fitData{iF}(:,2), 'o','Color',marker_color);
+            hold off;            
         end
-        if( ~isempty(ampThresh) && ~(snrThresh==0) )
-            snrMask = fitData_SNR(:,iF)>snrThresh;
-        end
-        toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-noise
-
-        % Draw all particles above the given tresholds
-        hold on;            
-        plot(fitData_xCoords(toPlotMask,iF), fitData_yCoords(toPlotMask, iF), 'o','Color',marker_color);
-        hold off;        
     end
 
     % Switch play/pause by button
@@ -320,9 +336,17 @@ end
         choices = get(h_all.popup_distribution,'String');
         selected_string = choices{selected_parameter};
         selected_parameter = selected_parameter+2; % fitData is x,y,A,BG,sigma but popup only A,BG,sigma
+
+        figure;        
+        if(LEGACY)
+            hist(valid_fitData(selected_parameter,:), getNum(h_all.edit_distributionBins));
+        else
+            if(isempty(allFramesData)) % Concatenate all frames
+                allFramesData = vertcat(fitData{:});
+            end
+            hist(allFramesData(:,selected_parameter), getNum(h_all.edit_distributionBins));
+        end
         
-        figure;
-        hist(valid_fitData(selected_parameter,:), getNum(h_all.edit_distributionBins));
         xlabel(selected_string);
         ylabel('frequency');
     end

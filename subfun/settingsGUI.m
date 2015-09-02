@@ -79,7 +79,6 @@ set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
 set(h_all.popup_trackerMethod, 'Callback', @callback_updateGUIstate);
 set(h_all.edit_trackerRadius,'Callback', {@callback_positiveFloatEdit,0,inf});
 set(h_all.edit_maxGap,'Callback', {@callback_positiveIntEdit,0,inf});
-% popup_linkingMethod % Only for simpletracker
 set(h_all.edit_minTrackLength,'Callback',{@callback_positiveIntEdit,1,inf});
 set(h_all.edit_splitMovieParts, 'Callback', {@callback_positiveIntEdit,1,inf});
 % cbx_verbose
@@ -118,11 +117,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Enable/disable tracking panel
         if get(h_all.cbx_enableTracking, 'Value')
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
-            
-            % Disable linking method except for simpletracker
-            if ~strcmp(getPopup(h_all.popup_trackerMethod), 'simpletracker')
-                set(h_all.popup_linkingMethod,'Enable','off')
-            end
         else
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
         end
@@ -346,7 +340,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.cbx_verbose, 'Value', trackingOptions.verbose);
         setNum(h_all.edit_trackerRadius, trackingOptions.maxRadius);
         setNum(h_all.edit_maxGap, trackingOptions.maxGap, true);
-        setPopup(h_all.popup_linkingMethod, trackingOptions.linkingMatrix) % Only for simpletracker
         setNum(h_all.edit_minTrackLength, trackingOptions.minTrackLength, true);
         setNum(h_all.edit_splitMovieParts, trackingOptions.splitMovieParts, true);  
         
@@ -389,7 +382,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         trackingOptions.verbose = logical(get(h_all.cbx_verbose, 'Value'));
         trackingOptions.maxRadius = getNum(h_all.edit_trackerRadius);
         trackingOptions.maxGap = getNum(h_all.edit_maxGap);
-        trackingOptions.linkingMatrix = getPopup(h_all.popup_linkingMethod); % Only for simpletracker
         trackingOptions.minTrackLength = getNum(h_all.edit_minTrackLength);
         trackingOptions.splitMovieParts = getNum(h_all.edit_splitMovieParts);        
         
