@@ -54,14 +54,12 @@ fittingOptions.useMLErefine = false; %boolean, enables MLE fitting of particle p
 
 % Options for tracking particle positions
 trackingOptions.enableTracking = true;
-trackingOptions.method = 'utrack'; %string, choice of tracker (simpletracker, utrack, or track_cg)
+trackingOptions.method = 'utrack'; %string, choice of tracker (utrack, or nn_cpp)
 trackingOptions.verbose = false; %boolean, enables logging if tracker supports it
 trackingOptions.maxRadius = 6; %double, CAREFUL! maximum search radius of particle connections in pixels
 trackingOptions.maxGap = 0; %intger, maximum allowed gap of empty frames between two particle observations. Set to 0 if no gap closing desired
 trackingOptions.minTrackLength  = 2; %integer, minimum desired length of trajectories
 trackingOptions.splitMovieParts = 1; %integer, splits positions array in X parts and tracks those individually. Might be necessary for utrack due to large memory consumption
- % .. for simpletracker only
-trackingOptions.linkingMatrix = 'NearestNeighbor'; %string, choice of linking algorithm of simpletracker, 'Hungarian' or 'NearestNeighbor'
 % .. for all but utrack
 trackingOptions.probDim = 2; %integer, problem dimension, 2 for xy-position. any tractable dimension (z, amplitude, pattern, background, ...) adds another dimension
 
