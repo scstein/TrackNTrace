@@ -215,7 +215,7 @@ Once you close the preview window, you will get asked to continue testing or abo
 \caption{TrackNTrace GUIs.}
 \end{figure}
 
-\subsection*{Spot candidate/Fitting options}
+\subsection*{Spot candidate options}
 Here, you can control how to roughly identify bright spots in your movies. These spot candidates are later fit and accurate positions and amplitudes get extracted. 
 \begin{itemize}[leftmargin=2cm]
 \item[Loop direction] Movies can be processed in a forward direction, from beginning to end, or backwards. Normally, there is no difference between the two. However, this setting can be used in combination with \textsf{Calculate candidates once} (see below).
@@ -227,24 +227,31 @@ Here, you can control how to roughly identify bright spots in your movies. These
 \item[P-test value] Every emitter's brightness is compared to its background via a hypothesis test, with the background assumed to be Gaussian. Lower means less candidates but higher candidate amplitude. Must be between 1 and 0.
 \item[BG calc. interval] This setting forces a new local background image to be calculated every $n$ frames. Setting a low number results in higher quality localizations at the cost of a severely reduced performance.
 \item[Threshold] This number $t$ is only used in the cross-correlation step and must be between 1 and 0. Choosing a large value for $t$ will make sure only spots which strongly match the Gaussian PSF model are chosen as spot candidates.\\[0pt]%
-%
+\end{itemize}
+
+\subsection*{Fitting options}
+The fitting options let you control how the PSF model is fit to the candidate spots. You can also enable photon conversion here.
+\begin{itemize}[leftmargin=2cm]
 \item[Fit PSF std. dev.] This enables fitting the PSF standard deviation on top of position, amplitude and background. Useful for wide particle size distributions or diffusing molecules.
 \item[Pixel integrated fit] Enables or disables fitting a Gaussian model integrated over one pixel. It more accurately resembles the process of photons hitting the discrete pixel grid of a camera chip surface and is recommended to be enabled [2].
-\item[\smash{\tshortstack[1]{Maximum Likeli- \\hood refinement}}] If enabled, the fitting algorithm uses a combination of Least-squares Minimization and Maximum Likelihood Estimation [2] for parameter optimization.
+\item[\smash{\tshortstack[1]{Maximum Likeli- \\hood refinement}}] If enabled, the fitting algorithm uses a combination of Least-squares Minimization and Maximum Likelihood Estimation [2] for parameter optimization. MLE refinement necessitates converting the camera image counts to photons.
+\item[Photon conversion] This setting enables photon conversion of the original camera image, which can be calculated as $i_\mathrm{photon} = (i_\mathrm{camera} - \mathrm{bias})\times \mathrm{sensitivity}/\mathrm{gain}$. Please note: The number of recorded photons can be converted to the incident photon count by dividing with the quantum efficiency of the camera chip. However, the number of recorded photons, not the photons incident on the chip, is important for the PSF fitting quality.  The option is always enabled if MLE fitting is used
+\item[Bias] After A/D-conversion of the camera chip signal, the image count floor is offset by this number to avoid negative image counts. This value is usually pre-set by the manufacturer or can be altered in the camera software.
+\item[Sensitivity] The sensitivity, given in electrons per count, is used to convert signal counts to signal electrons. It depends on amplification and readout settings and is usually listed in the camera specification sheet.
+\item[Gain] The EM-gain, given in electrons per photon, is used to obtain the original number of signal photons before electron multiplication.
 \end{itemize}
 
 \subsection*{Tracking options}
 This section contains all settings relevant to particle tracking. Tracking can also be disabled altogether by unticking \textsf{Tracking}.
-
 \begin{itemize}[leftmargin=2cm]
 \item[Method] Choose the tracking algorithm you would like to use. Possible methods at this point are \textsf{u-track} [3], and a custom nearest-neighbor tracker written in \CC.
-\item [Link radius] Maximum allowed distance a particle can travel between two frames. A good setting for diffusing particles is $3\sqrt{2 D t_a}$, where $D$ is the diffusion coefficient and $t_a$ is the frame aquisition time.
+\item [Link radius] Maximum allowed distance a particle can travel between two frames in px. A good setting for diffusing particles is $3\sqrt{2 D t_a}$, where $D$ is the diffusion coefficient and $t_a$ is the frame aquisition time.
 \item [Max. gap] Maximum amount of frames a particle can be invisible (e.g. by entering a non-radiative triplet state) between two observations without ending the trajectory prematurely. While useful for stationary, blinking fluorophores, allowing gaps for diffusing particles can severely distort the result. Set to 0 to disable.
 \item [Min. track length] All trajectories shorter than the minimum allowed track length will be discarded automatically. 
 \item [\smash{\tshortstack[1]{Split movie\\into parts}}] Particle tracking can be very memory-intensive and taxing on the CPU when dealing with a large amount of frames and particles, especially when gap closing is enabled. As performance does not scale linearly, splitting the movie into 2 or more parts can boost performance considerably. Choose with care if you do not want to allow tracks being split into smaller segments, e.g. when large gap closing values were chosen.
 \item [Verbose] If enabled, progress updates will be displayed if the tracking algorithm supports it.
 \end{itemize}
-\clearpage
+
 \section{TrackNTrace data structures}
 All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the format \texttt{'moviename\_timestamp\_TNT.mat'}. Here is a list of all variables it contains:
 \begin{table}[!h]
@@ -268,7 +275,7 @@ All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the form
 \end{table}
 
 \section{How TrackNTrace works}\label{sec:in-depth}
-After storing all options, reading in the movie and, if applicable, a closed shutter movie for correction, the fitting routine starts. First, the movie frame is cleaned up by adding a correction image obtained from the closed shutter movie as described in [1]. Then, the respective candidate search function is called for the respective frame and the result is passed to the fit function. Depending on the settings, candidate search is carried out in each frame or only once for the first (or last) frame or an average image of the first few (or last few) frames. In the latter case, fit results from the frame before are passed to the fit function in the next iteration. \\
+After storing all options, reading in the movie and, if applicable, a closed shutter movie for correction, the fitting routine starts. First, the movie frame is cleaned up by adding a correction image obtained from the closed shutter movie as described in [1] and then converted to a photon count image if possible. Then, the respective candidate search function is called for the respective frame and the result is passed to the fit function. Depending on the settings, candidate search is carried out in each frame or only once for the first (or last) frame or an average image of the first few (or last few) frames. In the latter case, fit results from the frame before are passed to the fit function in the next iteration. \\
 Two candidate search mechanism are possible: Normalized cross-correlation and intensity filtering. For cross-correlation, a Gaussian PSF mask is created and the \texttt{normxcorr2} function is called to calculate a correlation image of the original movie frame. This image is then processed with a local maximum filter using \texttt{imdilate}. Pixels with a correlation value higher than the user-provided threshold are accepted as spot candidates. In the intensity filtering step, the image is convolved with a normalized filter kernel  consisting of a moving average window and a Gaussian bell curve of $\sigma = \unit{1}{\mathrm{px}}$ against discretization noise before being processed with a local maximum filter. The kernel has a window size of $w = 2r+1$ where $r$ is the spot radius given by the user. Next, a local background image [4] is calculated and all pixels have to pass two tests: The intensity must be among the top $q\%$ in the image and $1-\mathrm{CDF}(\mu_b,\sigma_b) \leq p$ must hold, where CDF ist the normal distribution cumulative density function, and $\mu_b$ and $\sigma_b$ are mean and standard deviation of the local background. $p$ and $q$ are user-provided thresholds.\\[10pt]
 A list of spot candidate positions is passed to a \texttt{Mex} file which handles all fitting procedures. First, a square quadrant $I_\mathrm{exp}$ around a candidate pixel is fit to a 2D Gaussian,
 \begin{align*}
@@ -278,7 +285,7 @@ where $\theta = (A,\mu_x,\mu_y,B,\sigma)$. Fitting $\sigma$ can be disabled by t
 \begin{align*}
 I_\mathrm{theo, px} &= \int\limits^{+1\slash 2}_{-1\slash 2} \D x \int\limits^{+1\slash 2}_{-1\slash 2} \D y\: I_\mathrm{theo} \\
 &= \frac{A \pi \sigma^2}{2}\cdot \left[\mathrm{erfc}\,\left(-\frac{x-\mu_x+1\slash 2}{\sqrt{2} \sigma}\right) - \mathrm{erfc}\,\left(-\frac{x-\mu_x-1\slash 2}{\sqrt{2} \sigma}\right)\right] \times \\
-&\quad \left[\mathrm{erfc}\,\left(-\frac{y-\mu_y+1\slash 2}{\sqrt{2} \sigma}\right) - \mathrm{erfc}\,\left(-\frac{y-\mu_x-1\slash 2}{\sqrt{2} \sigma}\right)\right] +B
+&\quad \left[\mathrm{erfc}\,\left(-\frac{y-\mu_y+1\slash 2}{\sqrt{2} \sigma}\right) - \mathrm{erfc}\,\left(-\frac{y-\mu_y-1\slash 2}{\sqrt{2} \sigma}\right)\right] +B
 \end{align*}
 Here, $\mathrm{erfc}$ is the complementary error function. Note that $x$- and $y$- dimension are decoupled, meaning that the two terms only have to be calculated once for one column and one line. Residual minimization is done by a Least-squares Levenberg-Marquardt algorithm. The result can be fitted again using Maximum Likelihood Estimation which is proven to yield the best possible result [2]:
 \begin{align*}
@@ -296,8 +303,8 @@ While all tracking algorithms are handled more or less the same, u-Track is an e
 \section{References}
 \begin{itemize}
 \item [{[1]}]  Hirsch M, Wareham RJ, Martin-Fernandez ML, Hobson MP, Rolfe DJ: A Stochastic Model for Electron Multiplication Charge-Coupled Devices – From Theory to Practice. PLoS ONE 8(1), 2012.
-\item [{[2]}] Mortensen, KI, Churchman SL, Spudich, JA, Flyvbjerg H: Optimized localization analysis for single-molecule tracking and super-resolution microscopy. Nature Methods 7, 377 - 381, 2010.
-\item [{[3]}] Jaqaman K et al: Robust single-particle tracking in live-cell time-lapse sequences. Nature Methods 5, 695 - 702, 2008.
+\item [{[2]}] Mortensen, KI, Churchman SL, Spudich, JA, Flyvbjerg H: Optimized localization analysis for single-molecule tracking and super-resolution microscopy. Nature Methods 7, 377 {--} 381, 2010.
+\item [{[3]}] Jaqaman K et al: Robust single-particle tracking in live-cell time-lapse sequences. Nature Methods 5, 695 {--} 702, 2008.
 
 \end{itemize}
 
