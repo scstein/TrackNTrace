@@ -88,7 +88,7 @@ for i=1:numel(movie_list)
                 end
                 % IF: this is the first run, the preview window changed or the fitting/candidate options changed locate and
                 % track particles and save fitData. ELSE: reuse fitData acquired in the last run without re-fitting
-                if  first_run || GUIreturns.testWindowChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged
+                if  first_run || GUIreturns.testWindowChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged || GUIreturns.fittingOptionsChanged
                     [run_again, fitData_test] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions);
                 else
                     [run_again] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions, fitData_test);
@@ -124,7 +124,6 @@ end
 clear fitData movie
 %% TODO
 % correct for half pixel shift?
-% convert amplitude to photons
 % keep amplitude even if tracker cant manage
 % replace Ptest by something better? --> amp>mean+k*std, k by user
 % automatically determine if memory large enough

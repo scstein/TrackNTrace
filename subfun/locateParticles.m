@@ -37,75 +37,76 @@ img_bck_std = zeros(size(movie,1),size(movie,2));
 bck_interval = candidateOptions.backgroundCalculationInterval;
 
 
-fit_forward = candidateOptions.fitForward;
-fit_sigma = fittingOptions.fitSigma;
+fitForward = candidateOptions.fitForward;
+fitSigma = fittingOptions.fitSigma;
 usePixelIntegratedFit = fittingOptions.usePixelIntegratedFit;
 
 useMLE = fittingOptions.useMLErefine;
-if useMLE
-    bias = fittingOptions.photonBias;
+usePhoton = fittingOptions.usePhotonConversion;
+if usePhoton
+    photon_bias = fittingOptions.photonBias;
     photon_factor = fittingOptions.photonSensitivity/fittingOptions.photonGain;
 end
 
-calc_once = candidateOptions.calculateCandidatesOnce;
-cand_corr = candidateOptions.useCrossCorrelation;
+calcOnce = candidateOptions.calculateCandidatesOnce;
+useCorr = candidateOptions.useCrossCorrelation;
 if ~isempty(img_dark) %if correction image is provided, do it
-    correct_dark = true;
+    correctDark = true;
 else
-    correct_dark = false;
+    correctDark = false;
 end
 nrFrames = size(movie,3);
 halfw = round(4*candidateOptions.sigma); %fitting routine window
 
 
 % Trace first frame
-if calc_once %if candidate search only takes place once, an average image is calculated to achieve higher SNR
-    if fit_forward
+if calcOnce %if candidate search only takes place once, an average image is calculated to achieve higher SNR
+    if fitForward
         img = mean(double(movie(:,:,1:candidateOptions.averagingWindowSize)),3);
     else
         img = mean(double(movie(:,:,end:-1:end-candidateOptions.averagingWindowSize+1)),3);
     end
 else
-    if fit_forward
+    if fitForward
         img = double(movie(:,:,1));
     else
         img = double(movie(:,:,end));
     end
 end
 
-if correct_dark %use dark image stack to correct image for camera artifacts
+
+if usePhoton %convert counts to photons
+    img = (img-photon_bias)*photon_factor;
+end
+
+if correctDark %use dark image stack to correct image for camera artifacts
+    if usePhoton
+        img_dark = (img_dark+photon_bias)*photon_factor;
+    end
     img = img+img_dark;
 end
 
-if useMLE
-    if ~correct_dark
-        img = img-bias;
-    end
-    img = img*photon_factor;
-end
-
-
-if cand_corr %find candidates either by cross correlation or intensity filtering
+if useCorr %find candidates either by cross correlation or intensity filtering
     candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
 else
-    candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,true,false); %0: disable neughbours
+    candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,true,false); %0: disable neighbors
 end
 
 nrCandidates = size(candidatePos,1);
 fitData = cell(nrFrames,1);
 
 if nrCandidates>0
-    fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
-    if fit_forward
+    fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
+    if fitForward
         fitData(1) = {fitData_temp(:,fitData_temp(end,:)==1).'}; %only keep fits with positive exit flag
     else
         fitData(nrFrames) = {fitData_temp(:,fitData_temp(end,:)==1).'};
     end
 else
-    if calc_once
+    if calcOnce
         fprintf('No particles in first frame, switching to always calc. candidates.\n');
     end
-    calc_once = false;
+    calcOnce = false;
 end
 
 
@@ -116,7 +117,7 @@ startTime = tic;
 elapsedTime = [];
 lastElapsedTime = 0;
 
-if(fit_forward)
+if(fitForward)
     for iF = 2:nrFrames %first frame has already been dealt with
         elapsedTime = toc(startTime);
         
@@ -129,25 +130,25 @@ if(fit_forward)
             lastElapsedTime = elapsedTime;
         end
         
-        if correct_dark
-            if useMLE
-                img = (double(movie(:,:,iF))+img_dark)*photon_factor;
+        if correctDark
+            if usePhoton
+                img = (double(movie(:,:,iF))-photon_bias)*photon_factor+img_dark;
             else
                 img = double(movie(:,:,iF))+img_dark;
             end
         else
-            if useMLE
-                img = (double(movie(:,:,iF))-bias)*photon_factor;
+            if usePhoton
+                img = (double(movie(:,:,iF))-photon_bias)*photon_factor;
             else
                 img = double(movie(:,:,iF));
             end
         end
         
-        if calc_once %in this case, fitted positions of the last frame serve as candidates for this frame
-            fitData_temp = psfFit_Image( img, fitData{iF-1}.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
+        if calcOnce %in this case, fitted positions of the last frame serve as candidates for this frame
+            fitData_temp = psfFit_Image( img, fitData{iF-1}.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
             fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
         else %otherwise, find new candidates
-            if cand_corr
+            if useCorr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
             else
                 candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,~mod(iF-1,bck_interval),false);
@@ -155,7 +156,7 @@ if(fit_forward)
             
             nrCandidatesNew = size(candidatePos,1); %to remove empty entries, let's keep track of the largest amount of particles in one frame
             if nrCandidatesNew>0
-                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
+                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
                 fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
             end
         end
@@ -173,25 +174,25 @@ else %otherwise, we go backward in time
             lastElapsedTime = elapsedTime;
         end
         
-        if correct_dark
-            if useMLE
-                img = (double(movie(:,:,iF))+img_dark)*photon_factor;
+        if correctDark
+            if usePhoton
+                img = (double(movie(:,:,iF))-photon_bias)*photon_factor+img_dark;
             else
                 img = double(movie(:,:,iF))+img_dark;
             end
         else
-            if useMLE
-                img = (double(movie(:,:,iF))-bias)*photon_factor;
+            if usePhoton
+                img = (double(movie(:,:,iF))-photon_bias)*photon_factor;
             else
                 img = double(movie(:,:,iF));
             end
         end
         
-        if calc_once
-            fitData_temp = psfFit_Image( img, fitData{iF+1}.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
+        if calcOnce
+            fitData_temp = psfFit_Image( img, fitData{iF+1}.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
             fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
         else
-            if cand_corr
+            if useCorr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
             else
                 candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,~mod(nrFrames-iF,bck_interval),false);
@@ -199,7 +200,7 @@ else %otherwise, we go backward in time
             
             nrCandidatesNew = size(candidatePos,1);
             if nrCandidatesNew>0
-                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fit_sigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
+                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
                 fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
             end
         end

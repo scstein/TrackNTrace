@@ -25,18 +25,17 @@ function [trajData] = trackParticles(pos_file,trackingOptions)
 
 %Parse inputs
 method = trackingOptions.method;
-probDim = trackingOptions.probDim;
-r_max = trackingOptions.maxRadius;
+max_radius = trackingOptions.maxRadius;
 gap = trackingOptions.maxGap;
-tlen_min = trackingOptions.minTrackLength;
-n_split = trackingOptions.splitMovieParts;
+min_traj_length = trackingOptions.minTrackLength;
+nrSplit = trackingOptions.splitMovieParts;
 verbose = trackingOptions.verbose;
 
 %Read positions file and convert to array appropriate for respective
 %tracker
 [pos] = convertPositions(pos_file,method);
 
-traj_id = 0; %global traj_id, keeps track of every slice
+traj_id = 0; %global trajectory ID, keeps track of every slice
 
 trajData = [];
 
@@ -48,38 +47,38 @@ end
 switch method        
     case 'utrack'
         n_frames = size(pos,1); %number of frames
-        stack_slice = round(n_frames/n_split); %size of slice if tracking is divided
+        stack_slice = round(n_frames/nrSplit); %size of slice if tracking is divided
         
         %get option structs for utrack
         [gapCloseParam,costMatrices,kalmanFunctions] = parseUtrackOptions(trackingOptions);
         trackingOptions_slice = trackingOptions; trackingOptions_slice.minTrackLength = 2;
         [gapCloseParam_slice,costMatrices_slice,kalmanFunctions_slice] = parseUtrackOptions(trackingOptions_slice);
         
-        for iDiv = 1:n_split %slice position array if memory not large enough
+        for iDiv = 1:nrSplit %slice position array if memory not large enough
             slice = [1+(iDiv-1)*stack_slice,min(iDiv*stack_slice,n_frames)]; %start and end of this slice
             
             %call utrack with probDim=2 as it can only deal with spatial
             %probDims plus amplitude. we only track 2D here
             [tracksFinal,~,~] = trackCloseGapsKalmanSparse(pos(slice(1):slice(2)),costMatrices,gapCloseParam,kalmanFunctions,2,0,verbose);
-            n_tracks = numel(tracksFinal);
+            nrTracks = numel(tracksFinal);
             %seqofEvents: has a 0 where track has gap (NaN in
             %tracksCoordAmp) tracksCoordAmpCG:
             %[x,y,z,amp,xerr,yerr,zerr,amperr,x,y,...] tracksFeatIndxCG:
             %contains start and end frame
             
-            cell_coord_tracks = cell(n_tracks,1);
-            for iTrack = 1:n_tracks
-                nFrames = size(tracksFinal(iTrack).tracksFeatIndxCG,2); %number of frames
+            cell_coord_tracks = cell(nrTracks,1);
+            for iTrack = 1:nrTracks
+                nrFrames = size(tracksFinal(iTrack).tracksFeatIndxCG,2); %number of frames
                 frameStart = tracksFinal(iTrack).seqOfEvents(1,1)+(iDiv-1)*stack_slice; %get relative frame and correct for global frame
                 xyamp = [tracksFinal(iTrack).tracksCoordAmpCG(1:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(2:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(4:8:end).']; %[x,y,amp]
                 
-                cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nFrames,1), (frameStart:frameStart+nFrames-1).', xyamp]}; %[id,frame,x,y,amp]
+                cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nrFrames,1), (frameStart:frameStart+nrFrames-1).', xyamp]}; %[id,frame,x,y,amp]
             end
             
             %finally save data
             trajData = [trajData; vertcat(cell_coord_tracks{:})]; %#ok<AGROW>
             
-            %connect slices, it's impossible to consider gaps between
+            %connect slices; it's impossible to consider gaps between
             %slices, so only connect adjacent frames
             if iDiv>1
                 %get trajectories in frames adjacent to slice border
@@ -99,18 +98,18 @@ switch method
                 if ~isempty(pos_frame_now) && ~isempty(pos_frame_first)
                     try
                         [tracksFinal_sliced,~,~] = trackCloseGapsKalmanSparse(track_slice,costMatrices_slice,gapCloseParam_slice,kalmanFunctions_slice,2,0,verbose);
-                        n_tracks_sliced = numel(tracksFinal_sliced);
+                        nrTracks_sliced = numel(tracksFinal_sliced);
                     catch
                         %very rarely, utrack tries to index a feature track
                         %matrix with a wrong relative index starting at 0
-                        n_tracks_sliced = 0;
+                        nrTracks_sliced = 0;
                     end
                 else
-                    n_tracks_sliced = 0;
+                    nrTracks_sliced = 0;
                 end
                 
-                if n_tracks_sliced>0
-                    for iTrack = 1:n_tracks_sliced
+                if nrTracks_sliced>0
+                    for iTrack = 1:nrTracks_sliced
                         x_pos = tracksFinal_sliced(iTrack).tracksCoordAmpCG(1:8:end).'; %[x_old,x_new]
                         
                         %we cannot get back the respective ids, so we have
@@ -128,7 +127,7 @@ switch method
                     %tracks will have an id which is too high. we'll
                     %correct this now
                     traj_update = 0;
-                    for jId = traj_id+1:traj_id+n_tracks %go through all tracks in newly added slice
+                    for jId = 1+traj_id:nrTracks+traj_id %go through all tracks in newly added slice
                         idx_trajData_update = trajData(:,1)==jId;
                         n_to_update = sum(idx_trajData_update); %is this an unconnected or new track?
                         if n_to_update>0
@@ -138,26 +137,26 @@ switch method
                     end
                     traj_id = traj_id+traj_update; %...and finally update the global id
                 else
-                    traj_id = traj_id+n_tracks; %we are not in the first slice and there's nothing to reconnect. it's time to update the global id
-                end %if n_tracks_sliced>0
+                    traj_id = traj_id+nrTracks; %we are not in the first slice and there's nothing to reconnect. it's time to update the global id
+                end %if nrTracks_sliced>0
             else 
-                traj_id = traj_id+n_tracks; %if in very first slice, there's nothing to reconnect. then just update the global id
+                traj_id = traj_id+nrTracks; %if in very first slice, there's nothing to reconnect. then just update the global id
             end %if iDiv>1
-        end %for iDiv=1:n_split
+        end %for iDiv=1:nrSplit
         
         %remove NaNs resulting from closed gaps
         trajData = trajData(~isnan(trajData(:,end)),:);
         
         % if the movie was split, result array has to be sorted by
         % trajectory id again
-        if n_split>1
+        if nrSplit>1
             [~,idx] = sort(trajData(:,1));
             trajData = trajData(idx,:);
         end
         %FINISHED utrack
         
     case('nn_cpp')       
-        trajData = nn_tracker_cpp(pos,tlen_min,r_max,r_max,gap,[],verbose).';
+        trajData = nn_tracker_cpp(pos,min_traj_length,max_radius,max_radius,gap,[],verbose).';
         
     otherwise
         error('Unknown tracker ''%s''',method);

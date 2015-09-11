@@ -50,8 +50,9 @@ candidateOptions.backgroundCalculationInterval = 10; %integer, local background 
 fittingOptions.fitSigma = false; %boolean, enables fitting of standard deviation. Literature recommends fixed sigma value for non-moving particles
 fittingOptions.usePixelIntegratedFit = true; %boolean, enables pixel integrated Gaussian as fitting model (recommended). Disable for slighter better performance
 fittingOptions.useMLErefine = false; %boolean, enables MLE fitting of particle positions. Performance intensive but more accurate in some cases
+fittingOptions.usePhotonConversion = false; %boolean, enables photon conversion (absolutely necessary for MLE)
 fittingOptions.photonBias = 100; %integer, camera A/D count floor which is added to the image to remove negativ counts
-fittingOptions.photonSensitivity = 4; %double, pre-amplification of CCD signal
+fittingOptions.photonSensitivity = 4; %double, electrons per image count, depends on pre-amp setting and readout mode. Check your camera manual and spec sheet!
 fittingOptions.photonGain = 100; %integer, EMCCD gain of camera
 
 

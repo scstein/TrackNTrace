@@ -8,9 +8,9 @@ function [generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIre
 
 % struct for communication of the outside world to the GUI
 if nargin < 5 || isempty(GUIinputs)
-   GUIinputs.titleText = '';
-   GUIinputs.fileText = '';
-   GUIinputs.singleFileMode = false;
+    GUIinputs.titleText = '';
+    GUIinputs.fileText = '';
+    GUIinputs.singleFileMode = false;
 end
 
 % struct for communication of the GUI to the outside world
@@ -18,10 +18,11 @@ GUIreturns.useSettingsForAll = false;
 GUIreturns.userExit = false;
 GUIreturns.generalOptionsChanged = false;
 GUIreturns.candidateOptionsChanged = false;
+GUIreturns.fittingOptionsChanged = false;
 GUIreturns.trackingOptionsChanged  = false;
 
 % Save options at startup
-generalOptions_atStartup = generalOptions; 
+generalOptions_atStartup = generalOptions;
 candidateOptions_atStartup = candidateOptions;
 fittingOptions_atStartup = fittingOptions;
 trackingOptions_atStartup = trackingOptions;
@@ -36,7 +37,7 @@ h_all = guihandles(h_main);
 
 % Setup GUI specific elements
 set(h_all.text_title, 'String', GUIinputs.titleText);
- [~, filename, fileext] = fileparts(GUIinputs.fileText);
+[~, filename, fileext] = fileparts(GUIinputs.fileText);
 set(h_all.edit_title, 'String', [filename,fileext]);
 set(h_all.button_save, 'Callback', @callback_saveSettings);
 set(h_all.button_load, 'Callback', @callback_loadSettings);
@@ -72,7 +73,11 @@ set(h_all.edit_bgInterval,'Callback', {@callback_positiveIntEdit,1,inf});
 % % Fitting options
 % cbx_fitStddev
 % cbx_usePixelIntegration
-% cbx_useMleRefinement
+set(h_all.cbx_useMleRefinement, 'Callback', @callback_updateGUIstate);
+set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateGUIstate);
+set(h_all.edit_photonBias, 'Callback', {@callback_positiveIntEdit,0,inf});
+set(h_all.edit_photonSensitivity, 'Callback', {@callback_positiveFloatEdit,1.0,inf});
+set(h_all.edit_photonGain, 'Callback', {@callback_positiveIntEdit,1,1000});
 
 % % Tracking
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
@@ -88,8 +93,8 @@ setOptions();
 uiwait(h_main);
 drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 
-    % Update GUI based on currently set values
-    function callback_updateGUIstate(hObj, event)        
+% Update GUI based on currently set values
+    function callback_updateGUIstate(hObj, event)
         % Enable/disable testing fields
         if get(h_all.cbx_previewMode, 'Value');
             set(h_all.edit_firstFrameTesting, 'Enable','on');
@@ -113,6 +118,25 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         else
             set(h_all.edit_avgWinSize, 'Enable','off');
         end
+
+        
+        % Enable/disable mle conversion (necessitates photon conversion)
+        if get(h_all.cbx_useMleRefinement, 'Value')
+            set(h_all.cbx_usePhotonConv, 'Value',true);
+        end
+        
+        % Enable/disable photon conversion
+        if get(h_all.cbx_usePhotonConv, 'Value')
+            set(h_all.edit_photonBias, 'Enable','on');
+            set(h_all.edit_photonSensitivity, 'Enable','on');
+            set(h_all.edit_photonGain, 'Enable','on');
+        else
+            set(h_all.cbx_useMleRefinement, 'Value',false);
+            set(h_all.edit_photonBias, 'Enable','off');
+            set(h_all.edit_photonSensitivity, 'Enable','off');
+            set(h_all.edit_photonGain, 'Enable','off');
+        end
+
         
         % Enable/disable tracking panel
         if get(h_all.cbx_enableTracking, 'Value')
@@ -127,12 +151,12 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.button_movieList,'Enable', 'off');
             set(h_all.button_continueForAll, 'Visible','off');
         end
-
+        
     end
 
     function callback_continueForAll(hObj,event)
         GUIreturns.useSettingsForAll = true;
-        callback_continue(hObj,event); 
+        callback_continue(hObj,event);
     end
 
     function callback_saveSettings(hObj, event)
@@ -149,24 +173,24 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % In single file mode, the list of movies to process should not be
         % changed, we store it and restore after loading the settings
         if(GUIinputs.singleFileMode)
-           filename_movies = generalOptions.filename_movies;
+            filename_movies = generalOptions.filename_movies;
         end
         
-       [infile, path] = uigetfile('.mat');
-       if isfloat(infile);
-           return;
-       end; % User clicked cancel
-       % Note: Loading has to be done this way, as variables "can not be
-       % added to a static workspace" (e.g. the one of this GUI).
-       allOptions = load([path,infile],'generalOptions', 'candidateOptions','fittingOptions','trackingOptions');
-       generalOptions   = allOptions.generalOptions;
-       if(GUIinputs.singleFileMode)
-          generalOptions.filename_movies = filename_movies;
-       end       
-       candidateOptions = allOptions.candidateOptions;
-       fittingOptions   = allOptions.fittingOptions;
-       trackingOptions  = allOptions.trackingOptions;
-       setOptions();
+        [infile, path] = uigetfile('.mat');
+        if isfloat(infile);
+            return;
+        end; % User clicked cancel
+        % Note: Loading has to be done this way, as variables "can not be
+        % added to a static workspace" (e.g. the one of this GUI).
+        allOptions = load([path,infile],'generalOptions', 'candidateOptions','fittingOptions','trackingOptions');
+        generalOptions   = allOptions.generalOptions;
+        if(GUIinputs.singleFileMode)
+            generalOptions.filename_movies = filename_movies;
+        end
+        candidateOptions = allOptions.candidateOptions;
+        fittingOptions   = allOptions.fittingOptions;
+        trackingOptions  = allOptions.trackingOptions;
+        setOptions();
     end
 
     function callback_selectMovieList(hObj,event)
@@ -183,7 +207,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % atach path to every entry in the list
         if iscell(movieList)
             for i=1:length(movieList)
-               movieList{i} =  [path,movieList{i}];
+                movieList{i} =  [path,movieList{i}];
             end
         elseif ischar(movieList)
             movieList = [path,movieList];
@@ -196,7 +220,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         darkMoviePath = get(h_all.edit_darkMovie,'String');
         path = [];
         if ~isempty(darkMoviePath)
-           [path,~,~] = fileparts(darkMoviePath);
+            [path,~,~] = fileparts(darkMoviePath);
         end
         [darkMovie, path] = uigetfile([path,filesep,'*.tif']);
         if( isfloat(darkMovie)); return; end; % User pressed cancel.
@@ -206,10 +230,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
     function callback_positiveFloatEdit(hObj,event, minVal, maxVal)
         if nargin<3 || isempty(minVal);
-            minVal=0; 
+            minVal=0;
         end
         if nargin<4 || isempty(maxVal);
-            maxVal=inf; 
+            maxVal=inf;
         end
         
         value = str2num(get(hObj, 'String'));
@@ -227,12 +251,12 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
     function callback_positiveIntEdit(hObj,event, minVal,maxVal)
         if nargin<3 || isempty(minVal);
-            minVal=0; 
+            minVal=0;
         end
         if nargin<4 || isempty(maxVal);
-            maxVal=inf; 
+            maxVal=inf;
         end
-            
+        
         value = round(str2num(get(hObj,'String')));
         if isempty(value)
             set(hObj,'ForegroundColor','r');
@@ -248,18 +272,18 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
     function str = cell2str(cellObj, delimiter)
         if nargin<2
-           delimiter = ';'; 
+            delimiter = ';';
         end
         
         str = '';
         if(iscell(cellObj))
-           str = cellObj{1};
-           for i=2:length(cellObj)
-               str = [str,delimiter,cellObj{i}];
-           end
+            str = cellObj{1};
+            for i=2:length(cellObj)
+                str = [str,delimiter,cellObj{i}];
+            end
         elseif ischar(cellObj)
             str = cellObj;
-        end        
+        end
     end
 
 
@@ -333,6 +357,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.cbx_fitStddev,'Value', fittingOptions.fitSigma)
         set(h_all.cbx_usePixelIntegration,'Value', fittingOptions.usePixelIntegratedFit)
         set(h_all.cbx_useMleRefinement,'Value',fittingOptions.useMLErefine)
+        set(h_all.cbx_usePhotonConv,'Value',fittingOptions.usePhotonConversion)
+        set(h_all.edit_photonBias,'Value',fittingOptions.photonBias);
+        set(h_all.edit_photonSensitivity,'Value',fittingOptions.photonSensitivity);
+        set(h_all.edit_photonGain,'Value',fittingOptions.photonGain);
         
         % % Tracking
         set(h_all.cbx_enableTracking,'Value', trackingOptions.enableTracking); % --
@@ -341,13 +369,13 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         setNum(h_all.edit_trackerRadius, trackingOptions.maxRadius);
         setNum(h_all.edit_maxGap, trackingOptions.maxGap, true);
         setNum(h_all.edit_minTrackLength, trackingOptions.minTrackLength, true);
-        setNum(h_all.edit_splitMovieParts, trackingOptions.splitMovieParts, true);  
+        setNum(h_all.edit_splitMovieParts, trackingOptions.splitMovieParts, true);
         
         % Update the GUI
         callback_updateGUIstate();
     end
 
- function storeOptions()
+    function storeOptions()
         % % General Options
         generalOptions.filename_movies = strsplit(get(h_all.edit_movieList,'String'), ';');
         generalOptions.filename_dark_movie = get(h_all.edit_darkMovie,'String');
@@ -358,10 +386,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         generalOptions.lastFrameTesting = getNum(h_all.edit_lastFrameTesting);
         
         %             % % Candidate Options
-        candidateOptions.useCrossCorrelation = strcmp(getPopup(h_all.popup_candidateMethod), 'Cross-correlation'); 
-        candidateOptions.fitForward = strcmp(getPopup(h_all.popup_fitDirection), 'Forward'); 
+        candidateOptions.useCrossCorrelation = logical(strcmp(getPopup(h_all.popup_candidateMethod), 'Cross-correlation'));
+        candidateOptions.fitForward = logical(strcmp(getPopup(h_all.popup_fitDirection), 'Forward'));
         candidateOptions.sigma = getNum(h_all.edit_stddev);
-        candidateOptions.calculateCandidatesOnce = get(h_all.cbx_calcOnce, 'Value');
+        candidateOptions.calculateCandidatesOnce = logical(get(h_all.cbx_calcOnce, 'Value'));
         candidateOptions.averagingWindowSize = getNum(h_all.edit_avgWinSize);
         % Only for correlation
         candidateOptions.corrThresh = getNum(h_all.edit_corrThreshold);
@@ -372,18 +400,22 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         candidateOptions.backgroundCalculationInterval = getNum(h_all.edit_bgInterval);
         
         % Fitting options
-        fittingOptions.fitSigma = get(h_all.cbx_fitStddev,'Value');
-        fittingOptions.usePixelIntegratedFit = get(h_all.cbx_usePixelIntegration,'Value');
-        fittingOptions.useMLErefine = get(h_all.cbx_useMleRefinement,'Value');
+        fittingOptions.fitSigma = logical(get(h_all.cbx_fitStddev,'Value'));
+        fittingOptions.usePixelIntegratedFit = logical(get(h_all.cbx_usePixelIntegration,'Value'));
+        fittingOptions.useMLErefine = logical(get(h_all.cbx_useMleRefinement,'Value'));
+        fittingOptions.usePhotonConversion = logical(get(h_all.cbx_usePhotonConv,'Value'));
+        fittingOptions.photonBias = getNum(h_all.edit_photonBias);
+        fittingOptions.photonSensitivity = getNum(h_all.edit_photonSensitivity);
+        fittingOptions.photonGain = getNum(h_all.edit_photonGain);
         
         % % Tracking
-        trackingOptions.enableTracking = get(h_all.cbx_enableTracking,'Value'); % --
+        trackingOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
         trackingOptions.method = getPopup(h_all.popup_trackerMethod);
         trackingOptions.verbose = logical(get(h_all.cbx_verbose, 'Value'));
         trackingOptions.maxRadius = getNum(h_all.edit_trackerRadius);
         trackingOptions.maxGap = getNum(h_all.edit_maxGap);
         trackingOptions.minTrackLength = getNum(h_all.edit_minTrackLength);
-        trackingOptions.splitMovieParts = getNum(h_all.edit_splitMovieParts);        
+        trackingOptions.splitMovieParts = getNum(h_all.edit_splitMovieParts);
         
         
         %Check if options were changed compared to intial ones
@@ -403,9 +435,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
     end
 
     function onAppClose(hObj, event)
-       storeOptions();
-       GUIreturns.userExit = true;
-       delete(h_main);
+        storeOptions();
+        GUIreturns.userExit = true;
+        delete(h_main);
     end
 
 end
