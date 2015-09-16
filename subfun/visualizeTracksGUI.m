@@ -82,7 +82,6 @@ h_all.timer = timer(...
     'StopFcn',  @onTimerStop); % Specify callback
 
 
-
 % -- Preparation for plotting --
 % Convert data into cell array which is better for plotting
 % Each cell saves frame|x|y for one track
@@ -101,10 +100,17 @@ for iTrack = 1:n_tracks
     cnt = cnt+1;
 end
 
+
+
+% Store lineseries handle for each track (faster to plot)
+% For the same reason store handle to the image
+% Handles are set on first use (mostly in plotFrame)
+linehandles = -1*ones(n_tracks,1);
+imagehandle = -1;
+
 % Create the color pool
 track_colors = [];
 drawColors(n_colors);
-
 
 % Plot first frame to get limits right
 % Set x,y,color limits
@@ -118,6 +124,15 @@ plotFrame(1);
 xlim(xl);
 ylim(yl);
 caxis(zl);
+
+
+% Calling this creates handles for all tracks not plotted before.
+% Although this takes some time, the visualizer will respond smoother
+% afterwards. If you uncomment this function, the visualizer starts faster,
+% but may show jerky behaviour during first play as handles for tracks that
+% did not occur before are created on demand.
+setUnitinializedTrackHandles();
+
 
 % Variables for playback
 timePerFrame = round(1/FPS*1000)/1000; % limit to millisecond precision
@@ -172,6 +187,11 @@ end
 % Used to display the current frame as selected by the 'frame' variable
 % Also this sets and saves the axis states (e.g. for zooming);
     function updateFrameDisplay()
+        % Needed to minimize interference with other figures the user
+        % brings into focus. It can be that the images are not plotted to
+        % the GUI then but to the selected figure window
+        set(0,'CurrentFigure',h_main);
+        
         xl = xlim;
         yl = ylim;
         
@@ -182,15 +202,17 @@ end
         ylim(yl);
         caxis(zl);
         
-        drawnow; % Important! Or Matlab will skip drawing for high FPS
+        drawnow; % Important! Or Matlab will skip drawing entirely for high FPS
     end
 
 % Plots the frame with the input index
-% Note: probably a huge speedup can be achieved by implementing incremental
-% plotting (only adding new data) and manually keeping track of the
-% trajectories beeing drawn (for deletion)
     function plotFrame(iF)
-        imagesc(movie(:,:,iF)); axis image; colormap gray;
+        % Plot the movie frame
+        if imagehandle == -1
+            imagehandle = imagesc(movie(:,:,iF)); axis image; colormap gray;
+        else
+            set(imagehandle,'CData',movie(:,:,iF));
+        end
         if use_bw
             colormap gray;
         else
@@ -201,17 +223,40 @@ end
         % Draw the tracks of currently visible particles
         hold on;
         for iTr = 1:n_tracks
-            % skip tracks not yet visible (iF <...) or not visible any more
+            % Don't draw tracks not yet visible (iF <...) or not visible any more
             % (iF > ...). If traj_lifetime>0 the tracks are displayed for
             % the given number of frames longer.
             if iF < cell_traj{iTr}(1,1) || iF > cell_traj{iTr}(end,1) + traj_lifetime
-                continue
+                mask_toPlot = false(size(cell_traj{iTr},1),1);
+            else
+                % Plot trajectories a) only the last traj_displayLength positoins AND  b) up to the current frame
+                mask_toPlot = ((cell_traj{iTr}(:,1)>iF-traj_displayLength) & cell_traj{iTr}(:,1)<=iF);
+            end            
+            
+            % If this trajectory was already plotted before, we just set
+            % its data via its handle (which is fast!). If not, create a
+            % new lineseries by using the plot command.
+            if (linehandles(iTr) == -1)
+                if( sum(mask_toPlot) ~= 0) % only plot the first time we have actual data to display
+                    linehandles(iTr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:));
+                end
+            else
+                set(linehandles(iTr),'xdata',cell_traj{iTr}(mask_toPlot, 2),'ydata', cell_traj{iTr}(mask_toPlot, 3));
             end
-            % Plot trajectories a) only the last traj_displayLength positoins AND  b) up to the current frame
-            mask_toPlot = ((cell_traj{iTr}(:,1)>iF-traj_displayLength) & cell_traj{iTr}(:,1)<=iF);
-            plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:));
         end
         hold off;        
+    end
+
+    % Creates a line handle for every track that was not plotted before
+    function setUnitinializedTrackHandles()
+        hold on;
+        for iTr = 1:n_tracks
+            if(linehandles(iTr)==-1)
+                linehandles(iTr) = plot(cell_traj{iTr}(1, 2), cell_traj{iTr}(1, 3), '.--','Color',track_colors(iTr,:));
+                set(linehandles(iTr),'xdata',[],'ydata',[]);
+            end
+        end
+        hold off;
     end
 
 % Switch play/pause by button
@@ -264,7 +309,7 @@ end
         use_bw = ~use_bw;
         
         drawColors(n_colors); % Recompute colors
-        
+                
         if isTimerOn
             start(h_all.timer);
         else
@@ -372,6 +417,13 @@ end
         
         track_colors = repmat( distinguishable_colors(num_colors, bg), ceil(n_tracks/num_colors) ,1);
         track_colors = track_colors(1:n_tracks,:);
+        
+       % Set the line color for each track
+       for iH = 1:length(linehandles)
+           if(linehandles(iH) ~= -1)
+             set(linehandles(iH),'Color',track_colors(iH,:));
+           end
+       end
     end
 
     % This is called after letting the slider go. We update the frame display 

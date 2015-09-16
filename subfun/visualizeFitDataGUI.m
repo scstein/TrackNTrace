@@ -107,10 +107,15 @@ h_all.timer = timer(...
     'StartFcn', @onTimerStart, ...
     'StopFcn',  @onTimerStop); % Specify callback
 
+
+% Store handles to the plot objects (which is faster)
+% Handles are set on first use (mostly in plotFrame)
+dothandle = -1;
+imagehandle = -1;
+
 % Draw the marker color depending on background color
 marker_color = [];
 drawColors();
-
 
 % Plot first frame to get limits right
 % Set x,y,color limits
@@ -244,6 +249,11 @@ end
 % Used to display the current frame as selected by the 'frame' variable
 % Also this sets and saves the axis states (e.g. for zooming);
     function updateFrameDisplay()
+        % Needed to minimize interference with other figures the user
+        % brings into focus. It can be that the images are not plotted to
+        % the GUI then but to the selected figure window
+        set(0,'CurrentFigure',h_main); 
+        
         xl = xlim;
         yl = ylim;
         
@@ -259,7 +269,12 @@ end
 
 % Plots the frame with the input index
     function plotFrame(iF)
-        imagesc(movie(:,:,iF)); axis image; colormap gray;
+        % Plot the movie frame
+        if imagehandle == -1
+            imagehandle = imagesc(movie(:,:,iF)); axis image; colormap gray;
+        else
+            set(imagehandle,'CData',movie(:,:,iF));
+        end
         if use_bw
             colormap gray;
         else
@@ -286,7 +301,11 @@ end
             
             % Draw all particles above the given tresholds
             hold on;
-            plot(fitData_xCoords(toPlotMask,iF), fitData_yCoords(toPlotMask, iF), 'o','Color',marker_color);
+            if dothandle == -1;
+                dothandle = plot(fitData_xCoords(toPlotMask,iF), fitData_yCoords(toPlotMask, iF), 'o','Color',marker_color);
+            else
+                set(dothandle,'xdata',fitData_xCoords(toPlotMask,iF),'ydata',fitData_yCoords(toPlotMask, iF));
+            end
             hold off;
         else
             if(isempty(fitData{iF})); return; end; % Jump empty frames
@@ -304,7 +323,11 @@ end
             toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-background
             
             hold on;
-            plot(fitData{iF}(toPlotMask,1), fitData{iF}(toPlotMask,2), 'o','Color',marker_color);
+            if dothandle == -1
+                dothandle = plot(fitData{iF}(toPlotMask,1), fitData{iF}(toPlotMask,2), 'o','Color',marker_color);
+            else
+                set(dothandle,'xdata',fitData{iF}(toPlotMask,1),'ydata',fitData{iF}(toPlotMask,2));
+            end
             hold off;
         end
     end
@@ -394,6 +417,9 @@ end
         end
         
         marker_color = distinguishable_colors(1, bg);
+        if dothandle ~= -1
+           set(dothandle,'Color',marker_color);
+        end
     end
 
 % Update the movie FPS
