@@ -81,6 +81,7 @@ set(h_all.toptext,'String',sprintf('frame = 1/%i',size(movie,3)));
 % Buttons
 set(h_all.but_play,'Callback',@playCallback);
 set(h_all.but_contrast,'Callback',@contrastCallback);
+set(h_all.but_autocontrast,'Callback',@autocontrastCallback);
 set(h_all.but_distribution,'Callback',@distributionCallback);
 
 % Slider
@@ -363,6 +364,23 @@ end
         him = imcontrast;
         uiwait(him);
         zl = caxis;
+        
+        if isTimerOn
+            start(h_all.timer);
+        end
+    end
+
+    % Stop playing, set contrast to match image min/max values, continue
+    function autocontrastCallback(hObj, eventdata)
+        isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
+        if isTimerOn
+            stop(h_all.timer);
+        end
+        
+        axes(h_all.axes);
+        currImg = movie(:,:,frame);
+        zl = [min(currImg(:)), max(currImg(:))];
+        caxis(zl);
         
         if isTimerOn
             start(h_all.timer);
