@@ -203,6 +203,13 @@ end
         ylim(yl);
         caxis(zl);
         
+        % Adjust contrast continously if shift key is pressed
+        modifiers = get(gcf,'currentModifier');
+        shiftIsPressed = ismember('shift',modifiers);
+        if(shiftIsPressed)
+           autocontrastCallback([],[]); 
+        end
+        
         drawnow; % Important! Or Matlab will skip drawing entirely for high FPS
     end
 
@@ -302,19 +309,19 @@ end
 
     % Stop playing, set contrast to match image min/max values, continue
     function autocontrastCallback(hObj, eventdata)
-        isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
-        if isTimerOn
-            stop(h_all.timer);
-        end
+        axes(h_all.axes);        
+        xl = xlim; % update the axis limits in case the user zoomed
+        yl = ylim;
         
-        axes(h_all.axes);
-        currImg = movie(:,:,frame);
+%         currImg = movie(:,:,frame); % Take whole frame for autocontrast
+        % Take visible image cutout for autocontrast
+        visibleXRange = max(1,floor(xl(1))):min(size(movie,2),ceil(xl(2)));
+        visibleYRange = max(1,floor(yl(1))):min(size(movie,1),ceil(yl(2)));
+        currImg = movie(visibleYRange,visibleXRange,frame);
+        
+        % Adjust contrast to match min/max intensity
         zl = [min(currImg(:)), max(currImg(:))];
         caxis(zl);
-        
-        if isTimerOn
-            start(h_all.timer);
-        end
     end
 
     % Switch black-white and hot display mode

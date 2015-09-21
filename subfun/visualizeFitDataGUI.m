@@ -89,7 +89,7 @@ set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(mov
 hLstn = handle.listener(h_all.slider,'ActionEvent',@updateSlider); % Add event listener for continous update of the shown slider value
 
 % Edit fields
-set(h_all.edit_FPS,'String',sprintf('%i',FPS), 'Callback', {@fpsCallback,1e-3,1000});
+set(h_all.edit_FPS,'String',sprintf('%i',FPS), 'Callback', @fpsCallback);
 set(h_all.edit_ampThresh, 'Callback', {@callback_FloatEdit_Plus_Update,0,inf});
 setNum(h_all.edit_ampThresh, 0);
 set(h_all.edit_snrThresh, 'Callback', {@callback_FloatEdit_Plus_Update,0,inf});
@@ -265,6 +265,13 @@ end
         ylim(yl);
         caxis(zl);
         
+        % Adjust contrast continously if shift key is pressed
+        modifiers = get(gcf,'currentModifier');
+        shiftIsPressed = ismember('shift',modifiers);
+        if(shiftIsPressed)
+           autocontrastCallback([],[]); 
+        end
+        
         drawnow; % Important! Or Matlab will skip drawing for high FPS
     end
 
@@ -372,19 +379,19 @@ end
 
     % Stop playing, set contrast to match image min/max values, continue
     function autocontrastCallback(hObj, eventdata)
-        isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
-        if isTimerOn
-            stop(h_all.timer);
-        end
+        axes(h_all.axes);        
+        xl = xlim; % update the axis limits in case the user zoomed
+        yl = ylim;
         
-        axes(h_all.axes);
-        currImg = movie(:,:,frame);
+%         currImg = movie(:,:,frame); % Take whole frame for autocontrast
+        % Take visible image cutout for autocontrast
+        visibleXRange = max(1,floor(xl(1))):min(size(movie,2),ceil(xl(2)));
+        visibleYRange = max(1,floor(yl(1))):min(size(movie,1),ceil(yl(2)));
+        currImg = movie(visibleYRange,visibleXRange,frame);
+        
+        % Adjust contrast to match min/max intensity
         zl = [min(currImg(:)), max(currImg(:))];
         caxis(zl);
-        
-        if isTimerOn
-            start(h_all.timer);
-        end
     end
 
     function distributionCallback(hObj, eventdata)
