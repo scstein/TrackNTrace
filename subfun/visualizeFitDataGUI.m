@@ -316,7 +316,10 @@ end
             end
             hold off;
         else
-            if(isempty(fitData{iF})); return; end; % Jump empty frames
+            if(isempty(fitData{iF})); 
+                set(dothandle,'xdata',[],'ydata',[]);
+                return
+            end % Jump empty frames
             
             % By default all particels are drawn
             ampMask = ones(size(fitData{iF},1),1);
