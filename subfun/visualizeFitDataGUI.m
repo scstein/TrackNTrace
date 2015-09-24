@@ -359,14 +359,26 @@ end
         selected_parameter = get(h_all.popup_distribution,'Value');
         choices = get(h_all.popup_distribution,'String');
         selected_string = choices{selected_parameter};
-        selected_parameter = selected_parameter+2; % fitData is x,y,A,BG,sigma but popup only A,BG,sigma
         
-        figure;
         if(isempty(allFramesData)) % Concatenate all frames
             allFramesData = vertcat(fitData{:});
         end
-        hist(allFramesData(:,selected_parameter), getNum(h_all.edit_distributionBins));
         
+        % distribution to plot, must be synchronized with Popup-Menu (h_all.popup_distribution)
+        % Note: fitData is [x,y,A,BG,sigma,errorflag]
+        figure;
+        switch(selected_parameter)
+            case 1 % Amplitude (Peak)
+              hist(allFramesData(:,3), getNum(h_all.edit_distributionBins));
+            case 2 % Intensity (Integral) = Amplitude*2*pi*sigma^2
+              hist(allFramesData(:,3).*allFramesData(:,5).^2*2*pi, getNum(h_all.edit_distributionBins));
+            case 3 % Background
+              hist(allFramesData(:,4), getNum(h_all.edit_distributionBins));
+            case 4 % Psf standard deviation
+              hist(allFramesData(:,5), getNum(h_all.edit_distributionBins));
+            otherwise
+                warning('Unknown distribution to plot.')
+        end
         
         xlabel(selected_string);
         ylabel('frequency');
