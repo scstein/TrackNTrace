@@ -31,8 +31,6 @@ function [h_main, run_again] = visualizeFitDataGUI(movie, fitData, FPS, use_bw, 
 % Date: 2015
 %
 
-% TODO: Remove LEGACY Code in future versions
-
 % Parse given inputs. For clarity we outsource this in a function.
 if nargin<2 || isempty(movie) || isempty(fitData)
     fprintf(' Need input (movie,fitData)!\n');
@@ -41,28 +39,10 @@ end
 parse_inputs(nargin);
 run_again = false;
 
-% Check if we load the old (matrix) or the new (cell per frame) fitData format
-if( iscell(fitData) )
-    LEGACY = false;
-    
-    % This variable is computed on demand if the user wants to plot
-    % distributions of parameters
-    allFramesData = [];
-else
-    LEGACY = true;
-    % -- Preparation for plotting --
-    % Convert data into format better for plotting
-    % (for Matlabs column major memory layout)
-    fitData_xCoords = squeeze(fitData(1,:,:));
-    fitData_yCoords = squeeze(fitData(2,:,:));
-    fitData_Amplitude = squeeze(fitData(3,:,:));
-    fitData_Background = squeeze(fitData(4,:,:));
-    fitData_SBR = fitData_Amplitude./fitData_Background;
-    
-    % Filter out data with errorflag == 1 (successful fit)
-    % Used for plotting distributions of the values
-    valid_fitData = fitData(:,squeeze(fitData(6,:,:)==1));
-end
+% This variable is computed on demand if the user wants to plot
+% distributions of parameters
+allFramesData = [];
+
 
 
 % -- Preparing the GUI --
@@ -86,7 +66,7 @@ set(h_all.but_distribution,'Callback',@distributionCallback);
 
 % Slider
 set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(movie,3) 1/size(movie,3)],'Callback', @sliderCallback);
-hLstn = handle.listener(h_all.slider,'ActionEvent',@updateSlider); % Add event listener for continous update of the shown slider value
+hLstn = handle.listener(h_all.slider,'ActionEvent',@updateSlider); %#ok<NASGU> % Add event listener for continous update of the shown slider value
 
 % Edit fields
 set(h_all.edit_FPS,'String',sprintf('%i',FPS), 'Callback', @fpsCallback);
@@ -253,7 +233,7 @@ end
         % Needed to minimize interference with other figures the user
         % brings into focus. It can be that the images are not plotted to
         % the GUI then but to the selected figure window
-        set(0,'CurrentFigure',h_main); 
+        set(0,'CurrentFigure',h_main);
         
         xl = xlim;
         yl = ylim;
@@ -269,7 +249,7 @@ end
         modifiers = get(gcf,'currentModifier');
         shiftIsPressed = ismember('shift',modifiers);
         if(shiftIsPressed)
-           autocontrastCallback([],[]); 
+            autocontrastCallback([],[]);
         end
         
         drawnow; % Important! Or Matlab will skip drawing for high FPS
@@ -289,58 +269,36 @@ end
             colormap hot;
         end
         %     title(sprintf('Frame %i/%i',iF,size(movie,3)));
-               
+        
         % If thresholds are specified we filter the list of particles
         ampThresh = getNum(h_all.edit_ampThresh);
         snrThresh = getNum(h_all.edit_snrThresh);
         
-        if (LEGACY)
-            % By default all particels are drawn
-            ampMask = ones(size(fitData_Amplitude,1),1);
-            snrMask = ones(size(fitData_Amplitude,1),1);
-            
-            if( ~isempty(ampThresh) && ~(ampThresh==0) )
-                ampMask = fitData_Amplitude(:,iF)>ampThresh;
-            end
-            if( ~isempty(ampThresh) && ~(snrThresh==0) )
-                snrMask = fitData_SBR(:,iF)>snrThresh;
-            end
-            toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-noise
-            
-            % Draw all particles above the given tresholds
-            hold on;
-            if dothandle == -1;
-                dothandle = plot(fitData_xCoords(toPlotMask,iF), fitData_yCoords(toPlotMask, iF), 'o','Color',marker_color);
-            else
-                set(dothandle,'xdata',fitData_xCoords(toPlotMask,iF),'ydata',fitData_yCoords(toPlotMask, iF));
-            end
-            hold off;
-        else
-            if(isempty(fitData{iF})); 
-                set(dothandle,'xdata',[],'ydata',[]);
-                return
-            end % Jump empty frames
-            
-            % By default all particels are drawn
-            ampMask = ones(size(fitData{iF},1),1);
-            snrMask = ones(size(fitData{iF},1),1);
-            
-            if( ~isempty(ampThresh) && ~(ampThresh==0) )
-                ampMask = fitData{iF}(:,3)>ampThresh;
-            end
-            if( ~isempty(ampThresh) && ~(snrThresh==0) )
-                snrMask = (fitData{iF}(:,3)./fitData{iF}(:,4))>snrThresh;
-            end
-            toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-background
-            
-            hold on;
-            if dothandle == -1
-                dothandle = plot(fitData{iF}(toPlotMask,1), fitData{iF}(toPlotMask,2), 'o','Color',marker_color);
-            else
-                set(dothandle,'xdata',fitData{iF}(toPlotMask,1),'ydata',fitData{iF}(toPlotMask,2));
-            end
-            hold off;
+        if(isempty(fitData{iF}));
+            set(dothandle,'xdata',[],'ydata',[]);
+            return
+        end % Jump empty frames
+        
+        % By default all particels are drawn
+        ampMask = ones(size(fitData{iF},1),1);
+        snrMask = ones(size(fitData{iF},1),1);
+        
+        if( ~isempty(ampThresh) && ~(ampThresh==0) )
+            ampMask = fitData{iF}(:,3)>ampThresh;
         end
+        if( ~isempty(ampThresh) && ~(snrThresh==0) )
+            snrMask = (fitData{iF}(:,3)./fitData{iF}(:,4))>snrThresh;
+        end
+        toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-background
+        
+        hold on;
+        if dothandle == -1
+            dothandle = plot(fitData{iF}(toPlotMask,1), fitData{iF}(toPlotMask,2), 'o','Color',marker_color);
+        else
+            set(dothandle,'xdata',fitData{iF}(toPlotMask,1),'ydata',fitData{iF}(toPlotMask,2));
+        end
+        hold off;
+        
     end
 
 % Switch play/pause by button
@@ -380,13 +338,13 @@ end
         end
     end
 
-    % Stop playing, set contrast to match image min/max values, continue
+% Stop playing, set contrast to match image min/max values, continue
     function autocontrastCallback(hObj, eventdata)
-        axes(h_all.axes);        
+        axes(h_all.axes);
         xl = xlim; % update the axis limits in case the user zoomed
         yl = ylim;
         
-%         currImg = movie(:,:,frame); % Take whole frame for autocontrast
+        %         currImg = movie(:,:,frame); % Take whole frame for autocontrast
         % Take visible image cutout for autocontrast
         visibleXRange = max(1,floor(xl(1))):min(size(movie,2),ceil(xl(2)));
         visibleYRange = max(1,floor(yl(1))):min(size(movie,1),ceil(yl(2)));
@@ -404,14 +362,11 @@ end
         selected_parameter = selected_parameter+2; % fitData is x,y,A,BG,sigma but popup only A,BG,sigma
         
         figure;
-        if(LEGACY)
-            hist(valid_fitData(selected_parameter,:), getNum(h_all.edit_distributionBins));
-        else
-            if(isempty(allFramesData)) % Concatenate all frames
-                allFramesData = vertcat(fitData{:});
-            end
-            hist(allFramesData(:,selected_parameter), getNum(h_all.edit_distributionBins));
+        if(isempty(allFramesData)) % Concatenate all frames
+            allFramesData = vertcat(fitData{:});
         end
+        hist(allFramesData(:,selected_parameter), getNum(h_all.edit_distributionBins));
+        
         
         xlabel(selected_string);
         ylabel('frequency');
@@ -446,7 +401,7 @@ end
         
         marker_color = distinguishable_colors(1, bg);
         if dothandle ~= -1
-           set(dothandle,'Color',marker_color);
+            set(dothandle,'Color',marker_color);
         end
     end
 
