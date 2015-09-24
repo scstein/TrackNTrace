@@ -76,6 +76,8 @@ set(h_all.edit_snrThresh, 'Callback', {@callback_FloatEdit_Plus_Update,0,inf});
 setNum(h_all.edit_snrThresh, 0);
 set(h_all.edit_distributionBins, 'Callback', {@callback_intEdit,1,inf});
 setNum(h_all.edit_distributionBins, 50, true);
+set(h_all.edit_distributionRange,'Callback',{@callback_FloatEdit,0,100});
+setNum(h_all.edit_distributionRange,100);
 
 % Checkbox
 set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
@@ -155,6 +157,21 @@ end
             maxVal=inf;
         end
         
+        % Callback
+        callback_FloatEdit(hObj,event,minVal,maxVal);
+        
+        % Update the display
+        updateFrameDisplay();
+    end
+
+    function callback_FloatEdit(hObj,event, minVal, maxVal)
+        if nargin<3 || isempty(minVal);
+            minVal=-inf;
+        end
+        if nargin<4 || isempty(maxVal);
+            maxVal=inf;
+        end
+        
         % Check if a valid number was entered
         value = str2num(get(hObj, 'String'));
         if isempty(value)
@@ -167,8 +184,6 @@ end
             set(hObj,'ForegroundColor','k');
             set(hObj,'String',sprintf('%.2f',value));
         end
-        
-        updateFrameDisplay();
     end
 
     function callback_intEdit(hObj,event, minVal,maxVal)
@@ -366,16 +381,22 @@ end
         
         % distribution to plot, must be synchronized with Popup-Menu (h_all.popup_distribution)
         % Note: fitData is [x,y,A,BG,sigma,errorflag]
+        dataRange = getNum(h_all.edit_distributionRange); % Range of data to histogram
+        
         figure;
         switch(selected_parameter)
             case 1 % Amplitude (Peak)
-              hist(allFramesData(:,3), getNum(h_all.edit_distributionBins));
+%               hist(allFramesData(:,3), getNum(h_all.edit_distributionBins));
+                rangedHist(allFramesData(:,3), getNum(h_all.edit_distributionBins),dataRange);
             case 2 % Intensity (Integral) = Amplitude*2*pi*sigma^2
-              hist(allFramesData(:,3).*allFramesData(:,5).^2*2*pi, getNum(h_all.edit_distributionBins));
+%               hist(allFramesData(:,3).*allFramesData(:,5).^2*2*pi, getNum(h_all.edit_distributionBins));
+                rangedHist(allFramesData(:,3).*allFramesData(:,5).^2*2*pi, getNum(h_all.edit_distributionBins),dataRange);
             case 3 % Background
-              hist(allFramesData(:,4), getNum(h_all.edit_distributionBins));
+%               hist(allFramesData(:,4), getNum(h_all.edit_distributionBins));
+                rangedHist(allFramesData(:,4), getNum(h_all.edit_distributionBins),dataRange);
             case 4 % Psf standard deviation
-              hist(allFramesData(:,5), getNum(h_all.edit_distributionBins));
+%               hist(allFramesData(:,5), getNum(h_all.edit_distributionBins));
+                rangedHist(allFramesData(:,5), getNum(h_all.edit_distributionBins),dataRange);
             otherwise
                 warning('Unknown distribution to plot.')
         end
@@ -530,5 +551,58 @@ end
             delete(d);
         end
     end
+
+end
+
+
+function [freq, centers] = rangedHist(data, nbins, percentOfData)
+% Function that cuts data from upper and lower tails of the distribution
+% keeping at least 'percentOfData' percent of all values.
+if(percentOfData<100)
+    % Limits for the cumulative density function (which goes from 0 to 1)
+    lower_limit = (1-percentOfData/100)/2; % below this we throw away
+    upper_limit = 1-(1-percentOfData/100)/2; % above this we throw away
+    
+    % Increase histogram resolution until highest bin has at most 10% of the data
+    % This is neccessary to get a sufficiently good cumulative distribution function
+    currBins = nbins;
+    [freq,centers] = hist(data,currBins);
+    maxRelativeBinCount = max(freq)/numel(data);
+    while(maxRelativeBinCount>0.1)
+        currBins = currBins*2;
+        [freq,centers] = hist(data,currBins);
+        maxRelativeBinCount = max(freq)/numel(data);
+    end
+    
+    % Integrate to get cumulative density function
+    fraction = cumsum(freq)/sum(freq);
+    % Find lower cutoff
+    minIdx = find(fraction>lower_limit,1,'first')-1;
+    if minIdx == 0
+        minval = min(data);
+    else
+        minval = centers(minIdx);
+    end
+    % Find upper cutoff
+    maxIdx = find(fraction>upper_limit,1,'first');
+    if maxIdx == length(data)
+        maxval = max(data);
+    else
+        maxval = centers(maxIdx);
+    end
+    
+    data = data(data>=minval & data<=maxval);
+end
+
+freq = [];
+centers = [];
+switch(nargout)
+    case 0
+        hist(data,nbins);
+    case 1
+        freq = hist(data,nbins);
+    case 2
+        [freq,centers] = hist(data,nbins);
+end
 
 end
