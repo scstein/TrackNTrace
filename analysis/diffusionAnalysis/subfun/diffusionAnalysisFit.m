@@ -45,6 +45,10 @@ end
 for dim=1:size(msd_result,2)
     for iOrder=1:order
         msd_curve = msd_result{iOrder,dim};
+        if isempty(msd_curve) %skip "results" without an actual fit
+            continue;
+        end
+        
         min_data_points = max(fitParam.minimumSkip,3); %need at least 3 points to fit
         
         if fitParam.fitTrueMSDValues

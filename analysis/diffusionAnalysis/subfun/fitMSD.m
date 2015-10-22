@@ -118,7 +118,7 @@ if ~isempty(printParam)
             text(0.1,0.7-(iOrder-1)*0.11,['$R_',int2str(iOrder),' = ' num2str(R(iOrder),3),'$'],'Units','normalized');
         else
             text(0.15,0.64-(iOrder-1)*0.11,['R_',int2str(iOrder),' = ' num2str(R(iOrder),3)],'Units','normalized');
-            text(0.1,0.7-(iOrder-1)*0.11,['D = ' num2str(D(iOrder,1),3),' \pm ',num2str(D(iOrder,2)),' µm^2/s'],'Units','normalized');
+            text(0.1,0.7-(iOrder-1)*0.11,['D_',int2str(iOrder),' = ' num2str(D(iOrder,1),3),' \pm ',num2str(D(iOrder,2)),' µm^2/s'],'Units','normalized');
         end
     end
     

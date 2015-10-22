@@ -1,4 +1,4 @@
-function [traj_D,traj_v] = fitMSDSingle(traj,use_v,use_iso,use_disp,fitParam)
+function [traj_D,traj_v] = fitMSDSingle(traj,use_v,use_iso,use_displacement,fitParam)
 
 dim = 1+~use_iso;
 traj_D = zeros(1,2*dim);
@@ -27,7 +27,7 @@ for iFrame = 1:msd_length
         displace = displace(:);
     end
     
-    if use_disp
+    if use_displacement
         for jDim=1:dim
             msd(iFrame,1+(jDim-1)*2:jDim*2) = [mean(displace(:,jDim)),std(displace(:,jDim))];
         end
@@ -39,16 +39,20 @@ end
 t = 1:msd_length;
 
 for jDim=1:dim
-    [D,v] = MSDFit(t(:),msd(:,1+(jDim-1)*2:jDim*2),use_v,fitParam.weightedFit,use_disp);
+    [D,v] = MSDFit(t(:),msd(:,1+(jDim-1)*2:jDim*2),use_v,fitParam.weightedFit,use_displacement);
     traj_D(1+(jDim-1)*2:jDim*2) = D;
     if use_v
-        traj_v(1+(jDim-1)*2:jDim*2) = v;
+        if ~isempty(v)
+            traj_v(1+(jDim-1)*2:jDim*2) = v;
+        else
+            traj_v(1+(jDim-1)*2:jDim*2) = [Inf,Inf];
+        end
     end
 end
 end %MAINFUN
 
 
-function [D,v] = MSDFit(x,msd_curve,use_v,fit_weights,use_disp)
+function [D,v] = MSDFit(x,msd_curve,use_v,fit_weights,use_displacement)
 if fit_weights
     y_weight = 1./msd_curve(:,2);
 else
@@ -79,7 +83,7 @@ else
     v = [];
     D = [p(1)/2,dp(1)/2];
 end
-if ~use_disp
+if ~use_displacement
     D = D/2; %in this case, MSD slope would be 4*D (from x^2+y^2 instead of just x^2) instead of 2*D, correct this now.
 end
 

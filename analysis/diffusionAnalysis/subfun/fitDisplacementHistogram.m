@@ -29,7 +29,7 @@ end
 
 
 % Main fit loop
-p_total = cell(0,0);
+p_total = cell(100,1); %initialize very large array
 while keep_fitting
     if ~first_iteration
         % store old parameters
@@ -51,7 +51,7 @@ while keep_fitting
     pVarCovMat = chi2_new*inv(J'*J); %#ok<MINV> % variance-covariance matrix of parameters
     dp_new = sqrt(diag(pVarCovMat)); % parameter uncertainties, vector
     
-    p_total = [p_total;{[p_new(:).';dp_new(:).']}]; %#ok<AGROW>
+    p_total(order) = {[p_new(:).';dp_new(:).']};
     
     if first_iteration 
         first_iteration = false;
@@ -86,7 +86,7 @@ if plot_fit
     end
         
     figure;
-    subplot(2,1,1);
+    subplot(3,1,1:2);
     bar(x,y);
     
     hold on;
@@ -103,13 +103,13 @@ if plot_fit
     ylabel('Frequency [-]','fontsize',12);
     title(['Result of \chi^2 fit for \Delta_t = ',int2str(frame),' frames.'],'fontsize',12);
     
-    text(0.8,0.7,['\chi^2_{\nu-1} = ' num2str(chi2)],'Units','normalized');
+    text(0.7,0.75,['\chi^2_{\nu-1} = ' num2str(chi2)],'Units','normalized');
     for i=1:order
-        text(0.05,0.7-i*0.1,['D_',int2str(i),'= ',num2str(sigma_sq(i)/(2*frame)*px^2/dt,3) '\pm ', num2str(dp(order-1+i)/(2*frame)*px^2/dt,3)],'Units','normalized');
-        text(0.1,0.65-i*0.1,['w_',int2str(i),'= ',num2str(weight(i,1),3) '\pm ', num2str(weight(i,2),3)],'Units','normalized');
+        text(0.7,0.7-i*0.1,['D_',int2str(i),'= ',num2str(sigma_sq(i)/(2*frame)*px^2/dt,3) '\pm ', num2str(dp(order-1+i)/(2*frame)*px^2/dt,3)],'Units','normalized');
+        text(0.75,0.65-i*0.1,['w_',int2str(i),'= ',num2str(weight(i,1),3) '\pm ', num2str(weight(i,2),3)],'Units','normalized');
     end
     
-    subplot(2,1,2);
+    subplot(3,1,3);
     plot(x,zeros(size(x)),'r-');
     hold on;
     plot(x,residuals,'b.');

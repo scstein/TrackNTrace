@@ -124,9 +124,9 @@ for iFrame=1:max_frame
     
     
     if use_v
-        p0 = [ones(order-1,1)/order,2*D_initial(:)*iFrame;0]; %parameter vector: weight, sigma^2, velocity. We only need N-1 weights as sum w_i = 1
+        p0 = [ones(order-1,1)/order;2*D_initial(:)*iFrame;0]; %parameter vector: weight, sigma^2, velocity. We only need N-1 weights as sum w_i = 1
     else
-        p0 = [ones(order-1,1)/order,2*D_initial(:)*iFrame];
+        p0 = [ones(order-1,1)/order;2*D_initial(:)*iFrame];
     end
     
     % Fit histogram
@@ -205,16 +205,24 @@ for iFrame=1:max_frame
     p_x = fit_result(iFrame).p_x;
     order = numel(p_x);
     for jOrder = 1:order
-        msd_part = prepareResultMSD(p_x,iFrame,jOrder,order,px,dt);
-        msd_result(jOrder,1) = {[msd_result{jOrder,1};msd_part]};
+        if ~isempty(p_x{jOrder})
+            msd_part = prepareResultMSD(p_x,iFrame,jOrder,order,px,dt);
+            msd_result(jOrder,1) = {[msd_result{jOrder,1};msd_part]};
+        else
+            msd_result(jOrder,1) = {[]};
+        end
     end
     
     if ~use_iso
         p_y = fit_result(iFrame).p_y;
         order = numel(p_y);
         for jOrder = 1:order
-            msd_part = prepareResultMSD(p_y,iFrame,jOrder,order,px,dt);
-            msd_result(jOrder,2) = {[msd_result{jOrder,2};msd_part]};
+            if ~isempty(p_y{jOrder})
+                msd_part = prepareResultMSD(p_y,iFrame,jOrder,order,px,dt);
+                msd_result(jOrder,2) = {[msd_result{jOrder,2};msd_part]};
+            else
+                msd_result(jOrder,2) = {[]};
+            end
         end
     end
 end %iFrame
@@ -231,7 +239,7 @@ if jOrder==1
     msd_part = [iFrame*dt,sigsq,weights,jOrder==order];
 else
     sigsq = p{jOrder}(:,jOrder:2*jOrder-1)*px^2; %[[sigma_1;error_sigma_1],...]
-    weights = p{jOrder}(:,1:jOrder-1); weights = [weights,[1-sum(abs(weights(1,:)));sqrt(sum(weights(2,:).^2)/jOrder+std(weights(1,:))^2/jOrder)]]; %[[w_1;error_w_1],...]
+    weights = abs(p{jOrder}(:,1:jOrder-1)); weights = [weights,[1-sum(abs(weights(1,:)));sqrt(sum(weights(2,:).^2)/jOrder+std(weights(1,:))^2/jOrder)]]; %[[w_1;error_w_1],...]
     [~,idx] = sort(sigsq(1,:),'ascend');
     sigsq = sigsq(:,idx); %sort, starting at lowest diffusion coefficient
     weights = weights(:,idx);

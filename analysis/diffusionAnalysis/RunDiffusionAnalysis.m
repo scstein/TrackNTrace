@@ -35,14 +35,29 @@ addpath(genpath([path,filesep,'helper']));
 [experimParam,trajParam,fitParam,printParam] = setDefaultOptions();
 
 %% Calculate displacements/find trajectories
-if ischar(dataObject)
-    dataObject = {dataObject};
-    saveToFile = true;
-else
-    if ~iscell(dataObject)
-        dataObject = {dataObject};
+%no input? then ask user
+if isempty(dataObject)
+    [filename, pathname, ~] = uigetfile({'*.mat';'*.txt';'*.xls'}, 'Select all files to analyze.', 'MultiSelect','on');
+    dataObject = cell(numel(filename),1);
+    for iFiles=1:numel(dataObject)
+        dataObject(iFiles) = {[pathname,filename{iFiles}]};
     end
-    saveToFile = false;
+    saveToFile = true;
+    saveFilename = [pathname,'diffusionAnalysis.mat'];
+    saveOverwrite = false;
+else
+    % otherwise, parse input
+    if ischar(dataObject)
+        dataObject = {dataObject};
+        saveToFile = true;
+        saveFilename = dataObject{1};
+    else
+        if ~iscell(dataObject)
+            dataObject = {dataObject};
+        end
+        saveToFile = false;
+    end
+    saveOverwrite = true;
 end
 
 fprintf('\nProcessing tracks ... \n');
@@ -88,5 +103,9 @@ if saveToFile
     diffusionAnalysis_result.fitParam = fitParam;
     diffusionAnalysis_result.printParam = printParam; %#ok<STRNU>
     
-    save(dataObject{1},'diffusionAnalysis_result','-append');
+    if saveOverwrite
+        save(saveFilename,'diffusionAnalysis_result','-append');
+    else
+        save(saveFilename,'diffusionAnalysis_result');
+    end
 end

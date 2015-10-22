@@ -55,7 +55,7 @@ dt = timestep;
 
 %load file
 
-nrFrames = max(trajectoryData(:,2)); 
+nrFrames = max(trajectoryData(:,2));
 nrTraj = max(trajectoryData(:,1));
 
 %Integrate intensities (factory 2pi sigma^2)
@@ -75,9 +75,15 @@ intensity_trace_mean = zeros(nrFrames,1); %average intensity trace relative to f
 intensity_trace_mean_counter = zeros(nrFrames,1); %number of traces contributing to respective element in avg trace
 
 %% Collect data from trajectories
+nrTraj_analyzed = [];
 for iTraj = 1:nrTraj
     %Get current trajectory, increment active molecules counter
     trajectory = trajectoryData(trajectoryData(:,1)==iTraj,:);
+    if size(trajectory,2)<2
+        continue;
+    else
+        nrTraj_analyzed = [nrTraj_analyzed;iTraj]; %#ok<AGROW>
+    end
     traj_start_frame = trajectory(1,2);
     traj_end_frame = trajectory(end,2);
     molecules_in_frame(traj_start_frame:traj_end_frame) = molecules_in_frame(traj_start_frame:traj_end_frame)+1;
@@ -99,7 +105,7 @@ for iTraj = 1:nrTraj
     intensity_trace_mean(trajectory(:,2)) = intensity_trace_mean(trajectory(:,2))+trajectory(:,5);
     intensity_trace_mean_counter(trajectory(:,2)) = intensity_trace_mean_counter(trajectory(:,2))+ones(size(trajectory,1),1);
 end
-
+intensity_total_distr = intensity_total_distr(nrTraj_analyzed,:);
 %% Create data for analysis and plots
 
 %Bleaching curve
@@ -112,23 +118,30 @@ bleach_distr = [bleach_taxis,molecules_in_frame_relative(t0:end)];
 blink_taxis = 0:nrFrames-1;
 idx_blink = blink_distr>0;
 blink_taxis = blink_taxis(idx_blink).'*dt;
-[blink_param,blink_res] = fitExponential(blink_taxis,blink_distr(idx_blink),false);
-blink_distr = [blink_taxis,blink_distr(idx_blink)];
-blink_in_frame = [(0:nrFrames-1).'*dt,molecules_in_frame,blink_in_frame];
+if ~isempty(blink_taxis)
+    [blink_param,blink_res] = fitExponential(blink_taxis,blink_distr(idx_blink),false);
+    blink_distr = [blink_taxis,blink_distr(idx_blink)];
+    blink_in_frame = [(0:nrFrames-1).'*dt,molecules_in_frame,blink_in_frame];
+else
+    blink_distr = [];
+	blink_param = [];
+	blink_res = [];
+    blink_in_frame = [];
+end
 
 %Intensity curves  - we could use intensity filters for this!
 [intensity_xbins,intensity_distr,~] = Hist1D(trajectoryData(:,5),0,false,'freedman',true,false,true);
-intensity_distr = [intensity_xbins(1:end-1).',intensity_distr(1:end-1).'];
+intensity_distr = [intensity_xbins(1:end-1),intensity_distr(1:end-1)];
 
 [intensity_total_xbins,intensity_total_distr,~] = Hist1D(intensity_total_distr,0,false,'freedman',true,false,true);
-intensity_total_distr = [intensity_total_xbins(1:end-1).',intensity_total_distr(1:end-1).'];
+intensity_total_distr = [intensity_total_xbins(1:end-1),intensity_total_distr(1:end-1)];
 
 [bg_xbins,bg_distr,~] = Hist1D(trajectoryData(:,6),0,false,'freedman',true,false,true);
-bg_distr = [bg_xbins(1:end-1).',bg_distr(1:end-1).'];
+bg_distr = [bg_xbins(1:end-1),bg_distr(1:end-1)];
 
 sbr_distr = trajectoryData(:,5)./trajectoryData(:,6);
 [sbr_xbins,sbr_distr,~] = Hist1D(sbr_distr(sbr_distr<100*median(sbr_distr)),0,false,'freedman',true,false,true);
-sbr_distr = [sbr_xbins(1:end-1).',sbr_distr(1:end-1).'];
+sbr_distr = [sbr_xbins(1:end-1),sbr_distr(1:end-1)];
 
 intensity_trace_mean = intensity_trace_mean./intensity_trace_mean_counter;
 
@@ -149,6 +162,8 @@ intensityData.sbr_distribution = sbr_distr;
 intensityData.trace = intensity_trace_mean;
 if saveToFile
     save(filename,'bleachData','blinkData','intensityData','-append');
+else
+    save([filename_base,'.mat'],'bleachData','blinkData','intensityData');
 end
 
 if enablePlot
@@ -159,15 +174,17 @@ if enablePlot
     export_fig(filename_plot,'-png','-transparent','-r300');
     close all force
     
-    filename_plot = [filename_base,'_blink.png'];
-    plotData(blinkData,'blink');
-    export_fig(filename_plot,'-png','-transparent','-r300');
-    close all force
-    
-    filename_plot = [filename_base,'_blink_frames.png'];
-    plotData(blinkData,'blink_frames');
-    export_fig(filename_plot,'-png','-transparent','-r300');
-    close all force
+    if ~isempty(blinkData.param)
+        filename_plot = [filename_base,'_blink.png'];
+        plotData(blinkData,'blink');
+        export_fig(filename_plot,'-png','-transparent','-r300');
+        close all force
+
+        filename_plot = [filename_base,'_blink_frames.png'];
+        plotData(blinkData,'blink_frames');
+        export_fig(filename_plot,'-png','-transparent','-r300');
+        close all force
+    end
     
     filename_plot = [filename_base,'_int_distr.png'];
     plotData(intensityData,'intensity_distr');

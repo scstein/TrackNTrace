@@ -30,6 +30,9 @@ end
 switch bin 
     case 'freedman'
         hx = 2*iqr(X)/length(X)^(1/3); %Freedman-Diaconis
+        if hx<1 && hint
+            hint = false;
+        end
         k = ceil((Xmax-Xmin)/hx);
     case 'sturges'
         k = ceil(log2(length(X))+1); %Sturges

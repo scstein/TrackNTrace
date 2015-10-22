@@ -66,9 +66,23 @@ for iTraj=1:nrTraj
     traj_temp = tracks_processed(traj_start_idx(iTraj):traj_start_idx(iTraj+1)-2,1:2);
     
     if use_v
-        [data_D(iTraj,:),data_v(iTraj,:)] = fitMSDSingle(traj_temp,use_v,use_iso,use_disp,fitParam);
+        [data_D_temp,data_v_temp] = fitMSDSingle(traj_temp,use_v,use_iso,use_disp,fitParam);
     else
-        [data_D(iTraj,:),~] = fitMSDSingle(traj_temp,use_v,use_iso,use_disp,fitParam);
+        [data_D_temp,~] = fitMSDSingle(traj_temp,use_v,use_iso,use_disp,fitParam);
+    end
+    
+    if size(traj_temp)==3
+        data_D_temp(2) = 0;
+        if use_v
+            data_v_temp(2) = 0;
+        end
+    end
+    
+    if data_D_temp(2)/data_D_temp(1)<0.5
+        data_D(iTraj,:) = data_D_temp;
+        if use_v
+            data_v(iTraj,:) = data_v_temp;
+        end
     end
 end
 
@@ -90,7 +104,7 @@ for jDim=1:dim
     end
 end
 
-if fitPara.plotFit
+if fitParam.plotFit
     for jDim=1:dim
         figure;
         bar(bins_out_D{jDim},hist_out_D{jDim});
@@ -113,9 +127,9 @@ if fitPara.plotFit
             xlabel('v [µm/s]');
             ylabel('Frequency');
             if jDim==1
-                title_string = 'Diffusion histogram, x-dimension.';
+                title_string = 'Velocity histogram, x-dimension.';
             else
-                title_string = 'Diffusion histogram, y-dimension.';
+                title_string = 'Velocity histogram, y-dimension.';
             end
             title(title_string);
         end
@@ -126,8 +140,15 @@ end
 
 D_final.barBins = bins_out_D;
 D_final.barFreq = hist_out_D;
-velocity_final.barBins = bins_out_v;
-velocity_final.barFreq = hist_out_v;
+D_final.rawData = data_D;
+
+
+if use_v
+    velocity_final.barBins = bins_out_v;
+    velocity_final.barFreq = hist_out_v;
+else
+    velocity_final = [];
+end
 
 
 end %END MAINFUN
