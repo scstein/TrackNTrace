@@ -67,14 +67,14 @@ function [ params ] = psfFit_Image( img, varargin )
 % The views and conclusions contained in the software and documentation are those
 % of the authors and should not be interpreted as representing official policies,
 % either expressed or implied, of the FreeBSD Project.
-
-
+% 
+% 
 % -- Licensing --
-
+% 
 % License ceres-solver:
-%
+% 
 % Copyright 2015 Google Inc. All rights reserved.
-%
+% 
 % Redistribution and use in source and binary forms, with or without modification, 
 % are permitted provided that the following conditions are met:
 % 
@@ -84,7 +84,7 @@ function [ params ] = psfFit_Image( img, varargin )
 % of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 %     3. Neither the name of Google Inc., nor the names of its contributors may be used to
 % endorse or promote products derived from this software without specific prior written permission.
-%
+% 
 % This software is provided by the copyright holders and contributors “AS IS” and any express or 
 % implied warranties, including, but not limited to, the implied warranties of merchantability and 
 % fitness for a particular purpose are disclaimed. In no event shall Google Inc. be liable for any 
@@ -93,6 +93,10 @@ function [ params ] = psfFit_Image( img, varargin )
 % however caused and on any theory of liability, whether in contract, strict liability, or tort (including
 % negligence or otherwise) arising in any way out of the use of this software, even if advised of the
 % possibility of such damage.
+
+% Make sure logicals are passed as correct datatype
+if numel(varargin) >= 3;  varargin{3} = logical(varargin{3});  end
+if numel(varargin) >= 4;  varargin{4} = logical(varargin{4});  end
 
 % Convert img to double if neccessary
 [ params ] = mx_psfFit_Image( double(img), varargin{:} );

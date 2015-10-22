@@ -17,7 +17,7 @@ function [ tracks ] = nn_tracker_cpp(  Localizations, varargin)
 %     max_frame_gap - Max distance in time to connect gaps | default: 0
 %     min_track_length_afterGapClosing - Tracks shorter than this length
 %                                        are rejected after gap closing | default: 0
-%     vebose: If true, information is printed to the console | default: false
+%     verbose: If true, information is printed to the console | default: false
 %
 %  Parameters can be left empty [] to use their default values.
 %
@@ -32,6 +32,10 @@ function [ tracks ] = nn_tracker_cpp(  Localizations, varargin)
 %  To plot the y-t over time movement
 %     plot(track1data(2,:), track1data(4,:));
 
+% Make sure logicals are passed as correct datatype
+if numel(varargin) == 6
+    varargin{6} = logical(varargin{6});
+end
 
 tracks = mx_nn_tracker(Localizations, varargin{:});
 end
