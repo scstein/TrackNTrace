@@ -2,33 +2,33 @@ function [candidatePos,neighbours] = findSpotCandidates_MOSAIC(img,W0,INTENS_THR
 % [candidatePos,neighbours] = findSpotCandidates_MOSAIC(img,W0,INTENS_THRSH,PVAL_MIN,MIN_DIST)
 % Find particle candidates in fluorescence images based on intensity, local
 % background and size.
-% 
+%
 % INPUT:
 %     img - 2D matrix of pixel intensities, data type and normalisation
 %     arbitrary
-%     
+%
 %     W0 - 1D positive integer, search window size used for filtering image
 %     and detecting local maximas
-%     
+%
 %     INTENS_THRSH - 1D positive double percentage [0,100), used to
 %     consider only the top INTENS_THRSH percent highest pixel intensities.
 %     Lower means less candidates.
-%     
+%
 %     PVAL_MIN - 1D positive double [0,1], used to reject candidates whose
 %     intensities fail a P-test against their local background (assumed to
 %     be Gaussian). Lower means less candidates.
-%     
+%
 %     MIN_DIST - 1D positive double [0,infty). If candidate search with
 %     window size W0-1 yields N neighbours in vicinity
 %     |pos_w0-pos_w0-1|<=MIN_DIST, the original candidate could be assumed
 %     to consist of N smaller possible particles, marking it as a possible
 %     target for multi-position fitting
-%     
-% 
+%
+%
 % OUTPUT:
 %     candidatePos - Nx2 matrix of particle candidate positions [column
 %     pixel, row pixel] without subpixel position. Middle of upper left pixel would be [1,1].
-%     
+%
 %     neighbours - Nx1 vector of smaller particle candidate neighbours to
 %     original candidates
 
@@ -110,8 +110,8 @@ end %END MAIN
 % filename = 'U:\Jan Thiart\dicty\2015-06-09\200hz_100g_4mw_hilotirf_cell2.tif';
 % movie = read_tiff(filename);
 % img = movie(:,:,113);
-% 
-% 
+%
+%
 % %user provided
 % INTENS_THRSH = 10;
 % PVAL_MIN = 0.15;

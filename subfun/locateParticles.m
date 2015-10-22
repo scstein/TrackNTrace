@@ -151,7 +151,11 @@ if(fitForward)
             if useCorr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
             else
-                candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,~mod(iF-1,bck_interval),false);
+                calc_bck = ~mod(iF-1,bck_interval); %calculate new bacgkround?
+                if candidateOptions.intensityPtestVar>=0.99
+                    calc_bck = false; %disable if background test would always yield true
+                end
+                candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,calc_bck,false);
             end
             
             nrCandidatesNew = size(candidatePos,1); %to remove empty entries, let's keep track of the largest amount of particles in one frame
@@ -195,7 +199,11 @@ else %otherwise, we go backward in time
             if useCorr
                 candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
             else
-                candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,~mod(nrFrames-iF,bck_interval),false);
+                calc_bck = ~mod(nrFrames-iF,bck_interval);
+                if candidateOptions.intensityPtestVar>=0.99
+                    calc_bck = false;
+                end
+                candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,calc_bck,false);
             end
             
             nrCandidatesNew = size(candidatePos,1);
