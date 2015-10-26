@@ -290,7 +290,9 @@ end
         snrThresh = getNum(h_all.edit_snrThresh);
         
         if(isempty(fitData{iF}));
-            set(dothandle,'xdata',[],'ydata',[]);
+            if dothandle ~= -1
+                set(dothandle,'xdata',[],'ydata',[]);
+            end
             return
         end % Jump empty frames
         
