@@ -132,7 +132,7 @@ end
 if order == 1
     p = [0.5;sigma_sq/2;sigma_sq*2];
 else
-    p = [[weight+1/(1-order^2);1/(order+1)];[sigma_sq;1.5*max(sigma_sq)]];
+    p = [[weight-1/(2+2*order);1/(order+1)];[sigma_sq;1.5*max(sigma_sq)]];
 end
 
 p = [p;velocity];

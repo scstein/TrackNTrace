@@ -124,9 +124,9 @@ for iFrame=1:max_frame
     
     
     if use_v
-        p0 = [ones(order-1,1)/order;2*D_initial(:)*iFrame;0]; %parameter vector: weight, sigma^2, velocity. We only need N-1 weights as sum w_i = 1
+        p0 = [ones(order-1,1)/(order+1);2*D_initial(:)*iFrame;0]; %parameter vector: weight, sigma^2, velocity. We only need N-1 weights as sum w_i = 1
     else
-        p0 = [ones(order-1,1)/order;2*D_initial(:)*iFrame];
+        p0 = [ones(order-1,1)/(order+1);2*D_initial(:)*iFrame];
     end
     
     % Fit histogram
@@ -141,9 +141,9 @@ for iFrame=1:max_frame
     
     if ~use_iso
         if use_v
-            p0 = [ones(order-1,1)/order,2*D_initial(:)*iFrame;0]; %parameter vector: weight, sigma^2. We only need N-1 weights as sum w_i = 1
+            p0 = [ones(order-1,1)/(order+1),2*D_initial(:)*iFrame;0]; %parameter vector: weight, sigma^2. We only need N-1 weights as sum w_i = 1
         else
-            p0 = [ones(order-1,1)/order,2*D_initial(:)*iFrame];
+            p0 = [ones(order-1,1)/(order+1),2*D_initial(:)*iFrame];
         end
         
         [p,order_new,plotdata] = fitDisplacementHistogram(bins_out_y,hist_out_y,p0,use_v,order,fit_curve,alpha,plot_fit,iFrame,px,dt); % Fit Gaussian to displacement histogram
