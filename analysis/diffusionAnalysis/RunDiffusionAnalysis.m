@@ -1,4 +1,4 @@
-function [D_final,velocity_final,plotdata] = RunDiffusionAnalysis(dataObject,trajectoryMethod)
+function [D_final,velocity_final,plotdata,msd_result] = RunDiffusionAnalysis(dataObject,trajectoryMethod)
 % [D_final,velocity_final] = RunDiffusionAnalysis(dataObject,trajectoryMethod)
 % Perform diffusion and velocity analysis on trajectories obtained from TrackNTrace, MOSAIC or other tracking programs according to all options defined in SetDefaultOptions.m
 % 
@@ -38,7 +38,13 @@ addpath(genpath([path,filesep,'helper']));
 %no input? then ask user
 if isempty(dataObject)
     [filename, pathname, ~] = uigetfile({'*.mat';'*.txt';'*.xls'}, 'Select all files to analyze.', 'MultiSelect','on');
-    dataObject = cell(numel(filename),1);
+    if ischar(filename)
+        dataObject = cell(1,1);
+        filename = {filename};
+    else
+        dataObject = cell(numel(filename),1);
+    end
+    
     for iFiles=1:numel(dataObject)
         dataObject(iFiles) = {[pathname,filename{iFiles}]};
     end
@@ -83,6 +89,7 @@ switch fitParam.method
         [D_final,velocity_final] = diffusionAnalysisMSDFit(msd_result,experimParam,fitParam,printParam);
         
     case('msd-single')
+        msd_result = [];
         [D_final,velocity_final] = diffusionAnalysisMSDSingle(tracks_processed,fitParam,experimParam);
         
     otherwise

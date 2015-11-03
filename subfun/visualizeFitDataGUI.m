@@ -570,10 +570,16 @@ if(percentOfData<100)
     currBins = nbins;
     [freq,centers] = hist(data,currBins);
     maxRelativeBinCount = max(freq)/numel(data);
-    while(maxRelativeBinCount>0.1)
-        currBins = currBins*2;
-        [freq,centers] = hist(data,currBins);
-        maxRelativeBinCount = max(freq)/numel(data);
+    % If there is only one unique value (e.g. PSF size), the method would
+    % fail, so we set the number of bins very small instead
+    if maxRelativeBinCount<1
+        while(maxRelativeBinCount>0.1)
+            currBins = currBins*2;
+            [freq,centers] = hist(data,currBins);
+            maxRelativeBinCount = max(freq)/numel(data);
+        end
+    else
+        nbins=3;
     end
     
     % Integrate to get cumulative density function
