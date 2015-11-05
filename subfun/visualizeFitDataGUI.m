@@ -164,6 +164,8 @@ end
         updateFrameDisplay();
     end
 
+    % Callback for edit fields containing floats. Checks if a correct 
+    % number was entered and restricts it to the given bounds.
     function callback_FloatEdit(hObj,event, minVal, maxVal)
         if nargin<3 || isempty(minVal);
             minVal=-inf;
@@ -186,6 +188,8 @@ end
         end
     end
 
+    % Callback for edit fields containing integer values. Checks if a correct 
+    % number was entered and restricts it to the given bounds.
     function callback_intEdit(hObj,event, minVal,maxVal)
         if nargin<3 || isempty(minVal);
             minVal=0;
@@ -372,6 +376,7 @@ end
         caxis(zl);
     end
 
+    % Plots the distribution selected by popup_distribution
     function distributionCallback(hObj, eventdata)
         selected_parameter = get(h_all.popup_distribution,'Value');
         choices = get(h_all.popup_distribution,'String');
@@ -556,10 +561,9 @@ end
 
 end
 
-
-function [freq, centers] = rangedHist(data, nbins, percentOfData)
 % Function that cuts data from upper and lower tails of the distribution
 % keeping at least 'percentOfData' percent of all values.
+function [freq, centers] = rangedHist(data, nbins, percentOfData)
 if(percentOfData<100)
     % Limits for the cumulative density function (which goes from 0 to 1)
     lower_limit = (1-percentOfData/100)/2; % below this we throw away

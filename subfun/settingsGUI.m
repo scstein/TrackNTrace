@@ -21,7 +21,7 @@ GUIreturns.candidateOptionsChanged = false;
 GUIreturns.fittingOptionsChanged = false;
 GUIreturns.trackingOptionsChanged  = false;
 
-% Save options at startup
+% Save options at startup (to check later if options changed)
 generalOptions_atStartup = generalOptions;
 candidateOptions_atStartup = candidateOptions;
 fittingOptions_atStartup = fittingOptions;
@@ -47,27 +47,27 @@ set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
 % % General options
 % edit_movieList
 % edit_darkMovie
-set(h_all.edit_firstFrame,'Callback',{@callback_positiveIntEdit,1,inf});
-set(h_all.edit_lastFrame,'Callback',{@callback_positiveIntEdit,1,inf});
+set(h_all.edit_firstFrame,'Callback',{@callback_IntEdit,1,inf});
+set(h_all.edit_lastFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.cbx_previewMode, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_firstFrameTesting,'Callback',{@callback_positiveIntEdit,1,inf});
-set(h_all.edit_lastFrameTesting,'Callback',{@callback_positiveIntEdit,1,inf});
+set(h_all.edit_firstFrameTesting,'Callback',{@callback_IntEdit,1,inf});
+set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.button_movieList, 'Callback', @callback_selectMovieList);
 set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
 
 % % Candidate Options
 set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_stddev, 'Callback', {@callback_positiveFloatEdit,0,inf});
+set(h_all.edit_stddev, 'Callback', {@callback_FloatEdit,0,inf});
 % popup_fitDirection
 set(h_all.cbx_calcOnce, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_avgWinSize, 'Callback', {@callback_positiveIntEdit,1,inf});
+set(h_all.edit_avgWinSize, 'Callback', {@callback_IntEdit,1,inf});
 % Only for correlation
-set(h_all.edit_corrThreshold,'Callback', {@callback_positiveFloatEdit,0,1});
+set(h_all.edit_corrThreshold,'Callback', {@callback_FloatEdit,0,1});
 % Only for intensity filtering
-set(h_all.edit_particleRadius,'Callback', {@callback_positiveIntEdit,1,inf});
-set(h_all.edit_intensityThreshold,'Callback', {@callback_positiveFloatEdit,0,100});
-set(h_all.edit_pTest,'Callback', {@callback_positiveFloatEdit,0,1});
-set(h_all.edit_bgInterval,'Callback', {@callback_positiveIntEdit,1,inf});
+set(h_all.edit_particleRadius,'Callback', {@callback_IntEdit,1,inf});
+set(h_all.edit_intensityThreshold,'Callback', {@callback_FloatEdit,0,100});
+set(h_all.edit_pTest,'Callback', {@callback_FloatEdit,0,1});
+set(h_all.edit_bgInterval,'Callback', {@callback_IntEdit,1,inf});
 
 
 % % Fitting options
@@ -75,17 +75,17 @@ set(h_all.edit_bgInterval,'Callback', {@callback_positiveIntEdit,1,inf});
 % cbx_usePixelIntegration
 set(h_all.cbx_useMleRefinement, 'Callback', @callback_updateGUIstate);
 set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_photonBias, 'Callback', {@callback_positiveIntEdit,0,inf});
-set(h_all.edit_photonSensitivity, 'Callback', {@callback_positiveFloatEdit,1.0,inf});
-set(h_all.edit_photonGain, 'Callback', {@callback_positiveIntEdit,1,1000});
+set(h_all.edit_photonBias, 'Callback', {@callback_IntEdit,0,inf});
+set(h_all.edit_photonSensitivity, 'Callback', {@callback_FloatEdit,1.0,inf});
+set(h_all.edit_photonGain, 'Callback', {@callback_IntEdit,1,1000});
 
 % % Tracking
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
 set(h_all.popup_trackerMethod, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_trackerRadius,'Callback', {@callback_positiveFloatEdit,0,inf});
-set(h_all.edit_maxGap,'Callback', {@callback_positiveIntEdit,0,inf});
-set(h_all.edit_minTrackLength,'Callback',{@callback_positiveIntEdit,1,inf});
-set(h_all.edit_splitMovieParts, 'Callback', {@callback_positiveIntEdit,1,inf});
+set(h_all.edit_trackerRadius,'Callback', {@callback_FloatEdit,0,inf});
+set(h_all.edit_maxGap,'Callback', {@callback_IntEdit,0,inf});
+set(h_all.edit_minTrackLength,'Callback',{@callback_IntEdit,1,inf});
+set(h_all.edit_splitMovieParts, 'Callback', {@callback_IntEdit,1,inf});
 % cbx_verbose
 
 % GUI main
@@ -154,11 +154,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
     end
 
+    % This will process all given movies with the current settings without
+    % individual figures showing up for each one.
     function callback_continueForAll(hObj,event)
         GUIreturns.useSettingsForAll = true;
         callback_continue(hObj,event);
     end
 
+    % Save the current settings to file
     function callback_saveSettings(hObj, event)
         storeOptions();
         
@@ -169,6 +172,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         save(outfile,'generalOptions', 'candidateOptions','fittingOptions','trackingOptions');
     end
 
+    % Load settings from a file
     function callback_loadSettings(hObj,event)
         % In single file mode, the list of movies to process should not be
         % changed, we store it and restore after loading the settings
@@ -193,6 +197,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         setOptions();
     end
 
+    % Opens a file chooser dialog to choose multiple input (movie) files 
+    % for processing. Note: filenames will be seperated by ';'
     function callback_selectMovieList(hObj,event)
         % Get current text field to set starting path of uigetfile
         movieListString = get(h_all.edit_movieList,'String');
@@ -216,6 +222,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_movieList,'String',cell2str(movieList));
     end
 
+    % Opens a file chooser dialog to select the dark movie
     function callback_selectDarkMovie(hObj, event)
         darkMoviePath = get(h_all.edit_darkMovie,'String');
         path = [];
@@ -228,9 +235,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_darkMovie,'String',[path,darkMovie]);
     end
 
-    function callback_positiveFloatEdit(hObj,event, minVal, maxVal)
+    % Callback for edit fields containing floats. Checks if a correct 
+    % number was entered and restricts it to the given bounds.
+    function callback_FloatEdit(hObj,event, minVal, maxVal)
         if nargin<3 || isempty(minVal);
-            minVal=0;
+            minVal=-inf;
         end
         if nargin<4 || isempty(maxVal);
             maxVal=inf;
@@ -249,7 +258,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-    function callback_positiveIntEdit(hObj,event, minVal,maxVal)
+    % Callback for edit fields containing integer values. Checks if a correct 
+    % number was entered and restricts it to the given bounds.
+    function callback_IntEdit(hObj,event, minVal,maxVal)
         if nargin<3 || isempty(minVal);
             minVal=0;
         end
@@ -270,6 +281,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
+    % Takes a cell array containing strings and concatenates them into one
+    % string seperated by ';'. If the input is not a cell but a string, the
+    % output is equal to the input string;
     function str = cell2str(cellObj, delimiter)
         if nargin<2
             delimiter = ';';
@@ -286,11 +300,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-
+    % Gets the 'String' property from a uicontrol and returns the string
+    % converted to a number
     function value = getNum(hObj)
-        value = str2num(get(hObj,'String'));
+        value = str2double(get(hObj,'String'));
     end
 
+    % Sets the 'String' of an edit field to the input 'value'. Set
+    % 'isInteger' to true for displaying integer values.
     function setNum(hObj,value,isInteger)
         %         value = num2str(value);
         if nargin<3 || isempty(isInteger)
@@ -304,6 +321,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
+    % Sets a popup-menu's 'value' to the choice defined by 'optionString'.
     function setPopup(hObj,optionString)
         choices = get(hObj,'String');
         for idx = 1:length(choices)
@@ -315,11 +333,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         error('invalid option ''%s'' to setPopup tag: %s',optionString,get(hObj,'Tag'));
     end
 
+    % Gets the string of a popup-menu matching the currently selected value.
     function optionString = getPopup(hObj)
         choices = get(hObj,'String');
         optionString = choices{get(hObj,'Value')};
     end
 
+    % Set all UI fields based on the current value of the options structs
+    % (generalOptions, candidateOptions, fittingOptions, trackingOptions)
     function setOptions()
         % % General Options
         set(h_all.edit_movieList,'String', cell2str(generalOptions.filename_movies));
@@ -375,6 +396,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         callback_updateGUIstate();
     end
 
+    % Set all options structs (generalOptions, candidateOptions, fittingOptions, trackingOptions)
+    % based on the current state of the uicontrols. Also checks which
+    % options structs have changed compared to the startup values.
     function storeOptions()
         % % General Options
         generalOptions.filename_movies = strsplit(get(h_all.edit_movieList,'String'), ';');
@@ -434,6 +458,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         delete(h_main);
     end
 
+    % Called when closing the application via the 'X' button (or via close)
     function onAppClose(hObj, event)
         storeOptions();
         GUIreturns.userExit = true;
