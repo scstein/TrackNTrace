@@ -1,4 +1,89 @@
-function [ match_data, match_img ] = matchSpot( img, patt, CORR_THRESH, MIN_DIST)
+function [plugin_name] = plugin_crossCorrelation(h_panel, inputOptions)
+    if nargin < 1
+        inputOptions = [];
+    end
+
+    % Name of the component these options are for
+    plugin_name = 'Cross correlation';
+
+    % Enter names of the parameters
+    % These translate to the names of variables inside options struct this plugin
+    % outputs by removing all white spaces.
+    par_name  = {'PSF_sigma','Corr_Threshold'};
+
+    % Enter type of the parameters
+    % possible: 'float', 'int', 'bool','list'
+    par_type  = {'float','float'};
+
+    % Default value for parameters
+    % Should be a number for 'float'/'int', true/false for 'bool'
+    % or a cell array string list of possible choices for 'list' (first entry is default)
+    par_defaultValue = {1,0.4};
+
+    % Tooltip for the parameters
+    par_tooltip = {'Standard deviation of the PSF. sigma = FWHM/(2*sqrt(2*log(2))).', 'Threshold between 0 and 1.'};
+
+    createOptionsPanel(h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip,inputOptions);
+
+    % Save handle of the plugins function
+    options = getappdata(h_panel,'options');
+    options.functionHandle = @findCandidates_crossCorrelation;
+    setappdata(h_panel,'options',options);
+end
+
+
+
+function candidatePos = findCandidates_crossCorrelation(img, options)
+
+sigma = options.PSF_sigma;
+CORR_THRESH = options.Corr_Threshold;
+
+% Candidate selection by normalized cross correlation
+model = gaussian2d(round(10*sigma),sigma,true);
+pattRows = size(model,1);
+pattCols = size(model,2);
+
+MIN_DIST = round(6*sigma);
+[ match_data, ~ ] = matchPattern( img, model, CORR_THRESH, MIN_DIST);
+
+% convert to pixel position
+match_data(:,1) = match_data(:,1)+ceil(pattRows/2);
+match_data(:,2) = match_data(:,2)+ceil(pattCols/2);
+
+% ATTENTION! Here we switch the coordinates
+% candidatePos(:,1) is columns (x-coordinate)
+% candidatePos(:,2) is rows    (y-coordinate)
+candidatePos = match_data(:,[2,1]);
+
+end
+
+
+function f=gaussian2d(N,sigma, pixIntegrated)
+%Usage   g_img = gaussian2d(N,sigma, pixIntegrated)
+% N: grid size
+% sigma: standard deviation
+% pixIntegrated: Should the gaussian be integrated over the pixel area?
+%
+% The returned gaussian is normalized.
+
+if nargin<3
+    pixIntegrated = false;
+end
+
+[x, y]=meshgrid(round(-N/2):round(N/2), round(-N/2):round(N/2));
+
+if(pixIntegrated)
+    f = pi*sigma^2/2 * ( erfc(-(x-0+1/2)/(sqrt(2)*sigma)) - erfc(-(x-0-1/2)/(sqrt(2)*sigma))    )...
+                     .* ( erfc(-(y-0+1/2)/(sqrt(2)*sigma)) - erfc(-(y-0-1/2)/(sqrt(2)*sigma))   ) ;
+else
+    f= exp(-x.^2/(2*sigma^2)-y.^2/(2*sigma^2));
+end
+
+f=f./sum(f(:));  %Normalize
+end
+
+
+function [ match_data, match_img ] = matchPattern( img, patt, CORR_THRESH, MIN_DIST)
 % Detects a single pattern 'patt' withing the image 'img'. Only matches above the
 % correlation threshold threshold 'CORR_THRESH' are taken as valid. Each
 % returned match is the best candidate within a box window with edge
@@ -94,4 +179,3 @@ function max_indices = localMax(img, MIN_DIST)
     img_dilated = imdilate(img, neigh);
     max_indices = find(img == img_dilated);
 end
-

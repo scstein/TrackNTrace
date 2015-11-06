@@ -15,11 +15,12 @@ else
     end
 end
 
-% strip white spaces from paramter names
+% Replace white space ' ' by underscore '_' & remove dots '.'
 struct_varNames = cell(numel(par_name));
 for iP = 1:numel(par_name);
    stripped_name =  par_name{iP};
-   stripped_name(stripped_name == ' ') = [];
+   stripped_name(stripped_name == ' ') = '_';
+   stripped_name(stripped_name == '.') = '';
    struct_varNames{iP} = stripped_name;
 end
 
