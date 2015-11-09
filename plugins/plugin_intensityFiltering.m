@@ -21,7 +21,7 @@ function [plugin_name] = plugin_intensityFiltering(h_panel, inputOptions)
     par_defaultValue = {3,5,0.05,10};
 
     % Tooltip for the parameters
-    par_tooltip = {'Approxiate spot radius','Relative intensity threshold in percent. Example: 4 means only spots with intensity in the top 4% count.', 'P value for significance test of signal against background. Between 0 and 1, lower means higher quality spots.', 'Background is estimated every N times in the main loop. Set to higher number to speed up function.'};
+    par_tooltip = {'Approxiate spot radius in [px]','Relative intensity threshold in percent [0,100). Example: 4 means only spots with intensity in the top 4% count.', 'P value for significance test of signal against background [0,1]. Lower means higher quality spots.', 'Background is estimated every N times in the main loop. Set to higher number to speed up function.'};
 
     createOptionsPanel(h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip,inputOptions);
 
@@ -60,20 +60,23 @@ function [candidatePos] = findCandidates_intensityFiltering(img,options)
 %     candidatePos - Nx2 matrix of particle candidate positions [column
 %     pixel, row pixel] without subpixel position. Middle of upper left pixel would be [1,1].
 
+global main_iter;
+
 % parse options
 W0 = options.particle_radius;
 INTENS_THRSH = options.threshold_relative;
 PVAL_MIN = options.pval_min;
-par_name  = {'particle_radius','threshold_relative','pval_min','background_mean','background_stdev'};
+N_ITER = options.iteration_count;
 
+calc_bck = mod(main_iter,N_ITER)==0;
 
 % find candidates
 cands_w0 = detectSpots(img,W0,INTENS_THRSH,PVAL_MIN,calc_bck);
-n_cands = numel(cands_w0);
+% n_cands = numel(cands_w0);
 
 [pos_y,pos_x] = ind2sub(size(img),cands_w0);
 candidatePos = [pos_x,pos_y]; %save candidates in [column pixels, row pixels] format
-neighbours = zeros(n_cands,1);
+% neighbours = zeros(n_cands,1);
 %if no smaller features can exist or the search range is too low, don't
 %bother
 % if W0<=1 || MIN_DIST<=sqrt(2)
@@ -109,7 +112,7 @@ neighbours = zeros(n_cands,1);
         
         %calculate local background with twice bigger window by
         %LeastMedianSquares method
-        if calc_bck
+        if calc_bck || isempty(img_bck_mean)
             [img_bck_mean,img_bck_std] = calcBG(img_conv,size(img_conv,1),size(img_conv,2),2*w+1);
         end
         
