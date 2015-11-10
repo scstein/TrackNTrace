@@ -1,11 +1,20 @@
-function [plugin_name] = plugin_intensityFiltering(h_panel, inputOptions)
-    if nargin < 1
+function [plugin_name, plugin_type] = plugin_intensityFiltering(h_panel, inputOptions)
+    if nargin < 2
         inputOptions = [];
     end
 
     % Name of the component these options are for
     plugin_name = 'Intensity filtering';
 
+    % Type of plugin.
+    % 1: Candidate detection
+    % 2: Spot fitting
+    % 3: Tracking
+    plugin_type = 1;
+    
+    % Calling the plugin function without arguments just returns its name and type
+    if (nargin == 0); return; end
+    
     % Enter names of the parameters
     % These translate to the names of variables inside options struct this plugin
     % outputs by removing all white spaces.

@@ -55,38 +55,71 @@ set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.button_movieList, 'Callback', @callback_selectMovieList);
 set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
 
-% % Candidate Options
-set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_stddev, 'Callback', {@callback_FloatEdit,0,inf});
-% popup_fitDirection
-set(h_all.cbx_calcOnce, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_avgWinSize, 'Callback', {@callback_IntEdit,1,inf});
-% Only for correlation
-set(h_all.edit_corrThreshold,'Callback', {@callback_FloatEdit,0,1});
-% Only for intensity filtering
-set(h_all.edit_particleRadius,'Callback', {@callback_IntEdit,1,inf});
-set(h_all.edit_intensityThreshold,'Callback', {@callback_FloatEdit,0,100});
-set(h_all.edit_pTest,'Callback', {@callback_FloatEdit,0,1});
-set(h_all.edit_bgInterval,'Callback', {@callback_IntEdit,1,inf});
-
-
-% % Fitting options
-% cbx_fitStddev
-% cbx_usePixelIntegration
-set(h_all.cbx_useMleRefinement, 'Callback', @callback_updateGUIstate);
+%Photon conversion
 set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateGUIstate);
 set(h_all.edit_photonBias, 'Callback', {@callback_IntEdit,0,inf});
 set(h_all.edit_photonSensitivity, 'Callback', {@callback_FloatEdit,1.0,inf});
 set(h_all.edit_photonGain, 'Callback', {@callback_IntEdit,1,1000});
 
+% % Candidate Options
+set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
+% popup_fitDirection
+set(h_all.cbx_calcOnce, 'Callback', @callback_updateGUIstate);
+set(h_all.edit_avgWinSize, 'Callback', {@callback_IntEdit,1,inf});
+
+% % Fitting Options
+%popup_fittingMethod
+
 % % Tracking
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
-set(h_all.popup_trackerMethod, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_trackerRadius,'Callback', {@callback_FloatEdit,0,inf});
-set(h_all.edit_maxGap,'Callback', {@callback_IntEdit,0,inf});
-set(h_all.edit_minTrackLength,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.edit_splitMovieParts, 'Callback', {@callback_IntEdit,1,inf});
+set(h_all.popup_trackingMethod, 'Callback', @callback_updateGUIstate);
 % cbx_verbose
+
+% Parse plugins
+fullPathToThisFile = mfilename('fullpath');
+[folderPath,~,~] = fileparts(fullPathToThisFile);
+plugin_files = dir([folderPath filesep '..' filesep 'plugins' filesep 'plugin_*.m']);
+nr_plugins = numel(plugin_files);
+
+candidate_plugins = {};
+fitting_plugins = {};
+tracking_plugins = {};
+
+for iPlug = 1:nr_plugins
+    [~, plugin_function, ~] = fileparts(plugin_files(iPlug).name);
+    plugin_function = str2func(plugin_function); % Convert string to function handle
+    [plugin_name, plugin_type] = plugin_function();
+    
+    switch plugin_type
+        case 1 % Candidate method
+           candidate_plugins = [candidate_plugins; {plugin_function, plugin_name}];
+        case 2 % Fitting method
+            fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name}];
+        case 3 % Tracking method
+            tracking_plugins = [tracking_plugins; {plugin_function, plugin_name}];
+        otherwise
+            warning('Detected unknown plugin of type %i',plugin_type);
+    end    
+end
+
+found_candidate_plugin = size(candidate_plugins,1)>0;
+found_fitting_plugin = size(fitting_plugins,1)>0;
+found_tracking_plugin = size(tracking_plugins,1)>0;
+
+if not(found_candidate_plugin)
+    error('No candidate detection plugin detected.');
+end
+if not(found_fitting_plugin)
+    error('No fitting plugin detected.');
+end
+if not(found_tracking_plugin)
+    error('No tracking plugin detected.')
+end
+
+% Set popups
+set(h_all.popup_candidateMethod, 'String', candidate_plugins(:,2));
+set(h_all.popup_fittingMethod, 'String', fitting_plugins(:,2));
+set(h_all.popup_trackingMethod, 'String', tracking_plugins(:,2));
 
 % GUI main
 setOptions();
@@ -103,26 +136,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.edit_firstFrameTesting, 'Enable','off');
             set(h_all.edit_lastFrameTesting, 'Enable','off');
         end
-        
-        % Show only candidate options matching the method
-        if strcmp(getPopup(h_all.popup_candidateMethod), 'Cross-correlation')
-            set(h_all.panel_intensityFiltering,'Visible','off')
-            set(h_all.panel_correlation,'Visible','on');
-        else
-            set(h_all.panel_intensityFiltering,'Visible','on')
-            set(h_all.panel_correlation,'Visible','off');
-        end
-        
+                
         if get(h_all.cbx_calcOnce, 'Value')
             set(h_all.edit_avgWinSize, 'Enable','on');
         else
             set(h_all.edit_avgWinSize, 'Enable','off');
-        end
-
-        
-        % Enable/disable mle conversion (necessitates photon conversion)
-        if get(h_all.cbx_useMleRefinement, 'Value')
-            set(h_all.cbx_usePhotonConv, 'Value',true);
         end
         
         % Enable/disable photon conversion
@@ -131,20 +149,12 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.edit_photonSensitivity, 'Enable','on');
             set(h_all.edit_photonGain, 'Enable','on');
         else
-            set(h_all.cbx_useMleRefinement, 'Value',false);
             set(h_all.edit_photonBias, 'Enable','off');
             set(h_all.edit_photonSensitivity, 'Enable','off');
             set(h_all.edit_photonGain, 'Enable','off');
         end
 
-        
-        % Enable/disable tracking panel
-        if get(h_all.cbx_enableTracking, 'Value')
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
-        else
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
-        end
-        
+               
         % In single file mode we disable choosing the movie list
         if(GUIinputs.singleFileMode)
             set(h_all.edit_movieList,'Enable', 'off');
@@ -152,7 +162,107 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.button_continueForAll, 'Visible','off');
         end
         
+        % Create options panels based on chosen methods
+        candidate_plugins{ get(h_all.popup_candidateMethod,'Value'),1}(h_all.panel_candidate);
+        fitting_plugins{ get(h_all.popup_fittingMethod,'Value'),1}(h_all.panel_fitting);
+        tracking_plugins{ get(h_all.popup_trackingMethod,'Value'),1}(h_all.panel_tracking);
+        
+        updatePanelPositions();
+        
+        
+        % Enable/disable tracking panel
+        if get(h_all.cbx_enableTracking, 'Value')
+            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
+        else
+            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
+        end
     end
+
+    function updatePanelPositions()
+        above_panel_spacing = 0.5;
+        topic_spacing = 2.5;
+        units = 'characters';
+        
+        set(h_all.panel_candidate,'Units',units);
+        panel_candidate_pos = get(h_all.panel_candidate,'Position');
+        
+        % Relative to candidate detection panel
+        set(h_all.label_fittingMethod, 'Units',units);
+        label_fittingMethod_pos = get(h_all.label_fittingMethod, 'Position');
+        label_fittingMethod_pos(2) = panel_candidate_pos(2)-topic_spacing-label_fittingMethod_pos(4)/2;
+        set(h_all.label_fittingMethod, 'Position',label_fittingMethod_pos);
+        
+        set(h_all.popup_fittingMethod, 'Units',units);
+        pos = get(h_all.popup_fittingMethod, 'Position');
+        pos(2) = panel_candidate_pos(2)-topic_spacing-pos(4)/2;
+        set(h_all.popup_fittingMethod, 'Position',pos);
+        
+        % Relative to label_fitting_Method
+        set(h_all.panel_fitting, 'Units',units);
+        panel_fitting_pos = get(h_all.panel_fitting, 'Position');
+        panel_fitting_pos(2) = label_fittingMethod_pos(2)-above_panel_spacing-panel_fitting_pos(4);
+        set(h_all.panel_fitting, 'Position',panel_fitting_pos);
+        
+        % Relative to fitting panel
+        set(h_all.label_enableTracking, 'Units',units);
+        label_enableTracking_pos = get(h_all.label_enableTracking, 'Position');
+        label_enableTracking_pos(2) = panel_fitting_pos(2)-topic_spacing-label_enableTracking_pos(4)/2;
+        set(h_all.label_enableTracking, 'Position',label_enableTracking_pos);
+        
+        set(h_all.cbx_enableTracking, 'Units',units);
+        pos = get(h_all.cbx_enableTracking, 'Position');
+        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        set(h_all.cbx_enableTracking, 'Position',pos);
+        
+        set(h_all.label_trackingMethod, 'Units',units);
+        pos = get(h_all.label_trackingMethod, 'Position');
+        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        set(h_all.label_trackingMethod, 'Position',pos);
+
+        set(h_all.popup_trackingMethod, 'Units',units);
+        pos = get(h_all.popup_trackingMethod, 'Position');
+        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        set(h_all.popup_trackingMethod, 'Position',pos);
+
+        % Relative to label tracking
+        set(h_all.panel_tracking, 'Units',units);
+        panel_tracking_pos = get(h_all.panel_tracking, 'Position');
+        panel_tracking_pos(2) = label_enableTracking_pos(2)-above_panel_spacing-panel_tracking_pos(4);
+        set(h_all.panel_tracking, 'Position',panel_tracking_pos);        
+        
+        % Relative to tracking panel
+        button_spacing = 1;
+        
+        set(h_all.button_continueForAll, 'Units',units);
+        pos = get(h_all.button_continueForAll, 'Position');
+        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        set(h_all.button_continueForAll, 'Position',pos);        
+        
+        set(h_all.button_continue, 'Units',units);
+        pos = get(h_all.button_continue, 'Position');
+        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        set(h_all.button_continue, 'Position',pos);       
+        
+        % Rescale window based on last element
+        set(h_main,'Units',units);
+        win_pos = get(h_main,'Position');
+        diff_height = pos(2)-button_spacing;        
+        
+        % To resize the figure properly, we first need to move all objects
+        % inside.. (Matlab ..)
+        all_uiObjects = get(h_main,'Children');
+        
+        for iObj = 1:numel(all_uiObjects)
+            set(all_uiObjects(iObj),'Units',units);
+            pos = get(all_uiObjects(iObj),'Position');
+            pos(2) = pos(2) - diff_height;
+            set(all_uiObjects(iObj),'Position',pos);
+        end
+        
+        win_pos(4) = win_pos(4)-diff_height;
+        set(h_main,'Position', win_pos);        
+    end
+        
 
     % This will process all given movies with the current settings without
     % individual figures showing up for each one.
@@ -352,45 +462,26 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         setNum(h_all.edit_lastFrameTesting, generalOptions.lastFrameTesting, true);
         
         % Candidate Options
-        if candidateOptions.useCrossCorrelation
-            setPopup(h_all.popup_candidateMethod,'Cross-correlation');
-        else
-            setPopup(h_all.popup_candidateMethod,'Intensity filtering');
-        end
-        
-        if candidateOptions.fitForward
+        if generalOptions.fitForward
             setPopup(h_all.popup_fitDirection,'Forward');
         else
             setPopup(h_all.popup_fitDirection,'Backward');
         end
-        setNum(h_all.edit_stddev, candidateOptions.sigma);
-        set(h_all.cbx_calcOnce, 'Value', candidateOptions.calculateCandidatesOnce);
-        setNum(h_all.edit_avgWinSize, candidateOptions.averagingWindowSize, true);
-        % Only for correlation
-        setNum(h_all.edit_corrThreshold, candidateOptions.corrThresh);
-        % Only for intensity filtering
-        setNum(h_all.edit_particleRadius, candidateOptions.particleRadius, true);
-        setNum(h_all.edit_intensityThreshold,candidateOptions.intensityThreshold, true);
-        setNum(h_all.edit_pTest, candidateOptions.intensityPtestVar);
-        setNum(h_all.edit_bgInterval,candidateOptions.backgroundCalculationInterval, true);    %
         
-        % Fitting options
-        set(h_all.cbx_fitStddev,'Value', fittingOptions.fitSigma)
-        set(h_all.cbx_usePixelIntegration,'Value', fittingOptions.usePixelIntegratedFit)
-        set(h_all.cbx_useMleRefinement,'Value',fittingOptions.useMLErefine)
-        set(h_all.cbx_usePhotonConv,'Value',fittingOptions.usePhotonConversion)
-        set(h_all.edit_photonBias,'Value',fittingOptions.photonBias);
-        set(h_all.edit_photonSensitivity,'Value',fittingOptions.photonSensitivity);
-        set(h_all.edit_photonGain,'Value',fittingOptions.photonGain);
+        % Calc once
+        set(h_all.cbx_calcOnce, 'Value', generalOptions.calculateCandidatesOnce);        
+        setNum(h_all.edit_avgWinSize, generalOptions.averagingWindowSize, true);
+        
+        % Photon conversion        
+        set(h_all.cbx_usePhotonConv,'Value',generalOptions.usePhotonConversion)
+        set(h_all.edit_photonBias,'Value',generalOptions.photonBias);
+        set(h_all.edit_photonSensitivity,'Value',generalOptions.photonSensitivity);
+        set(h_all.edit_photonGain,'Value',generalOptions.photonGain);
         
         % % Tracking
-        set(h_all.cbx_enableTracking,'Value', trackingOptions.enableTracking); % --
-        setPopup(h_all.popup_trackerMethod, trackingOptions.method);
-        set(h_all.cbx_verbose, 'Value', trackingOptions.verbose);
-        setNum(h_all.edit_trackerRadius, trackingOptions.maxRadius);
-        setNum(h_all.edit_maxGap, trackingOptions.maxGap, true);
-        setNum(h_all.edit_minTrackLength, trackingOptions.minTrackLength, true);
-        setNum(h_all.edit_splitMovieParts, trackingOptions.splitMovieParts, true);
+        set(h_all.cbx_enableTracking,'Value', generalOptions.enableTracking); % --
+        
+        % TODO modify setOptions based on the plugin system
         
         % Update the GUI
         callback_updateGUIstate();
@@ -409,38 +500,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         generalOptions.firstFrameTesting = getNum(h_all.edit_firstFrameTesting);
         generalOptions.lastFrameTesting = getNum(h_all.edit_lastFrameTesting);
         
-        %             % % Candidate Options
-        candidateOptions.useCrossCorrelation = logical(strcmp(getPopup(h_all.popup_candidateMethod), 'Cross-correlation'));
-        candidateOptions.fitForward = logical(strcmp(getPopup(h_all.popup_fitDirection), 'Forward'));
-        candidateOptions.sigma = getNum(h_all.edit_stddev);
-        candidateOptions.calculateCandidatesOnce = logical(get(h_all.cbx_calcOnce, 'Value'));
-        candidateOptions.averagingWindowSize = getNum(h_all.edit_avgWinSize);
-        % Only for correlation
-        candidateOptions.corrThresh = getNum(h_all.edit_corrThreshold);
-        % Only for intensity filtering
-        candidateOptions.particleRadius = getNum(h_all.edit_particleRadius);
-        candidateOptions.intensityThreshold = getNum(h_all.edit_intensityThreshold);
-        candidateOptions.intensityPtestVar = getNum(h_all.edit_pTest);
-        candidateOptions.backgroundCalculationInterval = getNum(h_all.edit_bgInterval);
+        generalOptions.fitForward = logical(strcmp(getPopup(h_all.popup_fitDirection), 'Forward'));
+        generalOptions.calculateCandidatesOnce = logical(get(h_all.cbx_calcOnce, 'Value'));
+        generalOptions.averagingWindowSize = getNum(h_all.edit_avgWinSize);
         
-        % Fitting options
-        fittingOptions.fitSigma = logical(get(h_all.cbx_fitStddev,'Value'));
-        fittingOptions.usePixelIntegratedFit = logical(get(h_all.cbx_usePixelIntegration,'Value'));
-        fittingOptions.useMLErefine = logical(get(h_all.cbx_useMleRefinement,'Value'));
-        fittingOptions.usePhotonConversion = logical(get(h_all.cbx_usePhotonConv,'Value'));
-        fittingOptions.photonBias = getNum(h_all.edit_photonBias);
-        fittingOptions.photonSensitivity = getNum(h_all.edit_photonSensitivity);
-        fittingOptions.photonGain = getNum(h_all.edit_photonGain);
+        generalOptions.usePhotonConversion = logical(get(h_all.cbx_usePhotonConv,'Value'));
+        generalOptions.photonBias = getNum(h_all.edit_photonBias);
+        generalOptions.photonSensitivity = getNum(h_all.edit_photonSensitivity);
+        generalOptions.photonGain = getNum(h_all.edit_photonGain);
         
-        % % Tracking
-        trackingOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
-        trackingOptions.method = getPopup(h_all.popup_trackerMethod);
-        trackingOptions.verbose = logical(get(h_all.cbx_verbose, 'Value'));
-        trackingOptions.maxRadius = getNum(h_all.edit_trackerRadius);
-        trackingOptions.maxGap = getNum(h_all.edit_maxGap);
-        trackingOptions.minTrackLength = getNum(h_all.edit_minTrackLength);
-        trackingOptions.splitMovieParts = getNum(h_all.edit_splitMovieParts);
-        
+        % Tracking
+        generalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --       
         
         %Check if options were changed compared to intial ones
         GUIreturns.generalOptionsChanged   = ~isequaln(generalOptions_atStartup, generalOptions);

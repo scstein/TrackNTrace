@@ -4,15 +4,16 @@ function RunTrackNTrace()
     [path,~,~] = fileparts(fullPathToThisFile);
     addpath(genpath([path,filesep,'external']));
     addpath(genpath([path,filesep,'helper']));
+    addpath(genpath([path,filesep,'plugins']));
     addpath(genpath([path,filesep,'subfun']));
-    addpath(genpath([path,filesep,'analysis']));
+    addpath(genpath([path,filesep,'analysis']));    
 
     %% Load and adjust the default settings for this batch
     GUIinputs.titleText = 'Please select a list of movies to process.';
     GUIinputs.fileText  = 'Default settings for this batch';
     GUIinputs.singleFileMode = false;
-    [generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def] = setDefaultOptions();
-    [generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns_def] = settingsGUI(generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIinputs);
+    [generalOptions_def] = setDefaultOptions();
+    [generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns_def] = settingsGUI(generalOptions_def, [],[],[], GUIinputs);
     if GUIreturns_def.userExit; error('User abort. Stopping TrackNTrace.'); end;
 
     %% Adjust options for each movie and test settings if desired

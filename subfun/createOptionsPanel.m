@@ -50,7 +50,7 @@ panel_width = panel_pos(3);
 bg_color = get(h_panel,'BackgroundColor');
 
 % These variables influence the appearence of the panel
-fontSize = 10; % Note: Almost everything scales with the font size
+fontSize = 8; % Note: Almost everything scales with the font size
 row_gap = 1*fontSize; % Gap between two rows
 col_gap = 1*fontSize; % Gap between controls for two parameters
 text_gap = 0.5*fontSize; % Gap between text and value field
@@ -61,7 +61,7 @@ maxElemPerRow = 2; % Maximum number of elements in a row
 % 
 elemRowIdx = 1;
 left_pos = text_gap;
-bott_pos = -0.5*fontSize;
+bott_pos = -8;
 newRow();
 
 % Create controls for all parameters
@@ -145,15 +145,18 @@ for iP = 1:num_pars
     
     % Check if element should be placed in this row
     elemFitsInRow = (left_pos + overall_width < panel_width);
-    if(~elemFitsInRow || elemRowIdx > maxElemPerRow)
-        % Advance to new row
+    if(~elemFitsInRow)
         newRow();
         placeElement();
     else
         placeElement();
-        % Advance to next column
-        elemRowIdx = elemRowIdx+1;
-         left_pos = left_pos + overall_width + col_gap;
+        left_pos = left_pos + overall_width + col_gap; % Next column
+    end
+    elemRowIdx = elemRowIdx+1;
+    % If next element exceeds the max elements per row, begin new row
+    % (Except for the last element)
+    if( elemRowIdx > maxElemPerRow && iP~=num_pars)
+        newRow();
     end
 end
 
@@ -176,13 +179,12 @@ set(h_panel,'Position',panel_pos);
 
 
     function newRow()
+        elemRowIdx = 1;
         left_pos = text_gap;
         bott_pos = bott_pos-row_gap-elemHeight;
-        elemRowIdx = 1;
     end
 
     function placeElement()
-                % Place element
         text_pos = get(h_text,'Position');
         text_pos(1:2) = [left_pos,bott_pos];
         set(h_text,'Position',text_pos);

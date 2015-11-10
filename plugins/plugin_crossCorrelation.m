@@ -1,11 +1,17 @@
-function [plugin_name] = plugin_crossCorrelation(h_panel, inputOptions)
-    if nargin < 1
+function [plugin_name, plugin_type] = plugin_crossCorrelation(h_panel, inputOptions)
+    if nargin < 2
         inputOptions = [];
     end
 
     % Name of the component these options are for
     plugin_name = 'Cross correlation';
 
+    % Type of plugin.
+    % 1: Candidate detection
+    % 2: Spot fitting
+    % 3: Tracking
+    plugin_type = 1;
+    
     % Enter names of the parameters
     % These translate to the names of variables inside options struct this plugin
     % outputs by removing all white spaces.
@@ -23,6 +29,11 @@ function [plugin_name] = plugin_crossCorrelation(h_panel, inputOptions)
     % Tooltip for the parameters
     par_tooltip = {'Standard deviation of the PSF. sigma = FWHM/(2*sqrt(2*log(2))).', 'Threshold between 0 and 1.'};
 
+    
+    % Calling the plugin function without arguments just returns its name and type
+    if (nargin == 0); return; end
+    
+    % Create the panel for this plugin
     createOptionsPanel(h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip,inputOptions);
 
     % Save handle of the plugins function
