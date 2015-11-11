@@ -606,6 +606,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Tracking
         generalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
         
+        % Store options from plugins
+        candidateOptions = getappdata(h_all.panel_candidate,'options');
+        fittingOptions = getappdata(h_all.panel_fitting,'options');
+        trackingOptions = getappdata(h_all.panel_tracking,'options');        
+        
         %Check if options were changed compared to intial ones
         GUIreturns.generalOptionsChanged   = ~isequaln(generalOptions_atStartup, generalOptions);
         GUIreturns.candidateOptionsChanged = ~isequaln(candidateOptions_atStartup, candidateOptions);
@@ -613,11 +618,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         GUIreturns.trackingOptionsChanged  = ~isequaln(trackingOptions_atStartup, trackingOptions);
         %Check if preview window changed
         GUIreturns.testWindowChanged = (generalOptions_atStartup.firstFrameTesting ~= generalOptions.firstFrameTesting) || (generalOptions_atStartup.lastFrameTesting ~= generalOptions.lastFrameTesting);
-        
-        % Store options from plugins
-        candidateOptions = getappdata(h_all.panel_candidate,'options');
-        fittingOptions = getappdata(h_all.panel_fitting,'options');
-        trackingOptions = getappdata(h_all.panel_tracking,'options');
     end
 
 
