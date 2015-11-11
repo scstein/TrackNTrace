@@ -1,4 +1,4 @@
-function [ fitData ] = locateParticles( movie, img_dark, candidateOptions, fittingOptions)
+function [ fitData ] = locateParticles( movieStack, imgCorrection, generalOptions, candidateOptions, fittingOptions)
 % [ fitData ] = locateParticles( movieStack, imgCorrection, candidateOptions, fittingOptions)
 % Find locations of bright spots in an image, in this case a movie of
 % fluorescent molecules, and fit a Gaussian distribution to these spots to
@@ -7,17 +7,20 @@ function [ fitData ] = locateParticles( movie, img_dark, candidateOptions, fitti
 % INPUT:
 %     movieStack: 3D array of intensity values (y,x,N) where N is the
 %     number of frames. All images are treated piecewise and only converted
-%     to double when needed to avoid memory overlow
+%     to double when needed to avoid memory overflow.
 %
 %     imgCorrection: 2D array of intensity correction values which is added
 %     to each movie image to correct for non-isotropic camera readout.
-%     Leave empty [] if no correction is needed
+%     Leave empty [] if no correction is needed.
+% 
+%     generalOptions: struct of input options for this function, se
+%     setDefaultOptions or TrackNTrace manual for details.
 %
 %     candidateOptions: struct of input options used to find localization
-%     candidates. See RunTrackNTrace.m for details
+%     candidates. See respective plugin function for details.
 %
 %     fittingOptions: struct of input options used to fit localization
-%     candidates. See RunTrackNTrace.m for details
+%     candidates. See respective plugin function for details.
 %
 %
 % OUTPUT:
@@ -31,76 +34,65 @@ function [ fitData ] = locateParticles( movie, img_dark, candidateOptions, fitti
 %     see psfFit_Image.m for details.
 
 % Parse inputs
-global img_bck_mean img_bck_std %global variable is needed for intensity weighted filtering to improve performance as background is only calculated every bck_interval frames
-img_bck_mean = zeros(size(movie,1),size(movie,2));
-img_bck_std = zeros(size(movie,1),size(movie,2));
-bck_interval = candidateOptions.backgroundCalculationInterval;
-
-
-fitForward = candidateOptions.fitForward;
-fitSigma = fittingOptions.fitSigma;
-usePixelIntegratedFit = fittingOptions.usePixelIntegratedFit;
-
-useMLE = fittingOptions.useMLErefine;
-usePhoton = fittingOptions.usePhotonConversion;
+fitForward = generalOptions.fitForward;
+usePhoton = generalOptions.usePhotonConversion;
 if usePhoton
-    photon_bias = fittingOptions.photonBias;
-    photon_factor = fittingOptions.photonSensitivity/fittingOptions.photonGain;
+    photon_bias = generalOptions.photonBias;
+    photon_factor = generalOptions.photonSensitivity/generalOptions.photonGain;
 end
 
-calcOnce = candidateOptions.calculateCandidatesOnce;
-useCorr = candidateOptions.useCrossCorrelation;
-if ~isempty(img_dark) %if correction image is provided, do it
+calcOnce = generalOptions.calculateCandidatesOnce;
+if ~isempty(imgCorrection) %if correction image is provided, do it
     correctDark = true;
 else
     correctDark = false;
 end
-nrFrames = size(movie,3);
-halfw = round(4*candidateOptions.sigma); %fitting routine window
+nrFrames = size(movieStack,3);
+
+candidateFun = candidateOptions.functionHandle;
+fittingFun = fittingOptions.functionHandle;
 
 
 % Trace first frame
 if calcOnce %if candidate search only takes place once, an average image is calculated to achieve higher SNR
     if fitForward
-        img = mean(double(movie(:,:,1:candidateOptions.averagingWindowSize)),3);
+        img = mean(double(movieStack(:,:,1:generalOptions.averagingWindowSize)),3);
     else
-        img = mean(double(movie(:,:,end:-1:end-candidateOptions.averagingWindowSize+1)),3);
+        img = mean(double(movieStack(:,:,end:-1:end-generalOptions.averagingWindowSize+1)),3);
     end
 else
     if fitForward
-        img = double(movie(:,:,1));
+        img = double(movieStack(:,:,1));
     else
-        img = double(movie(:,:,end));
+        img = double(movieStack(:,:,end));
     end
 end
 
-
-if usePhoton %convert counts to photons
+%convert counts to photons
+if usePhoton
     img = (img-photon_bias)*photon_factor;
 end
 
-if correctDark %use dark image stack to correct image for camera artifacts
+%use dark image stack to correct image for camera artifacts
+if correctDark
     if usePhoton
-        img_dark = (img_dark+photon_bias)*photon_factor;
+        imgCorrection = (imgCorrection+photon_bias)*photon_factor;
     end
-    img = img+img_dark;
+    img = img+imgCorrection;
 end
 
-if useCorr %find candidates either by cross correlation or intensity filtering
-    candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
-else
-    candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,true,false); %0: disable neighbors
-end
-
+% call candidate function
+candidatePos = candidateFun(img,candidateOptions);
 nrCandidates = size(candidatePos,1);
-fitData = cell(nrFrames,1);
 
+
+fitData = cell(nrFrames,1);
 if nrCandidates>0
-    fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
+    fitData_temp = fittingFun(img,candidatePos,fittingOptions);
     if fitForward
-        fitData(1) = {fitData_temp(:,fitData_temp(end,:)==1).'}; %only keep fits with positive exit flag
+        fitData(1) = fitData_temp;
     else
-        fitData(nrFrames) = {fitData_temp(:,fitData_temp(end,:)==1).'};
+        fitData(nrFrames) = fitData_temp;
     end
 else
     if calcOnce
@@ -117,99 +109,79 @@ startTime = tic;
 elapsedTime = [];
 lastElapsedTime = 0;
 
+global iLocF %loop variable can be known by any function
+
 if(fitForward)
-    for iF = 2:nrFrames %first frame has already been dealt with
+    for iLocF = 2:nrFrames %first frame has already been dealt with
         elapsedTime = toc(startTime);
         
         % Output process every 0.5 seconds
         if( (elapsedTime-lastElapsedTime) > 0.5)
             rewindMessages();
-            rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iF*(nrFrames-iF)/60),  floor(mod(elapsedTime/iF*(nrFrames-iF),60)))
-            rewPrintf('Fitting frame %i/%i\n',iF,nrFrames)
+            rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
+            rewPrintf('Fitting frame %i/%i\n',iLocF,nrFrames)
             
             lastElapsedTime = elapsedTime;
         end
         
         if correctDark
             if usePhoton
-                img = (double(movie(:,:,iF))-photon_bias)*photon_factor+img_dark;
+                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor+imgCorrection;
             else
-                img = double(movie(:,:,iF))+img_dark;
+                img = double(movieStack(:,:,iLocF))+imgCorrection;
             end
         else
             if usePhoton
-                img = (double(movie(:,:,iF))-photon_bias)*photon_factor;
+                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor;
             else
-                img = double(movie(:,:,iF));
+                img = double(movieStack(:,:,iLocF));
             end
         end
         
         if calcOnce %in this case, fitted positions of the last frame serve as candidates for this frame
-            fitData_temp = psfFit_Image( img, fitData{iF-1}.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
-            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
+            fitData(iLocF) = fittingFun(img,fitData{iLocF-1},fittingOptions);
         else %otherwise, find new candidates
-            if useCorr
-                candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
-            else
-                calc_bck = ~mod(iF-1,bck_interval); %calculate new bacgkround?
-                if candidateOptions.intensityPtestVar>=0.99
-                    calc_bck = false; %disable if background test would always yield true
-                end
-                candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,calc_bck,false);
-            end
-            
+            candidatePos = candidateFun(img,candidateOptions);
             nrCandidatesNew = size(candidatePos,1); %to remove empty entries, let's keep track of the largest amount of particles in one frame
             if nrCandidatesNew>0
-                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
-                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
+                fitData(iLocF) = fittingFun(img,candidatePos,fittingOptions);
             end
         end
     end
 else %otherwise, we go backward in time
-    for iF = nrFrames-1:-1:1
+    for iLocF = nrFrames-1:-1:1
         elapsedTime = toc(startTime);
         
         % Output process every 0.5 seconds
         if( (elapsedTime-lastElapsedTime) > 0.5)
             rewindMessages();
-            rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/(nrFrames-iF)*iF/60),  floor(mod(elapsedTime/(nrFrames-iF)*iF,60)))
-            rewPrintf('Fitting frame %i/%i\n',nrFrames-iF+1,nrFrames)
+            rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/(nrFrames-iLocF)*iLocF/60),  floor(mod(elapsedTime/(nrFrames-iLocF)*iLocF,60)))
+            rewPrintf('Fitting frame %i/%i\n',nrFrames-iLocF+1,nrFrames)
             
             lastElapsedTime = elapsedTime;
         end
         
         if correctDark
             if usePhoton
-                img = (double(movie(:,:,iF))-photon_bias)*photon_factor+img_dark;
+                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor+imgCorrection;
             else
-                img = double(movie(:,:,iF))+img_dark;
+                img = double(movieStack(:,:,iLocF))+imgCorrection;
             end
         else
             if usePhoton
-                img = (double(movie(:,:,iF))-photon_bias)*photon_factor;
+                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor;
             else
-                img = double(movie(:,:,iF));
+                img = double(movieStack(:,:,iLocF));
             end
         end
         
         if calcOnce
-            fitData_temp = psfFit_Image( img, fitData{iF+1}.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
-            fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
+            fitData(iLocF) = fittingFun(img,fitData{iLocF+1},fittingOptions);
         else
-            if useCorr
-                candidatePos = findSpotCandidates(img, candidateOptions.sigma, candidateOptions.corrThresh,false);
-            else
-                calc_bck = ~mod(nrFrames-iF,bck_interval);
-                if candidateOptions.intensityPtestVar>=0.99
-                    calc_bck = false;
-                end
-                candidatePos = findSpotCandidates_MOSAIC(img,candidateOptions.particleRadius,candidateOptions.intensityThreshold,candidateOptions.intensityPtestVar,0,calc_bck,false);
-            end
-            
+            candidatePos = candidateFun(img,candidateOptions);
             nrCandidatesNew = size(candidatePos,1);
             if nrCandidatesNew>0
-                fitData_temp = psfFit_Image( img, candidatePos.', [1,1,1,1,fitSigma], usePixelIntegratedFit, useMLE, halfw, candidateOptions.sigma );
-                fitData(iF) = {fitData_temp(:,fitData_temp(end,:)==1).'};
+                fitData(iLocF) = fittingFun(img,candidatePos,fittingOptions);
             end
         end
     end
@@ -217,7 +189,7 @@ end
 
 
 rewindMessages();
-rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iF*(nrFrames-iF)/60),  floor(mod(elapsedTime/iF*(nrFrames-iF),60)))
+rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
 rewPrintf('Fitting done.\n');
 
 
@@ -237,6 +209,6 @@ rewPrintf('Fitting done.\n');
         msgAccumulator = '';
     end
 
-clear global img_bck_mean img_bck_std %get rid of global variables again
+clear global iLocF
 end
 

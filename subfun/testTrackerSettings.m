@@ -1,4 +1,4 @@
-function [run_again, fitData] = testTrackerSettings(movie,dark_stack,candidateOptions,fittingOptions,trackingOptions, fitData)
+function [run_again, fitData] = testTrackerSettings(movie,dark_stack,generalOptions,candidateOptions,fittingOptions,trackingOptions, fitData)
 % 
 % %read first 50 frames, hopefully this is enough for testing. If a movie is
 % %smaller than that, we're screwed as read_tiff_DEMO doesn't check for movie
@@ -11,21 +11,17 @@ function [run_again, fitData] = testTrackerSettings(movie,dark_stack,candidateOp
 %     end
 % end
 
-
-% slicing up a small movie doesn't make sense, so don't
-trackingOptions.splitMovieParts = 1;
-
 % if not supplied by the user, get the particle positions
-if nargin < 6 || isempty(vertcat(fitData{:}))
-   fitData = locateParticles(movie, dark_stack, candidateOptions, fittingOptions);    
+if nargin < 7 || isempty(vertcat(fitData{:}))
+   fitData = locateParticles(movie, dark_stack, generalOptions, candidateOptions, fittingOptions);    
 end
 % track the particles
-if trackingOptions.enableTracking
+if generalOptions.enableTracking
     trajectoryData = trackParticles(fitData,trackingOptions);
 end
 
 %visualize all trajectories
-if trackingOptions.enableTracking
+if generalOptions.enableTracking
     [hGUI, run_again] = visualizeTracksGUI(movie,trajectoryData,5,[],[],[],[],true);
 else
     [hGUI, run_again] = visualizeFitDataGUI(movie,fitData,5,[],true);

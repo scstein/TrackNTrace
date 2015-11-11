@@ -50,9 +50,9 @@ end
 %FUNCTION CODE STARTS HERE
 function [trajData] = trackParticles_uTrack(fitData,options)
 % u-Track was programmed in the lab of Gaudenz Danuser, see:
-% Jaqaman et al, Nature Methods - 5, 695 - 702 (2008), doi:10.1038/nmeth.1237 
+% Jaqaman et al, Nature Methods - 5, 695 - 702 (2008), doi:10.1038/nmeth.1237
 % Refer to GPL-License.txt for licensing information.
-% 
+%
 % Wrapper function for u-Track (see below). Refer to tooltips above, to
 % parseUtrackOptions function and to u-Track manual to obtain information
 % on input and output variables.
@@ -107,6 +107,8 @@ end
 
 function [trajData] = uTrackMain(pos,trackingOptions)
 % TODO: enable 3D tracking!
+
+traj_id = 0; %global trajectory idx
 
 nrSplit = trackingOptions.splitMovieIntervals;
 verbose = trackingOptions.verbose;
@@ -207,14 +209,16 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
     end %if iDiv>1
 end %for iDiv=1:nrSplit
 
-%remove NaNs resulting from closed gaps
-trajData = trajData(~isnan(trajData(:,end)),:);
-
-% if the movie was split, result array has to be sorted by
-% trajectory id again
-if nrSplit>1
-    [~,idx] = sort(trajData(:,1));
-    trajData = trajData(idx,:);
+if ~isempty(trajData)
+    %remove NaNs resulting from closed gaps
+    trajData = trajData(~isnan(trajData(:,end)),:);
+    
+    % if the movie was split, result array has to be sorted by
+    % trajectory id again
+    if nrSplit>1
+        [~,idx] = sort(trajData(:,1));
+        trajData = trajData(idx,:);
+    end
 end
 
 end

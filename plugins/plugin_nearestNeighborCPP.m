@@ -24,7 +24,7 @@ function [plugin_name, plugin_type] = plugin_nearestNeighborCPP(h_panel, inputOp
     % Default value for parameters
     % Should be a number for 'float'/'int', true/false for 'bool'
     % or a cell array string list of possible choices for 'list' (first entry is default)
-    par_defaultValue = {2,6,6,0,2,false};
+    par_defaultValue = {2,6,0,2,6,false};
 
     % Tooltip for the parameters
     par_tooltip = {'Minimum length of trajectories AFTER gap closing in [frames].',...

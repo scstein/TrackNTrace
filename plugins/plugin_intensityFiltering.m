@@ -80,7 +80,11 @@ INTENS_THRSH = options.threshold_relative;
 PVAL_MIN = options.pval_min;
 N_ITER = options.iteration_count;
 
-calc_bck = mod(iLocF,N_ITER)==0;
+if ~isempty(iLocF)
+    calc_bck = mod(iLocF,N_ITER)==0 && PVAL_MIN<0.99;
+else
+    calc_bck = true;
+end
 
 % find candidates
 cands_w0 = detectSpots(img,W0,INTENS_THRSH,PVAL_MIN,calc_bck);

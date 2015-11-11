@@ -63,7 +63,7 @@ function RunTrackNTrace()
             % Check if different dark movie was given
             if(~strcmp(generalOptions_def.filename_dark_movie, generalOptions.filename_dark_movie))
                 if(~isempty(generalOptions.filename_dark_movie))
-                    dark_img   = CalculateDark(read_tiff(generalOptions.filename_dark_movie));
+                    dark_img = CalculateDark(read_tiff(generalOptions.filename_dark_movie));
                 end
             end
 
@@ -93,9 +93,9 @@ function RunTrackNTrace()
                     % IF: this is the first run, the preview window changed or the fitting/candidate options changed locate and
                     % track particles and save fitData. ELSE: reuse fitData acquired in the last run without re-fitting
                     if  first_run || GUIreturns.testWindowChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged || GUIreturns.fittingOptionsChanged
-                        [run_again, fitData_test] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions);
+                        [run_again, fitData_test] = testTrackerSettings(movie,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions);
                     else
-                        [run_again] = testTrackerSettings(movie,dark_img,candidateOptions,fittingOptions,trackingOptions, fitData_test);
+                        [run_again] = testTrackerSettings(movie,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions, fitData_test);
                     end
                     first_run = false;
                 end
@@ -118,7 +118,7 @@ function RunTrackNTrace()
         movie = read_tiff(filename_movie, false, [generalOptions.firstFrame,generalOptions.lastFrame]);        
         % Compute the positions
         fprintf('######\nLocating particles in movie %s.\n',filename_movie);
-        fitData = locateParticles(movie, dark_img, candidateOptions, fittingOptions);
+        fitData = locateParticles(movie, dark_img, generalOptions, candidateOptions, fittingOptions);
 
         % Save positions and movieSize, update generalOptions.lastFrame
         generalOptions.lastFrame = generalOptions.firstFrame + size(movie,3)-1; % lastFrame could have been set to 'inf', now we synchronize with the correct number
@@ -135,10 +135,10 @@ function RunTrackNTrace()
 
     %% Compute trajectories
     for i=1:numel(posFit_list)
-        load(posFit_list{i},'trackingOptions','fitData','filename_movie');
+        load(posFit_list{i},'generalOptions','trackingOptions','fitData','filename_movie');
 
         % If no tracking is desired for this movie, continue
-        if (~trackingOptions.enableTracking)
+        if (~generalOptions.enableTracking)
             continue
         end
 

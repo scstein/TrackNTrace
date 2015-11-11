@@ -54,8 +54,8 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options)
 %     img: 2D matrix of pixel intensities, data type and normalization
 %     arbitrary.
 %     
-%     candidatePos: 2D double array of localization candidates created by
-%     locateParticles.m. Refer to that function or to TrackNTrace manual
+%     candidatePos: 2D double row array of localization candidates created
+%     by locateParticles.m. Refer to that function or to TrackNTrace manual
 %     for more information.
 %     
 %     options: Struct of input parameters provided by GUI.
@@ -69,7 +69,7 @@ varsToFit = [1,1,1,1,options.fitPSFsigma];
 halfw = round(4*options.PSFsigma);
 
 [params] = psfFit_Image( img, candidatePos.',varsToFit,options.usePixelIntegratedFit,options.useMLE,halfw,options.PSFsigma);
-fitData = {params(:,params(end,:)==1.')};
+fitData = {params(:,params(end,:)==1).'};
 
 end
 
