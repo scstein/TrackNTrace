@@ -169,7 +169,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         if isfield(fittingOptions,'plugin_name')
            selected_fitting_plugin = -1; 
-           for iPlug = 1:size(fittingOptions,1)
+           for iPlug = 1:size(fitting_plugins,1)
                 if strcmp(fittingOptions.plugin_name,fitting_plugins{iPlug,2})
                     selected_fitting_plugin = iPlug;
                 end
@@ -184,7 +184,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         if isfield(trackingOptions,'plugin_name')
            selected_tracking_plugin = -1; 
-           for iPlug = 1:size(trackingOptions,1)
+           for iPlug = 1:size(tracking_plugins,1)
                 if strcmp(trackingOptions.plugin_name,tracking_plugins{iPlug,2})
                     selected_tracking_plugin = iPlug;
                 end
