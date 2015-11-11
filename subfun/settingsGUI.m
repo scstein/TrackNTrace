@@ -1,5 +1,4 @@
 function [generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs)
-% USAGE:
 %
 % Author: Simon Christoph Stein
 % E-Mail: scstein@phys.uni-goettingen.de
@@ -67,64 +66,144 @@ set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
 set(h_all.cbx_calcOnce, 'Callback', @callback_updateGUIstate);
 set(h_all.edit_avgWinSize, 'Callback', {@callback_IntEdit,1,inf});
 
-% % Fitting Options
-%popup_fittingMethod
-
 % % Tracking
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
 set(h_all.popup_trackingMethod, 'Callback', @callback_updateGUIstate);
 % cbx_verbose
 
-% Parse plugins
-fullPathToThisFile = mfilename('fullpath');
-[folderPath,~,~] = fileparts(fullPathToThisFile);
-plugin_files = dir([folderPath filesep '..' filesep 'plugins' filesep 'plugin_*.m']);
-nr_plugins = numel(plugin_files);
-
+% % Parse plugins
+% Save plugin info (function / name)
 candidate_plugins = {};
 fitting_plugins = {};
 tracking_plugins = {};
 
-for iPlug = 1:nr_plugins
-    [~, plugin_function, ~] = fileparts(plugin_files(iPlug).name);
-    plugin_function = str2func(plugin_function); % Convert string to function handle
-    [plugin_name, plugin_type] = plugin_function();
-    
-    switch plugin_type
-        case 1 % Candidate method
-           candidate_plugins = [candidate_plugins; {plugin_function, plugin_name}];
-        case 2 % Fitting method
-            fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name}];
-        case 3 % Tracking method
-            tracking_plugins = [tracking_plugins; {plugin_function, plugin_name}];
-        otherwise
-            warning('Detected unknown plugin of type %i',plugin_type);
-    end    
-end
+% Save last selected plugin per category
+selected_candidate_plugin = -1; 
+selected_fitting_plugin = -1; 
+selected_tracking_plugin = -1;
 
-found_candidate_plugin = size(candidate_plugins,1)>0;
-found_fitting_plugin = size(fitting_plugins,1)>0;
-found_tracking_plugin = size(tracking_plugins,1)>0;
+% Save options for every plugin
+candidate_plugin_options = {};
+fitting_plugin_options = {};
+tracking_plugin_options = {};
 
-if not(found_candidate_plugin)
-    error('No candidate detection plugin detected.');
-end
-if not(found_fitting_plugin)
-    error('No fitting plugin detected.');
-end
-if not(found_tracking_plugin)
-    error('No tracking plugin detected.')
-end
+% Load the plugins
+loadPlugins();
 
-% Set popups
-set(h_all.popup_candidateMethod, 'String', candidate_plugins(:,2));
-set(h_all.popup_fittingMethod, 'String', fitting_plugins(:,2));
-set(h_all.popup_trackingMethod, 'String', tracking_plugins(:,2));
-
-% GUI main
-setOptions();
+% % GUI main
+setGUIBasedOnOptions();
 uiwait(h_main);
 drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
+
+    % Load plugins from the plugins folder
+    function loadPlugins()
+        fullPathToThisFile = mfilename('fullpath');
+        [folderPath,~,~] = fileparts(fullPathToThisFile);
+        plugin_files = dir([folderPath filesep '..' filesep 'plugins' filesep 'plugin_*.m']);
+        nr_plugins = numel(plugin_files);
+        
+        for iPlug = 1:nr_plugins
+            [~, plugin_function, ~] = fileparts(plugin_files(iPlug).name);
+            plugin_function = str2func(plugin_function); % Convert string to function handle
+            [plugin_name, plugin_type] = plugin_function();
+            
+            switch plugin_type
+                case 1 % Candidate method
+                    candidate_plugins = [candidate_plugins; {plugin_function, plugin_name}];
+                case 2 % Fitting method
+                    fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name}];
+                case 3 % Tracking method
+                    tracking_plugins = [tracking_plugins; {plugin_function, plugin_name}];
+                otherwise
+                    warning('Detected unknown plugin of type %i',plugin_type);
+            end
+        end
+        
+        found_candidate_plugin = size(candidate_plugins,1)>0;
+        found_fitting_plugin = size(fitting_plugins,1)>0;
+        found_tracking_plugin = size(tracking_plugins,1)>0;
+        
+        if not(found_candidate_plugin)
+            error('No candidate detection plugin detected.');
+        end
+        if not(found_fitting_plugin)
+            error('No fitting plugin detected.');
+        end
+        if not(found_tracking_plugin)
+            error('No tracking plugin detected.')
+        end
+        
+        % Set popup choices
+        set(h_all.popup_candidateMethod, 'String', candidate_plugins(:,2));
+        set(h_all.popup_fittingMethod, 'String', fitting_plugins(:,2));
+        set(h_all.popup_trackingMethod, 'String', tracking_plugins(:,2)); 
+        
+        % Allocate size to store options
+        candidate_plugin_options = cell(size(candidate_plugins,1),1);
+        fitting_plugin_options = cell(size(fitting_plugins,1),1);
+        tracking_plugin_options = cell(size(tracking_plugins,1),1);
+        
+        setPluginsBasedOnOptions();
+    end
+
+    function setPluginsBasedOnOptions()
+       % Select plugin based on the input options
+        if isfield(candidateOptions,'plugin_name')
+           selected_candidate_plugin = -1; 
+           for iPlug = 1:size(candidate_plugins,1)
+                if strcmp(candidateOptions.plugin_name,candidate_plugins{iPlug,2})
+                    selected_candidate_plugin = iPlug;
+                end
+           end
+           
+           if selected_candidate_plugin < 0
+              error('Plugin ''%s'' not found.',candidateOptions.plugin_name) ;
+           end
+        else
+            selected_candidate_plugin = 1; 
+        end
+        
+        
+        if isfield(fittingOptions,'plugin_name')
+           selected_fitting_plugin = -1; 
+           for iPlug = 1:size(fittingOptions,1)
+                if strcmp(fittingOptions.plugin_name,fitting_plugins{iPlug,2})
+                    selected_fitting_plugin = iPlug;
+                end
+           end
+           
+           if selected_fitting_plugin < 0
+              error('Plugin ''%s'' not found.',fittingOptions.plugin_name) ;
+           end
+        else
+            selected_fitting_plugin = 1; 
+        end
+        
+        if isfield(trackingOptions,'plugin_name')
+           selected_tracking_plugin = -1; 
+           for iPlug = 1:size(trackingOptions,1)
+                if strcmp(trackingOptions.plugin_name,tracking_plugins{iPlug,2})
+                    selected_tracking_plugin = iPlug;
+                end
+           end
+           
+           if selected_tracking_plugin < 0
+              error('Plugin ''%s'' not found.',trackingOptions.plugin_name) ;
+           end
+        else
+            selected_tracking_plugin = 1; 
+        end
+        
+        % Set popups to correct value
+        set(h_all.popup_candidateMethod, 'Value', selected_candidate_plugin);
+        set(h_all.popup_fittingMethod, 'Value', selected_fitting_plugin);
+        set(h_all.popup_trackingMethod, 'Value', selected_tracking_plugin);
+        
+        % Build panels
+        candidate_plugins{ selected_candidate_plugin,1}(h_all.panel_candidate, candidateOptions);
+        fitting_plugins{ selected_fitting_plugin,1}(h_all.panel_fitting, fittingOptions);
+        tracking_plugins{ selected_tracking_plugin,1}(h_all.panel_tracking, trackingOptions); 
+    end
 
 % Update GUI based on currently set values
     function callback_updateGUIstate(hObj, event)
@@ -136,7 +215,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.edit_firstFrameTesting, 'Enable','off');
             set(h_all.edit_lastFrameTesting, 'Enable','off');
         end
-                
+        
         if get(h_all.cbx_calcOnce, 'Value')
             set(h_all.edit_avgWinSize, 'Enable','on');
         else
@@ -153,8 +232,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.edit_photonSensitivity, 'Enable','off');
             set(h_all.edit_photonGain, 'Enable','off');
         end
-
-               
+        
+        
         % In single file mode we disable choosing the movie list
         if(GUIinputs.singleFileMode)
             set(h_all.edit_movieList,'Enable', 'off');
@@ -162,14 +241,24 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.button_continueForAll, 'Visible','off');
         end
         
-        % Create options panels based on chosen methods
-        candidate_plugins{ get(h_all.popup_candidateMethod,'Value'),1}(h_all.panel_candidate);
-        fitting_plugins{ get(h_all.popup_fittingMethod,'Value'),1}(h_all.panel_fitting);
-        tracking_plugins{ get(h_all.popup_trackingMethod,'Value'),1}(h_all.panel_tracking);
+        % % Plugins
+        % Store options for last selected plugins
+       candidate_plugin_options{selected_candidate_plugin} = getappdata(h_all.panel_candidate,'options');
+       fitting_plugin_options{selected_fitting_plugin} = getappdata(h_all.panel_fitting,'options');
+       tracking_plugin_options{selected_tracking_plugin} = getappdata(h_all.panel_tracking,'options');
+        
+        % Update panels to display currently selected plugin
+        % This is done by executing the plugin function with the correct panel as the argument
+        selected_candidate_plugin =  get(h_all.popup_candidateMethod,'Value');
+        selected_fitting_plugin = get(h_all.popup_fittingMethod,'Value');
+        selected_tracking_plugin = get(h_all.popup_trackingMethod,'Value');
+        
+        candidate_plugins{ selected_candidate_plugin,1}(h_all.panel_candidate, candidate_plugin_options{selected_candidate_plugin});
+        fitting_plugins{ selected_fitting_plugin,1}(h_all.panel_fitting, fitting_plugin_options{selected_fitting_plugin});
+        tracking_plugins{ selected_tracking_plugin,1}(h_all.panel_tracking, tracking_plugin_options{selected_tracking_plugin});
         
         updatePanelPositions();
-        
-        
+                
         % Enable/disable tracking panel
         if get(h_all.cbx_enableTracking, 'Value')
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
@@ -218,17 +307,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         pos = get(h_all.label_trackingMethod, 'Position');
         pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
         set(h_all.label_trackingMethod, 'Position',pos);
-
+        
         set(h_all.popup_trackingMethod, 'Units',units);
         pos = get(h_all.popup_trackingMethod, 'Position');
         pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
         set(h_all.popup_trackingMethod, 'Position',pos);
-
+        
         % Relative to label tracking
         set(h_all.panel_tracking, 'Units',units);
         panel_tracking_pos = get(h_all.panel_tracking, 'Position');
         panel_tracking_pos(2) = label_enableTracking_pos(2)-above_panel_spacing-panel_tracking_pos(4);
-        set(h_all.panel_tracking, 'Position',panel_tracking_pos);        
+        set(h_all.panel_tracking, 'Position',panel_tracking_pos);
         
         % Relative to tracking panel
         button_spacing = 1;
@@ -236,17 +325,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.button_continueForAll, 'Units',units);
         pos = get(h_all.button_continueForAll, 'Position');
         pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
-        set(h_all.button_continueForAll, 'Position',pos);        
+        set(h_all.button_continueForAll, 'Position',pos);
         
         set(h_all.button_continue, 'Units',units);
         pos = get(h_all.button_continue, 'Position');
         pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
-        set(h_all.button_continue, 'Position',pos);       
+        set(h_all.button_continue, 'Position',pos);
         
         % Rescale window based on last element
         set(h_main,'Units',units);
         win_pos = get(h_main,'Position');
-        diff_height = pos(2)-button_spacing;        
+        diff_height = pos(2)-button_spacing;
         
         % To resize the figure properly, we first need to move all objects
         % inside.. (Matlab ..)
@@ -260,18 +349,18 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         win_pos(4) = win_pos(4)-diff_height;
-        set(h_main,'Position', win_pos);        
+        set(h_main,'Position', win_pos);
     end
-        
 
-    % This will process all given movies with the current settings without
-    % individual figures showing up for each one.
+
+% This will process all given movies with the current settings without
+% individual figures showing up for each one.
     function callback_continueForAll(hObj,event)
         GUIreturns.useSettingsForAll = true;
         callback_continue(hObj,event);
     end
 
-    % Save the current settings to file
+% Save the current settings to file
     function callback_saveSettings(hObj, event)
         storeOptions();
         
@@ -282,7 +371,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         save(outfile,'generalOptions', 'candidateOptions','fittingOptions','trackingOptions');
     end
 
-    % Load settings from a file
+% Load settings from a file
     function callback_loadSettings(hObj,event)
         % In single file mode, the list of movies to process should not be
         % changed, we store it and restore after loading the settings
@@ -304,11 +393,12 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         candidateOptions = allOptions.candidateOptions;
         fittingOptions   = allOptions.fittingOptions;
         trackingOptions  = allOptions.trackingOptions;
-        setOptions();
+        
+        setGUIBasedOnOptions();
     end
 
-    % Opens a file chooser dialog to choose multiple input (movie) files 
-    % for processing. Note: filenames will be seperated by ';'
+% Opens a file chooser dialog to choose multiple input (movie) files
+% for processing. Note: filenames will be seperated by ';'
     function callback_selectMovieList(hObj,event)
         % Get current text field to set starting path of uigetfile
         movieListString = get(h_all.edit_movieList,'String');
@@ -332,7 +422,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_movieList,'String',cell2str(movieList));
     end
 
-    % Opens a file chooser dialog to select the dark movie
+% Opens a file chooser dialog to select the dark movie
     function callback_selectDarkMovie(hObj, event)
         darkMoviePath = get(h_all.edit_darkMovie,'String');
         path = [];
@@ -345,8 +435,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_darkMovie,'String',[path,darkMovie]);
     end
 
-    % Callback for edit fields containing floats. Checks if a correct 
-    % number was entered and restricts it to the given bounds.
+% Callback for edit fields containing floats. Checks if a correct
+% number was entered and restricts it to the given bounds.
     function callback_FloatEdit(hObj,event, minVal, maxVal)
         if nargin<3 || isempty(minVal);
             minVal=-inf;
@@ -368,8 +458,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-    % Callback for edit fields containing integer values. Checks if a correct 
-    % number was entered and restricts it to the given bounds.
+% Callback for edit fields containing integer values. Checks if a correct
+% number was entered and restricts it to the given bounds.
     function callback_IntEdit(hObj,event, minVal,maxVal)
         if nargin<3 || isempty(minVal);
             minVal=0;
@@ -391,9 +481,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-    % Takes a cell array containing strings and concatenates them into one
-    % string seperated by ';'. If the input is not a cell but a string, the
-    % output is equal to the input string;
+% Takes a cell array containing strings and concatenates them into one
+% string seperated by ';'. If the input is not a cell but a string, the
+% output is equal to the input string;
     function str = cell2str(cellObj, delimiter)
         if nargin<2
             delimiter = ';';
@@ -410,14 +500,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-    % Gets the 'String' property from a uicontrol and returns the string
-    % converted to a number
+% Gets the 'String' property from a uicontrol and returns the string
+% converted to a number
     function value = getNum(hObj)
         value = str2double(get(hObj,'String'));
     end
 
-    % Sets the 'String' of an edit field to the input 'value'. Set
-    % 'isInteger' to true for displaying integer values.
+% Sets the 'String' of an edit field to the input 'value'. Set
+% 'isInteger' to true for displaying integer values.
     function setNum(hObj,value,isInteger)
         %         value = num2str(value);
         if nargin<3 || isempty(isInteger)
@@ -431,7 +521,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-    % Sets a popup-menu's 'value' to the choice defined by 'optionString'.
+% Sets a popup-menu's 'value' to the choice defined by 'optionString'.
     function setPopup(hObj,optionString)
         choices = get(hObj,'String');
         for idx = 1:length(choices)
@@ -443,15 +533,15 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         error('invalid option ''%s'' to setPopup tag: %s',optionString,get(hObj,'Tag'));
     end
 
-    % Gets the string of a popup-menu matching the currently selected value.
+% Gets the string of a popup-menu matching the currently selected value.
     function optionString = getPopup(hObj)
         choices = get(hObj,'String');
         optionString = choices{get(hObj,'Value')};
     end
 
-    % Set all UI fields based on the current value of the options structs
-    % (generalOptions, candidateOptions, fittingOptions, trackingOptions)
-    function setOptions()
+% Set all UI fields based on the current value of the options structs
+% (generalOptions, candidateOptions, fittingOptions, trackingOptions)
+    function setGUIBasedOnOptions()
         % % General Options
         set(h_all.edit_movieList,'String', cell2str(generalOptions.filename_movies));
         set(h_all.edit_darkMovie,'String', generalOptions.filename_dark_movie);
@@ -469,10 +559,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         % Calc once
-        set(h_all.cbx_calcOnce, 'Value', generalOptions.calculateCandidatesOnce);        
+        set(h_all.cbx_calcOnce, 'Value', generalOptions.calculateCandidatesOnce);
         setNum(h_all.edit_avgWinSize, generalOptions.averagingWindowSize, true);
         
-        % Photon conversion        
+        % Photon conversion
         set(h_all.cbx_usePhotonConv,'Value',generalOptions.usePhotonConversion)
         set(h_all.edit_photonBias,'Value',generalOptions.photonBias);
         set(h_all.edit_photonSensitivity,'Value',generalOptions.photonSensitivity);
@@ -481,15 +571,16 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % % Tracking
         set(h_all.cbx_enableTracking,'Value', generalOptions.enableTracking); % --
         
-        % TODO modify setOptions based on the plugin system
+        % Update plugins
+        setPluginsBasedOnOptions();
         
         % Update the GUI
         callback_updateGUIstate();
     end
 
-    % Set all options structs (generalOptions, candidateOptions, fittingOptions, trackingOptions)
-    % based on the current state of the uicontrols. Also checks which
-    % options structs have changed compared to the startup values.
+% Set all options structs (generalOptions, candidateOptions, fittingOptions, trackingOptions)
+% based on the current state of the uicontrols. Also checks which
+% options structs have changed compared to the startup values.
     function storeOptions()
         % % General Options
         generalOptions.filename_movies = strsplit(get(h_all.edit_movieList,'String'), ';');
@@ -510,7 +601,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         generalOptions.photonGain = getNum(h_all.edit_photonGain);
         
         % Tracking
-        generalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --       
+        generalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
         
         %Check if options were changed compared to intial ones
         GUIreturns.generalOptionsChanged   = ~isequaln(generalOptions_atStartup, generalOptions);
@@ -519,6 +610,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         GUIreturns.trackingOptionsChanged  = ~isequaln(trackingOptions_atStartup, trackingOptions);
         %Check if preview window changed
         GUIreturns.testWindowChanged = (generalOptions_atStartup.firstFrameTesting ~= generalOptions.firstFrameTesting) || (generalOptions_atStartup.lastFrameTesting ~= generalOptions.lastFrameTesting);
+        
+        % Store options from plugins
+        candidateOptions = getappdata(h_all.panel_candidate,'options');
+        fittingOptions = getappdata(h_all.panel_fitting,'options');
+        trackingOptions = getappdata(h_all.panel_tracking,'options');
     end
 
 
@@ -528,7 +624,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         delete(h_main);
     end
 
-    % Called when closing the application via the 'X' button (or via close)
+% Called when closing the application via the 'X' button (or via close)
     function onAppClose(hObj, event)
         storeOptions();
         GUIreturns.userExit = true;
