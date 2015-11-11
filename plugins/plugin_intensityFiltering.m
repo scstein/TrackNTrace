@@ -15,7 +15,7 @@ function [plugin_name, plugin_type] = plugin_intensityFiltering(h_panel, inputOp
     % Enter names of the parameters
     % These translate to the names of variables inside options struct this plugin
     % outputs by removing all white spaces.
-    par_name  = {'particle_radius','threshold_relative','pval_min','iteration_count'};
+    par_name  = {'particleRadius','thresholdRelative','pvalMin','iterationCount'};
 
     % Enter type of the parameters
     % possible: 'float', 'int', 'bool','list'
@@ -27,7 +27,7 @@ function [plugin_name, plugin_type] = plugin_intensityFiltering(h_panel, inputOp
     par_defaultValue = {3,5,0.05,10};
 
     % Tooltip for the parameters
-    par_tooltip = {'Approxiate spot radius in [pixels]',...
+    par_tooltip = {'Approximate spot radius in [pixels]',...
         'Relative intensity threshold in percent [0,100). Example: 4 means only spots with intensity in the top 4% count.',...
         'P value for significance test of signal against background [0,1]. Lower means higher quality spots.',...
         'Background is estimated every N times in the main loop. Set to higher number to speed up function.'};
@@ -75,10 +75,10 @@ function [candidatePos] = findCandidates_intensityFiltering(img,options)
 global iLocF;
 
 % parse options
-W0 = options.particle_radius;
-INTENS_THRSH = options.threshold_relative;
-PVAL_MIN = options.pval_min;
-N_ITER = options.iteration_count;
+W0 = options.particleRadius;
+INTENS_THRSH = options.thresholdRelative;
+PVAL_MIN = options.pvalMin;
+N_ITER = options.iterationCount;
 
 if ~isempty(iLocF)
     calc_bck = mod(iLocF,N_ITER)==0 && PVAL_MIN<0.99;
@@ -111,7 +111,7 @@ candidatePos = [pos_x,pos_y]; %save candidates in [column pixels, row pixels] fo
 
 
     function [max_indices] = detectSpots(img,w,INTENS_THRSH,PVAL_MIN,calc_bck)
-        global img_bck_mean img_bck_std
+        persistent img_bck_mean img_bck_std
         %convolution with Gaussian blur (sigma = 1px, camera discretization) and moving
         %average, kernel window length is 2*w+1
         lambda_k = 1;

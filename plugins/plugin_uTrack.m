@@ -72,11 +72,14 @@ function [trajData] = trackParticles_uTrack(fitData,options)
 % convert fitData cell array to adjust to tracker function input
 
 nrFrames = size(fitData,1);
+if nrFrames<200
+    options.splitMovieIntervals=1; %no need to split small movies
+end
 
 if options.track3D
-    pos = repmat(struct('xCoord',[],'yCoord',[],'amp',[],'sigma',[]),nrFrames,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
-else
     pos = repmat(struct('xCoord',[],'yCoord',[],'zCoord',[],'amp',[],'sigma',[]),nrFrames,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
+else
+    pos = repmat(struct('xCoord',[],'yCoord',[],'amp',[],'sigma',[]),nrFrames,1);    
 end
 
 for iFrame=1:nrFrames
@@ -108,8 +111,11 @@ end
 function [trajData] = uTrackMain(pos,trackingOptions)
 % TODO: enable 3D tracking!
 
+trajData = [];
 traj_id = 0; %global trajectory idx
 
+probDim = 2;
+% probDim = 2+trackingOptions.track3D;
 nrSplit = trackingOptions.splitMovieIntervals;
 verbose = trackingOptions.verbose;
 n_frames = size(pos,1); %number of frames
@@ -124,7 +130,7 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
     slice = [1+(iDiv-1)*stack_slice,min(iDiv*stack_slice,n_frames)]; %start and end of this slice
     
     %call utrack with probDim=2+track3D
-    [tracksFinal,~,~] = trackCloseGapsKalmanSparse(pos(slice(1):slice(2)),costMatrices,gapCloseParam,kalmanFunctions,2+trackingOptions.track3D,0,verbose);
+    [tracksFinal,~,~] = trackCloseGapsKalmanSparse(pos(slice(1):slice(2)),costMatrices,gapCloseParam,kalmanFunctions,probDim,0,verbose);
     nrTracks = numel(tracksFinal);
     %seqofEvents: has a 0 where track has gap (NaN in
     %tracksCoordAmp) tracksCoordAmpCG:

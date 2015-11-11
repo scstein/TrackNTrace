@@ -23,7 +23,7 @@ function [trajectoryData] = trackParticles(fitData,trackingOptions)
 
 trackingFun = trackingOptions.functionHandle;
 
-fprintf('Tracking particles using %s .\n',func2str(trackingFun));
+fprintf('Tracking particles using %s .. \n',trackingOptions.plugin_name);
 trajectoryData = trackingFun(fitData,trackingOptions);
 fprintf('\b done\n');
 
