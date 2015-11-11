@@ -66,6 +66,9 @@ set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
 set(h_all.cbx_calcOnce, 'Callback', @callback_updateGUIstate);
 set(h_all.edit_avgWinSize, 'Callback', {@callback_IntEdit,1,inf});
 
+% % Fitting
+set(h_all.popup_fittingMethod, 'Callback', @callback_updateGUIstate);
+
 % % Tracking
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
 set(h_all.popup_trackingMethod, 'Callback', @callback_updateGUIstate);
