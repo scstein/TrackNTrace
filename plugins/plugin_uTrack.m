@@ -24,7 +24,7 @@ par_type  = {'int','float','int','int','bool','bool'};
 % Default value for parameters
 % Should be a number for 'float'/'int', true/false for 'bool'
 % or a cell array string list of possible choices for 'list' (first entry is default)
-par_defaultValue = {2,6,0,5,false};
+par_defaultValue = {2,6,0,5,false,false};
 
 % Tooltip for the parameters
 par_tooltip = {'Minimum length of trajectories AFTER gap closing in [frames].',...
