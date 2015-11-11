@@ -92,7 +92,7 @@ function RunTrackNTrace()
                     end
                     % IF: this is the first run, the preview window changed or the fitting/candidate options changed locate and
                     % track particles and save fitData. ELSE: reuse fitData acquired in the last run without re-fitting
-                    if first_run || GUIreturns.testWindowChanged || GUIreturns.generalOptionsChanged || GUIreturns.candidateOptionsChanged || GUIreturns.fittingOptionsChanged || GUIreturns.trackingOptionsChanged
+                    if  first_run || GUIreturns.testWindowChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged || GUIreturns.fittingOptionsChanged
                         [run_again, fitData_test] = testTrackerSettings(movie,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions);
                     else
                         [run_again] = testTrackerSettings(movie,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions, fitData_test);
