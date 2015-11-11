@@ -15,7 +15,7 @@ function [plugin_name, plugin_type] = plugin_crossCorrelation(h_panel, inputOpti
     % Enter names of the parameters
     % These translate to the names of variables inside options struct this plugin
     % outputs by removing all white spaces.
-    par_name  = {'PSF_sigma','Corr_Threshold'};
+    par_name  = {'PSFsigma','CorrThreshold'};
 
     % Enter type of the parameters
     % possible: 'float', 'int', 'bool','list'
@@ -27,7 +27,7 @@ function [plugin_name, plugin_type] = plugin_crossCorrelation(h_panel, inputOpti
     par_defaultValue = {1,0.4};
 
     % Tooltip for the parameters
-    par_tooltip = {'Standard deviation of the PSF. sigma = FWHM/(2*sqrt(2*log(2))).', 'Threshold between 0 and 1.'};
+    par_tooltip = {'Standard deviation of the PSF in pixels. sigma = FWHM/(2*sqrt(2*log(2))).', 'Threshold between 0 and 1.'};
 
     
     % Calling the plugin function without arguments just returns its name and type
@@ -45,9 +45,22 @@ end
 
 
 function candidatePos = findCandidates_crossCorrelation(img, options)
+%Wrapper function for cross correlation candidate finding. Refer to
+%matchSpot below or tooltips above to obtain information on input and
+%output variables.
+% 
+% INPUT:
+%     img: 2D matrix of pixel intensities, data type and normalization
+%     arbitrary.
+%     
+%     options: Struct of input parameters provided by GUI.
+%     
+% OUTPUT:
+%     candidatePos - Nx2 matrix of particle candidate positions [column
+%     pixel, row pixel] without subpixel position. Middle of upper left pixel would be [1,1].
 
-sigma = options.PSF_sigma;
-CORR_THRESH = options.Corr_Threshold;
+sigma = options.PSFsigma;
+CORR_THRESH = options.CorrThreshold;
 
 % Candidate selection by normalized cross correlation
 model = gaussian2d(round(10*sigma),sigma,true);

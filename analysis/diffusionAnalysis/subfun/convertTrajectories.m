@@ -48,7 +48,7 @@ switch lower(trmethod)
                 end
                 
                 %check if particle is moving, if the segment has the right length, if it's outside the inclusion zone
-                if sigma_guess>=trajParam.diffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone
+                if sigma_guess>=trajParam.minimalDiffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone
                     traj_result(iTraj) = {[traj_result{iTraj};seg_temp;NaN(1,2)]};
                 end
             end
@@ -89,7 +89,7 @@ switch lower(trmethod)
                 is_in_zone = sum(sqrt(sum((seg_temp-repmat(trajParam.inclusionZone(1:2),seg_size,1)).^2,2))<=trajParam.inclusionZone(3))==seg_size;
             end
             
-            if D_guess>=trajParam.diffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone
+            if D_guess>=trajParam.minimalDiffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone
                 traj_result(iTraj) = {[traj_result{iTraj};seg_temp;NaN(1,2)]};
             end
             
@@ -124,7 +124,7 @@ switch lower(trmethod)
                     is_in_zone = sum(sqrt(sum((seg_temp-repmat(trajParam.inclusionZone(1:2),seg_size,1)).^2,2))<=trajParam.inclusionZone(3))==seg_size;
                 end
                 
-                if D_guess>=trajParam.diffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone
+                if D_guess>=trajParam.minimalDiffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone
                     traj_result(iTraj) = {[traj_result{iTraj};seg_temp;NaN(1,2)]};
                 end
             end
