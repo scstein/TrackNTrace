@@ -241,7 +241,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if(GUIinputs.singleFileMode)
             set(h_all.edit_movieList,'Enable', 'off');
             set(h_all.button_movieList,'Enable', 'off');
-            set(h_all.button_continueForAll, 'Visible','off');
+%             set(h_all.button_continueForAll, 'Visible','off');
         end
         
         % % Plugins

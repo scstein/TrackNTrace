@@ -36,11 +36,15 @@ function RunTrackNTrace()
         filename_movie = movie_list{i};
         [path,filename,~] = fileparts(filename_movie);
         filename_fitData = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
-
-
-        %     Skip nonsensical input
-        [~,movie] = evalc(['read_tiff(''',filename_movie,''',false,[1,2])']); % Read 2 frames. note: evalc suppresses output
-        if size(movie,3)<=1
+        
+        
+        % Skip nonsensical input
+        if ~isempty(filename_movie)
+            [~,movie] = evalc(['read_tiff(''',filename_movie,''',false,[1,2])']); % Read 2 frames. note: evalc suppresses output
+            if size(movie,3)<=1
+                continue;
+            end
+        else
             continue;
         end
 
@@ -52,7 +56,7 @@ function RunTrackNTrace()
         dark_img = dark_img_def;
 
         % Does the user want to adjust the settings per movie?
-        if not(GUIreturns_def.useSettingsForAll)
+        if not(  GUIreturns_def.useSettingsForAll || (exist('GUIreturns','var') && GUIreturns.useSettingsForAll)  )
             % Show filename in GUI
             GUIinputs.fileText = filename_movie;
 
@@ -66,6 +70,9 @@ function RunTrackNTrace()
                     dark_img = CalculateDark(read_tiff(generalOptions.filename_dark_movie));
                 end
             end
+            
+            % Set same settings for all remaining movies if user said so
+            if GUIreturns.useSettingsForAll; generalOptions.previewMode = false; end;
 
             % If test mode is enabled, analyze first X frames and show GUI
             if generalOptions.previewMode
@@ -73,15 +80,21 @@ function RunTrackNTrace()
                 first_run = true;
                 filename_dark_movie = generalOptions.filename_dark_movie;
                 while run_again
-                    if not(first_run);
+                    if not(first_run)
                         [generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
                         if GUIreturns.userExit; error(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.')); end; %#ok<SPERR>
-                    end;
+                        if GUIreturns.useSettingsForAll; generalOptions.previewMode = false; end; %dont go through other movies anymore
+                    end
 
                     if not(generalOptions.previewMode); break; end; % If test mode was disabled by user in the settingsGUI
                     % Check if requested frame interval has changed -> re-read movie if neccessary
                     if first_run || GUIreturns.testWindowChanged
-                        movie = read_tiff(filename_movie, false, [generalOptions.firstFrameTesting, generalOptions.lastFrameTesting]);
+                        try
+                            movie = read_tiff(filename_movie, false, [generalOptions.firstFrameTesting, generalOptions.lastFrameTesting]);
+                        catch
+                            warning('Movie could not be read, check settings again before continuing!');
+                            continue;
+                        end
                     end
                     % Check if different dark movie was given
                     if(~strcmp(filename_dark_movie, generalOptions.filename_dark_movie))
@@ -101,7 +114,16 @@ function RunTrackNTrace()
                 end
             end
 
+        end %not(  GUIreturns_def.useSettingsForAll || (exist('GUIreturns','var') && GUIreturns.useSettingsForAll)  )
+        
+        if exist('GUIreturns','var') && GUIreturns.useSettingsForAll
+            generalOptions_def = generalOptions;
+            candidateOptions_def = candidateOptions;
+            fittingOptions_def = fittingOptions;
+            trackingOptions_def = trackingOptions;
+            dark_img_def = dark_img;
         end
+        
         % Save options
         generalOptions.filename_movies = {filename_movie}; % Save only name of this file in its settings (important when loading options)
         save(filename_fitData,'filename_movie','generalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
