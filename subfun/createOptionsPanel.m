@@ -56,7 +56,7 @@ col_gap = 1*fontSize; % Gap between controls for two parameters
 text_gap = 0.5*fontSize; % Gap between text and value field
 elemHeight = 1.4*fontSize; % Height of uicontrols
 editWidth = 6*fontSize; % width of edit fields
-maxElemPerRow = 2; % Maximum number of elements in a row
+maxElemPerRow = 5; % Maximum number of elements in a row
 
 % 
 elemRowIdx = 1;
@@ -147,11 +147,9 @@ for iP = 1:num_pars
     elemFitsInRow = (left_pos + overall_width < panel_width);
     if(~elemFitsInRow)
         newRow();
-        placeElement();
-    else
-        placeElement();
-        left_pos = left_pos + overall_width + col_gap; % Next column
     end
+    placeElement();
+    left_pos = left_pos + overall_width + col_gap; % Next column
     elemRowIdx = elemRowIdx+1;
     % If next element exceeds the max elements per row, begin new row
     % (Except for the last element)
