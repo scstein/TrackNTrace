@@ -510,7 +510,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
     end
 
 % Sets the 'String' of an edit field to the input 'value'. Set
-% 'isInteger' to true for displaying integer values.
+% 'isInteger' to true for setting/displaying integer values.
     function setNum(hObj,value,isInteger)
         %         value = num2str(value);
         if nargin<3 || isempty(isInteger)
@@ -518,7 +518,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         if isInteger
-            set(hObj,'String',sprintf('%i',value));
+            set(hObj,'String',sprintf('%i',round(value)));
         else
             set(hObj,'String',sprintf('%.2f',value));
         end
@@ -567,9 +567,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         % Photon conversion
         set(h_all.cbx_usePhotonConv,'Value',generalOptions.usePhotonConversion)
-        set(h_all.edit_photonBias,'Value',generalOptions.photonBias);
-        set(h_all.edit_photonSensitivity,'Value',generalOptions.photonSensitivity);
-        set(h_all.edit_photonGain,'Value',generalOptions.photonGain);
+        setNum(h_all.edit_photonBias,generalOptions.photonBias, true);
+        setNum(h_all.edit_photonSensitivity,generalOptions.photonSensitivity);
+        setNum(h_all.edit_photonGain,generalOptions.photonGain, true);
         
         % % Tracking
         set(h_all.cbx_enableTracking,'Value', generalOptions.enableTracking); % --
