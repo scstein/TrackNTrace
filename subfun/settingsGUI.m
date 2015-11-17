@@ -370,7 +370,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         setNum(h_all.edit_corrThreshold, candidateOptions.corrThresh);
         % Only for intensity filtering
         setNum(h_all.edit_particleRadius, candidateOptions.particleRadius, true);
-        setNum(h_all.edit_intensityThreshold,candidateOptions.intensityThreshold, true);
+        setNum(h_all.edit_intensityThreshold,candidateOptions.intensityThreshold, false);
         setNum(h_all.edit_pTest, candidateOptions.intensityPtestVar);
         setNum(h_all.edit_bgInterval,candidateOptions.backgroundCalculationInterval, true);    %
         
@@ -379,9 +379,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.cbx_usePixelIntegration,'Value', fittingOptions.usePixelIntegratedFit)
         set(h_all.cbx_useMleRefinement,'Value',fittingOptions.useMLErefine)
         set(h_all.cbx_usePhotonConv,'Value',fittingOptions.usePhotonConversion)
-        set(h_all.edit_photonBias,'Value',fittingOptions.photonBias);
-        set(h_all.edit_photonSensitivity,'Value',fittingOptions.photonSensitivity);
-        set(h_all.edit_photonGain,'Value',fittingOptions.photonGain);
+        setNum(h_all.edit_photonBias, fittingOptions.photonBias, true);
+        setNum(h_all.edit_photonSensitivity, fittingOptions.photonSensitivity);
+        setNum(h_all.edit_photonGain, fittingOptions.photonGain, true);
         
         % % Tracking
         set(h_all.cbx_enableTracking,'Value', trackingOptions.enableTracking); % --
