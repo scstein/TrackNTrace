@@ -13,8 +13,8 @@ function RunTrackNTrace()
     GUIinputs.fileText  = 'Default settings for this batch';
     GUIinputs.singleFileMode = false;
     [generalOptions_def] = setDefaultOptions();
-    [generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns_def] = settingsGUI(generalOptions_def, [],[],[], GUIinputs);
-    if GUIreturns_def.userExit; error('User abort. Stopping TrackNTrace.'); end;
+    [generalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(generalOptions_def, [],[],[], GUIinputs);
+    if GUIreturns.userExit; error('User abort. Stopping TrackNTrace.'); end;
 
     %% Adjust options for each movie and test settings if desired
     GUIinputs.singleFileMode = true; % No editing of movie list possible
@@ -56,7 +56,7 @@ function RunTrackNTrace()
         dark_img = dark_img_def;
 
         % Does the user want to adjust the settings per movie?
-        if not(  GUIreturns_def.useSettingsForAll || (exist('GUIreturns','var') && GUIreturns.useSettingsForAll)  )
+        if not(  GUIreturns.useSettingsForAll )
             % Show filename in GUI
             GUIinputs.fileText = filename_movie;
 
@@ -116,7 +116,7 @@ function RunTrackNTrace()
 
         end %not(  GUIreturns_def.useSettingsForAll || (exist('GUIreturns','var') && GUIreturns.useSettingsForAll)  )
         
-        if exist('GUIreturns','var') && GUIreturns.useSettingsForAll
+        if GUIreturns.useSettingsForAll
             generalOptions_def = generalOptions;
             candidateOptions_def = candidateOptions;
             fittingOptions_def = fittingOptions;
