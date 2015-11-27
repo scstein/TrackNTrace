@@ -86,8 +86,7 @@ end
 
 
 % call main function
-trajData = nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,options.maxFrameGap,options.minTrajLength,options.verbose).';
-
+trajData = nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,options.maxGapRadius,options.maxFrameGap,options.minTrajLength,options.verbose).';
 end
 
 
