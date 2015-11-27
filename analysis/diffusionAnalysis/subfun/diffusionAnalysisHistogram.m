@@ -85,7 +85,7 @@ fit_result = repmat(struct('p_x',[],'p_y',[],'order_x',[],'order_y',[]),max_fram
 plotdata_result = repmat(struct('plotdata_x',[],'plotdata_y',[]),max_frame,1);
 fit_aborted = false;
 order_max = 1;
-
+histo_totalbins = [];
 for iFrame=1:max_frame
     
     %format all trajectories with appropriate skip frame length
@@ -100,6 +100,7 @@ for iFrame=1:max_frame
     if strcmp(fit_curve,'jump')
         data_hist_in = sqrt(traj(:,1).^2+traj(:,2).^2);
         [bins_out,hist_out,~] = Hist1D(data_hist_in,hist_bin,false,'freedman',true,false,false);
+%         histo_totalbins = [histo_totalbins;[iFrame,sum(hist_out(:))]];
         hist_out = hist_out/sum(hist_out*(bins_out(2)-bins_out(1)));
     else
         if use_iso
@@ -162,6 +163,7 @@ if fit_aborted
 end
 fit_result = fit_result(1:iFrame);
 plotdata_result = plotdata_result(1:iFrame);
+% histo_totalbins
 
 [msd_result,velocity_result] = prepareResult(fit_result,use_v,use_iso,order_max,px,dt);
 end %END MAINFUN

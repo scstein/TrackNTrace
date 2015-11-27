@@ -168,7 +168,7 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
         %track those two frames
         if ~isempty(pos_frame_now) && ~isempty(pos_frame_first)
             try
-                [tracksFinal_sliced,~,~] = trackCloseGapsKalmanSparse(track_slice,costMatrices_slice,gapCloseParam_slice,kalmanFunctions_slice,2,0,verbose);
+                [tracksFinal_sliced,~,~] = trackCloseGapsKalmanSparse(track_slice,costMatrices_slice,gapCloseParam_slice,kalmanFunctions_slice,probDim,0,verbose);
                 nrTracks_sliced = numel(tracksFinal_sliced);
             catch
                 %very rarely, utrack tries to index a feature track
