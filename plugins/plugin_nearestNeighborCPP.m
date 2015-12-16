@@ -1,7 +1,14 @@
 function [plugin_name, plugin_type] = plugin_nearestNeighborCPP(h_panel, inputOptions)
+%    -------------- TNT core code, not to change by user --------------
 if nargin < 2
     inputOptions = [];
 end
+
+% This stores the setup of all parameters
+param_specification = cell(0,4);
+
+
+%    -------------- User definition of plugin --------------
 
 % Name of the component these options are for
 plugin_name = 'NearestNeighbor C++';
@@ -12,42 +19,58 @@ plugin_name = 'NearestNeighbor C++';
 % 3: Tracking
 plugin_type = 3;
 
-% Enter names of the parameters
-% These translate to the names of variables inside options struct this plugin
-% outputs by removing all white spaces.
-par_name  = {'minTrajLength','maxTrackRadius','maxFrameGap','minSegLength','maxGapRadius','verbose'};
+% The function this plugin implements
+plugin_function =  @trackParticles_nearestNeighborCPP;
 
-% Enter type of the parameters
-% possible: 'float', 'int', 'bool','list'
-par_type  = {'int','float','float','int','int','bool'};
 
-% Default value for parameters
-% Should be a number for 'float'/'int', true/false for 'bool'
-% or a cell array string list of possible choices for 'list' (first entry is default)
-par_defaultValue = {2,6,0,2,6,false};
+% Add parameters
+% read comments of function subfun/add_plugin_param for HOWTO
+add_param('minTrajLength',...
+    'int',...
+    {2, 0, inf},...
+    'Minimum length of trajectories AFTER gap closing in [frames].');
+add_param('maxTrackRadius',...
+    'float',...
+    {6, 0, inf},...
+    'Maximum allowed linking distance between two spots in [pixels].');
+add_param('maxFrameGap',...
+    'float',...
+    {0, 0, inf},...
+    'Maximum allowed time gap between two segments used for gap closing in [frames]. 0 = no gap closing.');
+add_param('minSegLength',...
+    'int',...
+    {2, 0, inf},...
+    'Minimum length of trajectory segments BEFORE gap closing in [frames].');
+add_param('maxGapRadius',...
+    'int',...
+    {6, 0, inf},...
+    'Maximum allowed linking distance between two segments uses for gap closing in [pixels].');
+add_param('verbose',...
+    'bool',...
+    false,...
+    'Switch on to see tracking progress in command window.');
 
-% Tooltip for the parameters
-par_tooltip = {'Minimum length of trajectories AFTER gap closing in [frames].',...
-    'Maximum allowed linking distance between two spots in [pixels].',...
-    'Maximum allowed time gap between two segments used for gap closing in [frames]. 0 = no gap closing.',...
-    'Minimum length of trajectory segments BEFORE gap closing in [frames].',...
-    'Maximum allowed linking distance between two segments uses for gap closing in [pixels].',...
-    'Switch on to see tracking progress in command window.'};
-
+%   -------------- TNT core code, not to change by user --------------
+%
 % Calling the plugin function without arguments just returns its name and type
 if (nargin == 0); return; end
 
 % Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip,inputOptions);
+createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
 
 % Save handle of the plugins function
 options = getappdata(h_panel,'options');
-options.functionHandle = @trackParticles_nearestNeighborCPP;
+options.functionHandle = plugin_function;
 setappdata(h_panel,'options',options);
+
+    function add_param(par_name, par_type, par_settings, par_tooltip)
+        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
+    end
 end
 
 
-%FUNCTION CODE STARTS HERE
+%   -------------- User functions --------------
+
 function [trajData] = trackParticles_nearestNeighborCPP(fitData,options)
 % Wrapper function for nearest neighbor C++ tracker (see below). Refer to
 % tooltips above and to nn_tracker_cpp help to obtain information on input

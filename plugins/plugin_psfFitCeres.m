@@ -1,7 +1,14 @@
 function [plugin_name, plugin_type] = plugin_psfFitCeres(h_panel, inputOptions)
+%    -------------- TNT core code, not to change by user --------------    
     if nargin < 2
         inputOptions = [];
     end
+    
+    % This stores the setup of all parameters
+    param_specification = cell(0,4);
+    
+
+%    -------------- User definition of plugin --------------
 
     % Name of the component these options are for
     plugin_name = 'PSF fit Ceres';
@@ -12,39 +19,50 @@ function [plugin_name, plugin_type] = plugin_psfFitCeres(h_panel, inputOptions)
     % 3: Tracking
     plugin_type = 2;
     
-    % Enter names of the parameters
-    % These translate to the names of variables inside options struct this plugin
-    % outputs by removing all white spaces.
-    par_name  = {'fitPSFsigma','usePixelIntegratedFit', 'useMLE','PSFsigma'};
-
-    % Enter type of the parameters
-    % possible: 'float', 'int', 'bool','list'
-    par_type  = {'bool','bool','bool','float'};
-
-    % Default value for parameters
-    % Should be a number for 'float'/'int', true/false for 'bool'
-    % or a cell array string list of possible choices for 'list' (first entry is default)
-    par_defaultValue = {false,true,false, 1.2};
-
-    % Tooltip for the parameters
-    par_tooltip = {'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).',...
-        'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.',...
-        'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).',...
-        'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))'};
+    % The function this plugin implements
+    plugin_function =  @fitPositions_psfFitCeres;
     
+    % Add parameters
+    % read comments of function subfun/add_plugin_param for HOWTO
+    add_param('fitPSFsigma',...
+              'bool',...
+              false,...
+              'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).');
+    add_param('usePixelIntegratedFit',...
+              'bool',...
+              true,...
+              'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.');
+    add_param('useMLE',...
+              'bool',...
+              false,...
+              'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');
+    add_param('PSFsigma',...
+              'float',...
+              {1.2, 0,inf},...
+              'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
+    
+          
+%   -------------- TNT core code, not to change by user --------------
+%               
     % Calling the plugin function without arguments just returns its name and type
-    if (nargin == 0); return; end    
+    if (nargin == 0); return; end
     
-    createOptionsPanel(h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip,inputOptions);
+    % Create the panel for this plugin
+    createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
 
     % Save handle of the plugins function
     options = getappdata(h_panel,'options');
-    options.functionHandle = @fitPositions_psfFitCeres;
+    options.functionHandle = plugin_function;
     setappdata(h_panel,'options',options);
+    
+    function add_param(par_name, par_type, par_settings, par_tooltip)
+        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
+    end
 end
 
 
-%FUNCTION CODE STARTS HERE
+%   -------------- User functions --------------
+
 function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options)
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input

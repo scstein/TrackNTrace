@@ -1,4 +1,4 @@
-function createOptionsPanel( h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip, inputOptions)
+function createOptionsPanel( h_panel, plugin_name, param_specification, inputOptions)
 
 
 % All paramters are saved within the options struct. Variable names are
@@ -14,10 +14,16 @@ else
     end
 end
 
+% unpack parameter specification
+par_name = param_specification(:,1);
+par_type = param_specification(:,2);
+par_settings = param_specification(:,3);
+par_tooltip = param_specification(:,4);
+
 % Check if properties are defined for all parameters
-nElem = [numel(par_name), numel(par_type), numel(par_defaultValue), numel(par_tooltip)];
+nElem = [numel(par_name), numel(par_type), numel(par_settings), numel(par_tooltip)];
 if(numel(unique(nElem)) >1)
-   error('createOptionsPanel: Error: par_name, par_type, par_defaultValue, par_tooltip must be specified for every parameter to create a plugin!.');
+   error('createOptionsPanel: Error: par_name, par_type, par_settings, par_tooltip must be specified for every parameter to create plugin ''%s''!.',plugin_name);
 end
 
 % Number of parameters
@@ -38,7 +44,6 @@ for iP = 1:numel(par_name);
     stripped_name(stripped_name == '.') = '';
     struct_varNames{iP} = stripped_name;
 end
-
 
 set(h_panel,'Title',[plugin_name, ' Options']);
 set(h_panel,'Units','Points');
@@ -74,8 +79,16 @@ for iP = 1:num_pars
     if(isfield(options,pStructVarName))
         pValue = options.(pStructVarName);
     else
-        pValue = par_defaultValue{iP};
+        % Currently the default value is either the value of par_settings itself 
+        % or the first value inside the settings cell array
+        if(iscell(par_settings{iP}))
+            pValue = par_settings{iP}{1};
+        else
+            pValue = par_settings{iP};
+        end
     end
+    
+    pSettings = par_settings{iP};
     
     
     % Add text
@@ -105,21 +118,25 @@ for iP = 1:num_pars
             val_pos = [value_position(1), value_position(2), 11.5, elemHeight];
             h_val= uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
                 'Style','checkbox','FontSize',fontSize,'Value',pValue,'String','');
+        case 'string'
+            val_pos = [value_position(1), value_position(2), 2*editWidth, elemHeight];
+            h_val= uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
+                'Style','edit','BackgroundColor', 'w','FontSize',fontSize,'String',pValue);
         case 'list'
             val_pos = [value_position(1), value_position(2), editWidth, elemHeight];
             h_val = uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
-                'Style','popupmenu','BackgroundColor', 'w','FontSize',fontSize,'String',par_defaultValue{iP});
+                'Style','popupmenu','BackgroundColor', 'w','FontSize',fontSize,'String',par_settings{iP});
             % Determine neccessary width of popup based on choosable options
             maxCharacters = 0;
-            for iOption = 1:numel(par_defaultValue{iP})
-                characters = numel(par_defaultValue{iP}{iOption});
+            for iOption = 1:numel(par_settings{iP})
+                characters = numel(par_settings{iP}{iOption});
                 if(characters>maxCharacters); maxCharacters = characters; end;
             end
             set(h_val,'Value', 1); % Select first item by default
             val_pos(3) = (maxCharacters+1)*fontSize/2+16; % Note: fontSize/2 is an (arbitrary) approximation of the font width
             set(h_val,'Position',val_pos);
             
-            % Special case for lists: The given default value is the list of
+            % For lists the given settings value is the list of
             % options. If no selected option was given, the first item will
             % be automatically selected. If a selected option was given,
             % we have to set the popup accordingly.
@@ -136,9 +153,9 @@ for iP = 1:num_pars
     set(h_val, 'TooltipString',par_tooltip{iP});
     
     % Set callback
-    set(h_val, 'Callback', {@callback_saveOnChange,pStructVarName,pType});
+    set(h_val, 'Callback', {@callback_saveOnChange,pStructVarName,pType, pSettings});
     % Execute callback once to save the parameter starting value
-    callback_saveOnChange(h_val, [], pStructVarName, pType);
+    callback_saveOnChange(h_val, [], pStructVarName, pType, pSettings);
     
     % Width of 'text value'
     overall_width = textwidth + text_gap + valwidth;
@@ -174,8 +191,6 @@ panel_pos(2) = panel_pos(2) + panel_pos(4) - panel_newheight;
 panel_pos(4) = panel_newheight;
 set(h_panel,'Position',panel_pos);
 
-
-
     function newRow()
         elemRowIdx = 1;
         left_pos = text_gap;
@@ -192,19 +207,32 @@ set(h_panel,'Position',panel_pos);
         set(h_val,'Position',val_pos);
     end
 
-    function callback_saveOnChange(uiObj, eventdata, structVarName, pType)
+    function callback_saveOnChange(uiObj, eventdata, structVarName, pType, pSettings)
         switch pType
             case 'float'
-                pValue = str2double(get(uiObj,'String'));
-                set(uiObj, 'String', num2str(pValue)); % Synchronise text field
-                options.(structVarName) = pValue;
+                parValue = str2double(get(uiObj,'String'));
+                % Obey upper/lower limits
+                parValue = max(pSettings{2},parValue);
+                parValue = min(pSettings{3},parValue);                
+                
+                set(uiObj, 'String', num2str(parValue)); % Synchronise text field
+                options.(structVarName) = parValue;
             case 'int'
-                pValue = round(str2double(get(uiObj,'String'))); % get integer value
-                set(uiObj, 'String', num2str(pValue)); % Synchronise text field
-                options.(structVarName) = pValue;
+                parValue = str2double(get(uiObj,'String')); % get integer value
+                % Obey upper/lower limits
+                parValue = max(pSettings{2},parValue);
+                parValue = min(pSettings{3},parValue);    
+                % Round to int
+                parValue = round(parValue);
+                
+                set(uiObj, 'String', num2str(parValue)); % Synchronise text field
+                options.(structVarName) = parValue;
             case 'bool'
-                pValue = logical(get(uiObj,'Value'));
-                options.(structVarName) = pValue;
+                parValue = logical(get(uiObj,'Value'));
+                options.(structVarName) = parValue;
+            case 'string'
+                parValue = get(uiObj,'String');
+                options.(structVarName) = parValue;
             case 'list'
                 choices = get(uiObj,'String');
                 optionString = choices{get(uiObj,'Value')};

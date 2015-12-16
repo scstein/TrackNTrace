@@ -1,49 +1,67 @@
 function [plugin_name, plugin_type] = plugin_intensityFiltering(h_panel, inputOptions)
-    if nargin < 2
-        inputOptions = [];
+%    -------------- TNT core code, not to change by user --------------
+if nargin < 2
+    inputOptions = [];
+end
+
+% This stores the setup of all parameters
+param_specification = cell(0,4);
+
+
+%    -------------- User definition of plugin --------------
+
+% Name of the component these options are for
+plugin_name = 'Intensity filtering';
+
+% Type of plugin.
+% 1: Candidate detection
+% 2: Spot fitting
+% 3: Tracking
+plugin_type = 1;
+
+% The function this plugin implements
+plugin_function =  @findCandidates_intensityFiltering;
+
+% Add parameters
+% read comments of function subfun/add_plugin_param for HOWTO
+add_param('particleRadius',...
+    'int',...
+    {3, 0, inf},...
+    'Approximate spot radius in [pixels]');
+add_param('thresholdRelative',...
+    'float',...
+    {5, 0, inf},...
+    'Relative intensity threshold in percent [0,100). Example: 4 means only spots with intensity in the top 4% count.');
+add_param('pvalMin',...
+    'float',...
+    {0.05, 0, inf},...
+    'P value for significance test of signal against background [0,1]. Lower means higher quality spots.');
+add_param('iterationCount',...
+    'int',...
+    {10, 0, inf},...
+    'Background is estimated every N times in the main loop. Set to higher number to speed up function.');
+
+
+%   -------------- TNT core code, not to change by user --------------
+%
+% Calling the plugin function without arguments just returns its name and type
+if (nargin == 0); return; end
+
+% Create the panel for this plugin
+createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
+
+% Save handle of the plugins function
+options = getappdata(h_panel,'options');
+options.functionHandle = plugin_function;
+setappdata(h_panel,'options',options);
+
+    function add_param(par_name, par_type, par_settings, par_tooltip)
+        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
     end
-
-    % Name of the component these options are for
-    plugin_name = 'Intensity filtering';
-
-    % Type of plugin.
-    % 1: Candidate detection
-    % 2: Spot fitting
-    % 3: Tracking
-    plugin_type = 1;
-    
-    % Enter names of the parameters
-    % These translate to the names of variables inside options struct this plugin
-    % outputs by removing all white spaces.
-    par_name  = {'particleRadius','thresholdRelative','pvalMin','iterationCount'};
-
-    % Enter type of the parameters
-    % possible: 'float', 'int', 'bool','list'
-    par_type  = {'int','float','float','int'};
-
-    % Default value for parameters
-    % Should be a number for 'float'/'int', true/false for 'bool'
-    % or a cell array string list of possible choices for 'list' (first entry is default)
-    par_defaultValue = {3,5,0.05,10};
-
-    % Tooltip for the parameters
-    par_tooltip = {'Approximate spot radius in [pixels]',...
-        'Relative intensity threshold in percent [0,100). Example: 4 means only spots with intensity in the top 4% count.',...
-        'P value for significance test of signal against background [0,1]. Lower means higher quality spots.',...
-        'Background is estimated every N times in the main loop. Set to higher number to speed up function.'};
-    
-    % Calling the plugin function without arguments just returns its name and type
-    if (nargin == 0); return; end
-
-    createOptionsPanel(h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip,inputOptions);
-
-    % Save handle of the plugins function
-    options = getappdata(h_panel,'options');
-    options.functionHandle = @findCandidates_intensityFiltering;
-    setappdata(h_panel,'options',options);
 end
 
 
+%   -------------- User functions --------------
 
 function [candidatePos] = findCandidates_intensityFiltering(img,options)
 % Find particle candidates in fluorescence images based on intensity, local
@@ -63,7 +81,7 @@ function [candidatePos] = findCandidates_intensityFiltering(img,options)
 %     PVAL_MIN - 1D positive double [0,1], used to reject candidates whose
 %     intensities fail a P-test against their local background (assumed to
 %     be Gaussian). Lower means less candidates.
-% 
+%
 %     N_ITER - 1D positive integer, background is calculated every time
 %     main loop variable every time mod(loop_var,N_ITER) is 0
 %

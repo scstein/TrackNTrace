@@ -1,60 +1,73 @@
 function [plugin_name, plugin_type] = plugin_crossCorrelation(h_panel, inputOptions)
-    if nargin < 2
-        inputOptions = [];
+%    -------------- TNT core code, not to change by user --------------
+if nargin < 2
+    inputOptions = [];
+end
+
+% This stores the setup of all parameters
+param_specification = cell(0,4);
+
+
+%    -------------- User definition of plugin --------------
+
+% Name of the component these options are for
+plugin_name = 'Cross correlation';
+
+% Type of plugin.
+% 1: Candidate detection
+% 2: Spot fitting
+% 3: Tracking
+plugin_type = 1;
+
+% The function this plugin implements
+plugin_function =  @findCandidates_crossCorrelation;
+
+% Add parameters
+% read comments of function subfun/add_plugin_param for HOWTO
+add_param('PSFsigma',...
+    'float',...
+    {1, 0, inf},...
+    'Standard deviation of the PSF in pixels. sigma = FWHM/(2*sqrt(2*log(2))).');
+add_param('CorrThreshold',...
+    'float',...
+    {0.4, 0, 1},...
+    'Threshold between 0 and 1.');
+
+
+
+%   -------------- TNT core code, not to change by user --------------
+%
+
+% Calling the plugin function without arguments just returns its name and type
+if (nargin == 0); return; end
+
+% Create the panel for this plugin
+createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
+
+% Save handle of the plugins function
+options = getappdata(h_panel,'options');
+options.functionHandle = plugin_function;
+setappdata(h_panel,'options',options);
+
+    function add_param(par_name, par_type, par_settings, par_tooltip)
+        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
     end
-
-    % Name of the component these options are for
-    plugin_name = 'Cross correlation';
-
-    % Type of plugin.
-    % 1: Candidate detection
-    % 2: Spot fitting
-    % 3: Tracking
-    plugin_type = 1;
-    
-    % Enter names of the parameters
-    % These translate to the names of variables inside options struct this plugin
-    % outputs by removing all white spaces.
-    par_name  = {'PSFsigma','CorrThreshold'};
-
-    % Enter type of the parameters
-    % possible: 'float', 'int', 'bool','list'
-    par_type  = {'float','float'};
-
-    % Default value for parameters
-    % Should be a number for 'float'/'int', true/false for 'bool'
-    % or a cell array string list of possible choices for 'list' (first entry is default)
-    par_defaultValue = {1,0.4};
-
-    % Tooltip for the parameters
-    par_tooltip = {'Standard deviation of the PSF in pixels. sigma = FWHM/(2*sqrt(2*log(2))).', 'Threshold between 0 and 1.'};
-
-    
-    % Calling the plugin function without arguments just returns its name and type
-    if (nargin == 0); return; end
-    
-    % Create the panel for this plugin
-    createOptionsPanel(h_panel, plugin_name, par_name, par_type, par_defaultValue, par_tooltip,inputOptions);
-
-    % Save handle of the plugins function
-    options = getappdata(h_panel,'options');
-    options.functionHandle = @findCandidates_crossCorrelation;
-    setappdata(h_panel,'options',options);
 end
 
 
+%   -------------- User functions --------------
 
 function candidatePos = findCandidates_crossCorrelation(img, options)
 %Wrapper function for cross correlation candidate finding. Refer to
 %matchSpot below or tooltips above to obtain information on input and
 %output variables.
-% 
+%
 % INPUT:
 %     img: 2D matrix of pixel intensities, data type and normalization
 %     arbitrary.
-%     
+%
 %     options: Struct of input parameters provided by GUI.
-%     
+%
 % OUTPUT:
 %     candidatePos - Nx2 matrix of particle candidate positions [column
 %     pixel, row pixel] without subpixel position. Middle of upper left pixel would be [1,1].
@@ -98,7 +111,7 @@ end
 
 if(pixIntegrated)
     f = pi*sigma^2/2 * ( erfc(-(x-0+1/2)/(sqrt(2)*sigma)) - erfc(-(x-0-1/2)/(sqrt(2)*sigma))    )...
-                     .* ( erfc(-(y-0+1/2)/(sqrt(2)*sigma)) - erfc(-(y-0-1/2)/(sqrt(2)*sigma))   ) ;
+        .* ( erfc(-(y-0+1/2)/(sqrt(2)*sigma)) - erfc(-(y-0-1/2)/(sqrt(2)*sigma))   ) ;
 else
     f= exp(-x.^2/(2*sigma^2)-y.^2/(2*sigma^2));
 end
@@ -127,15 +140,15 @@ function [ match_data, match_img ] = matchPattern( img, patt, CORR_THRESH, MIN_D
 %
 % Output:
 %    match_data  - Mx3 matrix, where M is the number of valid matches. The
-%                  columns correspond to (rowShift, colShift, correlation 
+%                  columns correspond to (rowShift, colShift, correlation
 %                  value). For rowShift = colShift = 0 the upper left pixel
 %                  of the pattern lies ontop the upper left pixel of the
 %                  image. The pattern centers can be calculated as
 %                  (rowShift + pattRows/2, colShift + pattCols/2).
-%    match_img   - Image of size (imgRows-pattRows)x(imgCols-pattCols) 
-%                  showing pattern shifts with pixels intensities 
+%    match_img   - Image of size (imgRows-pattRows)x(imgCols-pattCols)
+%                  showing pattern shifts with pixels intensities
 %                  corresponding to the correlation values.
-%    
+%
 % Note: Only patterns fully embedded in the image are detected.
 
 %Note: CORR_THRESH depends on 'empty' space around the pattern.
@@ -199,7 +212,7 @@ function max_indices = localMax(img, MIN_DIST)
 % Returns indices of highest local maximum within a box window of edge
 % length 2*MIN_DIST+1 around each pixel. Connected pixels with equal values
 % are considered maxima as well.
-    neigh = ones(2*MIN_DIST+1); % Neighborhood matrix
-    img_dilated = imdilate(img, neigh);
-    max_indices = find(img == img_dilated);
+neigh = ones(2*MIN_DIST+1); % Neighborhood matrix
+img_dilated = imdilate(img, neigh);
+max_indices = find(img == img_dilated);
 end
