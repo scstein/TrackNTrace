@@ -106,19 +106,23 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         nr_plugins = numel(plugin_files);
         
         for iPlug = 1:nr_plugins
-            [~, plugin_function, ~] = fileparts(plugin_files(iPlug).name);
-            plugin_function = str2func(plugin_function); % Convert string to function handle
-            [plugin_name, plugin_type] = plugin_function();
-            
-            switch plugin_type
-                case 1 % Candidate method
-                    candidate_plugins = [candidate_plugins; {plugin_function, plugin_name}];
-                case 2 % Fitting method
-                    fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name}];
-                case 3 % Tracking method
-                    tracking_plugins = [tracking_plugins; {plugin_function, plugin_name}];
-                otherwise
-                    warning('Detected unknown plugin of type %i',plugin_type);
+            try %% Try loading this plugin
+                [~, plugin_function, ~] = fileparts(plugin_files(iPlug).name);
+                plugin_function = str2func(plugin_function); % Convert string to function handle
+                [plugin_name, plugin_type] = plugin_function();
+
+                switch plugin_type
+                    case 1 % Candidate method
+                        candidate_plugins = [candidate_plugins; {plugin_function, plugin_name}];
+                    case 2 % Fitting method
+                        fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name}];
+                    case 3 % Tracking method
+                        tracking_plugins = [tracking_plugins; {plugin_function, plugin_name}];
+                    otherwise
+                        warning('Detected unknown plugin of type %i',plugin_type);
+                end
+            catch err
+                warning('TrackNTrace: Failed to load plugin file ''%s''. \n  Error: %s', plugin_files(iPlug).name, err.message);
             end
         end
         
