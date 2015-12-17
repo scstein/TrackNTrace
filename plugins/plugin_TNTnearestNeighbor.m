@@ -1,4 +1,4 @@
-function [plugin_name, plugin_type] = plugin_nearestNeighborCPP(h_panel, inputOptions)
+function [plugin_name, plugin_type, plugin_info] = plugin_TNTnearestNeighbor(h_panel, inputOptions)
 %    -------------- TNT core code, not to change by user --------------
 if nargin < 2
     inputOptions = [];
@@ -11,13 +11,16 @@ param_specification = cell(0,4);
 %    -------------- User definition of plugin --------------
 
 % Name of the component these options are for
-plugin_name = 'NearestNeighbor C++';
+plugin_name = 'TNT NearestNeighbor';
 
 % Type of plugin.
 % 1: Candidate detection
 % 2: Spot fitting
 % 3: Tracking
 plugin_type = 3;
+
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin_info = 'Simple and fast nearest neighbor tracking implemented in C++.';
 
 % The function this plugin implements
 plugin_function =  @trackParticles_nearestNeighborCPP;
@@ -52,7 +55,7 @@ add_param('verbose',...
 
 %   -------------- TNT core code, not to change by user --------------
 %
-% Calling the plugin function without arguments just returns its name and type
+% Calling the plugin function without arguments just returns its name, type and info
 if (nargin == 0); return; end
 
 % Create the panel for this plugin

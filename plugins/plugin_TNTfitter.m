@@ -1,4 +1,4 @@
-function [plugin_name, plugin_type] = plugin_psfFitCeres(h_panel, inputOptions)
+function [plugin_name, plugin_type, plugin_info] = plugin_TNTfitter(h_panel, inputOptions)
 %    -------------- TNT core code, not to change by user --------------    
     if nargin < 2
         inputOptions = [];
@@ -11,7 +11,7 @@ function [plugin_name, plugin_type] = plugin_psfFitCeres(h_panel, inputOptions)
 %    -------------- User definition of plugin --------------
 
     % Name of the component these options are for
-    plugin_name = 'PSF fit Ceres';
+    plugin_name = 'TNT Fitter';
 
     % Type of plugin.
     % 1: Candidate detection
@@ -19,11 +19,19 @@ function [plugin_name, plugin_type] = plugin_psfFitCeres(h_panel, inputOptions)
     % 3: Tracking
     plugin_type = 2;
     
+    % Description of plugin, supports sprintf format specifier like '\n' for a newline
+    plugin_info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
+                   'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
+    
     % The function this plugin implements
     plugin_function =  @fitPositions_psfFitCeres;
     
     % Add parameters
     % read comments of function subfun/add_plugin_param for HOWTO
+    add_param('PSFsigma',...
+          'float',...
+          {1.2, 0,inf},...
+          'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
     add_param('fitPSFsigma',...
               'bool',...
               false,...
@@ -36,15 +44,11 @@ function [plugin_name, plugin_type] = plugin_psfFitCeres(h_panel, inputOptions)
               'bool',...
               false,...
               'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');
-    add_param('PSFsigma',...
-              'float',...
-              {1.2, 0,inf},...
-              'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
     
           
 %   -------------- TNT core code, not to change by user --------------
 %               
-    % Calling the plugin function without arguments just returns its name and type
+    % Calling the plugin function without arguments just returns its name, type and info
     if (nargin == 0); return; end
     
     % Create the panel for this plugin

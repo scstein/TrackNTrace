@@ -74,6 +74,11 @@ set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
 set(h_all.popup_trackingMethod, 'Callback', @callback_updateGUIstate);
 % cbx_verbose
 
+% % Help buttons
+set(h_all.button_candidateHelp, 'Callback', @callback_helpButtons);
+set(h_all.button_fittingHelp, 'Callback', @callback_helpButtons);
+set(h_all.button_trackingHelp, 'Callback', @callback_helpButtons);
+
 % % Parse plugins
 % Save plugin info (function / name)
 candidate_plugins = {};
@@ -109,15 +114,15 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             try %% Try loading this plugin
                 [~, plugin_function, ~] = fileparts(plugin_files(iPlug).name);
                 plugin_function = str2func(plugin_function); % Convert string to function handle
-                [plugin_name, plugin_type] = plugin_function();
+                [plugin_name, plugin_type, plugin_info] = plugin_function();
 
                 switch plugin_type
                     case 1 % Candidate method
-                        candidate_plugins = [candidate_plugins; {plugin_function, plugin_name}];
+                        candidate_plugins = [candidate_plugins; {plugin_function, plugin_name, plugin_info}];
                     case 2 % Fitting method
-                        fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name}];
+                        fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name, plugin_info}];
                     case 3 % Tracking method
-                        tracking_plugins = [tracking_plugins; {plugin_function, plugin_name}];
+                        tracking_plugins = [tracking_plugins; {plugin_function, plugin_name, plugin_info}];
                     otherwise
                         warning('Detected unknown plugin of type %i',plugin_type);
                 end
@@ -293,6 +298,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         pos(2) = panel_candidate_pos(2)-topic_spacing-pos(4)/2;
         set(h_all.popup_fittingMethod, 'Position',pos);
         
+        set(h_all.button_fittingHelp, 'Units',units);
+        pos = get(h_all.button_fittingHelp, 'Position');
+        pos(2) = panel_candidate_pos(2)-topic_spacing-pos(4)/2;
+        set(h_all.button_fittingHelp, 'Position',pos);
+        
         % Relative to label_fitting_Method
         set(h_all.panel_fitting, 'Units',units);
         panel_fitting_pos = get(h_all.panel_fitting, 'Position');
@@ -319,6 +329,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         pos = get(h_all.popup_trackingMethod, 'Position');
         pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
         set(h_all.popup_trackingMethod, 'Position',pos);
+        
+        set(h_all.button_trackingHelp, 'Units',units);
+        pos = get(h_all.button_trackingHelp, 'Position');
+        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        set(h_all.button_trackingHelp, 'Position',pos);
         
         % Relative to label tracking
         set(h_all.panel_tracking, 'Units',units);
@@ -440,6 +455,29 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if( isfloat(darkMovie)); return; end; % User pressed cancel.
         
         set(h_all.edit_darkMovie,'String',[path,darkMovie]);
+    end
+
+ % Shows a message dialog with the info of the currently selected plugin
+    function callback_helpButtons(hObj, event)
+       switch hObj
+           case h_all.button_candidateHelp
+               name = candidate_plugins{selected_candidate_plugin, 2};
+               msg = candidate_plugins{selected_candidate_plugin, 3};
+           case h_all.button_fittingHelp
+               name = fitting_plugins{selected_fitting_plugin, 2};
+               msg = fitting_plugins{selected_fitting_plugin, 3};
+           case h_all.button_trackingHelp               
+               name = tracking_plugins{selected_tracking_plugin, 2};
+               msg = tracking_plugins{selected_tracking_plugin, 3};
+           otherwise
+            error('Unknown caller of callback. Something went wront =?!');
+       end
+       
+       % Get title
+       title = ['About ', name];
+       % Show message box, the sprintf allows using commands like '\n' for a line break
+       % in the message.
+       msgbox(sprintf(msg), title, 'help','non-modal');
     end
 
 % Callback for edit fields containing floats. Checks if a correct

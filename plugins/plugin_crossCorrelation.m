@@ -1,4 +1,4 @@
-function [plugin_name, plugin_type] = plugin_crossCorrelation(h_panel, inputOptions)
+function [plugin_name, plugin_type, plugin_info] = plugin_crossCorrelation(h_panel, inputOptions)
 %    -------------- TNT core code, not to change by user --------------
 if nargin < 2
     inputOptions = [];
@@ -19,6 +19,9 @@ plugin_name = 'Cross correlation';
 % 3: Tracking
 plugin_type = 1;
 
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin_info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross correlation.';
+
 % The function this plugin implements
 plugin_function =  @findCandidates_crossCorrelation;
 
@@ -38,7 +41,7 @@ add_param('CorrThreshold',...
 %   -------------- TNT core code, not to change by user --------------
 %
 
-% Calling the plugin function without arguments just returns its name and type
+% Calling the plugin function without arguments just returns its name, type and info
 if (nargin == 0); return; end
 
 % Create the panel for this plugin

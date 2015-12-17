@@ -1,4 +1,4 @@
-function [plugin_name, plugin_type] = plugin_intensityFiltering(h_panel, inputOptions)
+function [plugin_name, plugin_type, plugin_info] = plugin_intensityFiltering(h_panel, inputOptions)
 %    -------------- TNT core code, not to change by user --------------
 if nargin < 2
     inputOptions = [];
@@ -18,6 +18,9 @@ plugin_name = 'Intensity filtering';
 % 2: Spot fitting
 % 3: Tracking
 plugin_type = 1;
+
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin_info = 'Finds candidates based on local maxima in intensity.';
 
 % The function this plugin implements
 plugin_function =  @findCandidates_intensityFiltering;
@@ -44,7 +47,7 @@ add_param('iterationCount',...
 
 %   -------------- TNT core code, not to change by user --------------
 %
-% Calling the plugin function without arguments just returns its name and type
+% Calling the plugin function without arguments just returns its name, type and info
 if (nargin == 0); return; end
 
 % Create the panel for this plugin
