@@ -1,4 +1,4 @@
-function [generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(generalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs)
+function [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs)
 %
 % Author: Simon Christoph Stein
 % E-Mail: scstein@phys.uni-goettingen.de
@@ -15,13 +15,14 @@ end
 % struct for communication of the GUI to the outside world
 GUIreturns.useSettingsForAll = false;
 GUIreturns.userExit = false;
-GUIreturns.generalOptionsChanged = false;
+GUIreturns.globalOptionsChanged = false;
 GUIreturns.candidateOptionsChanged = false;
 GUIreturns.fittingOptionsChanged = false;
 GUIreturns.trackingOptionsChanged  = false;
+GUIreturns.testWindowChanged = false;
 
 % Save options at startup (to check later if options changed)
-generalOptions_atStartup = generalOptions;
+globalOptions_atStartup = globalOptions;
 candidateOptions_atStartup = candidateOptions;
 fittingOptions_atStartup = fittingOptions;
 trackingOptions_atStartup = trackingOptions;
@@ -390,7 +391,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if isfloat(outfile); return; end; % User clicked cancel
         
         outfile = [path,outfile];
-        save(outfile,'generalOptions', 'candidateOptions','fittingOptions','trackingOptions');
+        save(outfile,'globalOptions', 'candidateOptions','fittingOptions','trackingOptions');
     end
 
 % Load settings from a file
@@ -398,7 +399,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % In single file mode, the list of movies to process should not be
         % changed, we store it and restore after loading the settings
         if(GUIinputs.singleFileMode)
-            filename_movies = generalOptions.filename_movies;
+            filename_movies = globalOptions.filename_movies;
         end
         
         [infile, path] = uigetfile('.mat');
@@ -407,10 +408,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end; % User clicked cancel
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
-        allOptions = load([path,infile],'generalOptions', 'candidateOptions','fittingOptions','trackingOptions');
-        generalOptions   = allOptions.generalOptions;
+        allOptions = load([path,infile],'globalOptions', 'candidateOptions','fittingOptions','trackingOptions');
+        globalOptions   = allOptions.globalOptions;
         if(GUIinputs.singleFileMode)
-            generalOptions.filename_movies = filename_movies;
+            globalOptions.filename_movies = filename_movies;
         end
         candidateOptions = allOptions.candidateOptions;
         fittingOptions   = allOptions.fittingOptions;
@@ -585,36 +586,36 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
     end
 
 % Set all UI fields based on the current value of the options structs
-% (generalOptions, candidateOptions, fittingOptions, trackingOptions)
+% (globalOptions, candidateOptions, fittingOptions, trackingOptions)
     function setGUIBasedOnOptions()
         % % General Options
-        set(h_all.edit_movieList,'String', cell2str(generalOptions.filename_movies));
-        set(h_all.edit_darkMovie,'String', generalOptions.filename_dark_movie);
-        setNum(h_all.edit_firstFrame, generalOptions.firstFrame, true);
-        setNum(h_all.edit_lastFrame, generalOptions.lastFrame, true);
-        set(h_all.cbx_previewMode, 'Value', generalOptions.previewMode);
-        setNum(h_all.edit_firstFrameTesting, generalOptions.firstFrameTesting, true);
-        setNum(h_all.edit_lastFrameTesting, generalOptions.lastFrameTesting, true);
+        set(h_all.edit_movieList,'String', cell2str(globalOptions.filename_movies));
+        set(h_all.edit_darkMovie,'String', globalOptions.filename_dark_movie);
+        setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
+        setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
+        set(h_all.cbx_previewMode, 'Value', globalOptions.previewMode);
+        setNum(h_all.edit_firstFrameTesting, globalOptions.firstFrameTesting, true);
+        setNum(h_all.edit_lastFrameTesting, globalOptions.lastFrameTesting, true);
         
         % Candidate Options
-        if generalOptions.fitForward
+        if globalOptions.fitForward
             setPopup(h_all.popup_fitDirection,'Forward');
         else
             setPopup(h_all.popup_fitDirection,'Backward');
         end
         
         % Calc once
-        set(h_all.cbx_calcOnce, 'Value', generalOptions.calculateCandidatesOnce);
-        setNum(h_all.edit_avgWinSize, generalOptions.averagingWindowSize, true);
+        set(h_all.cbx_calcOnce, 'Value', globalOptions.calculateCandidatesOnce);
+        setNum(h_all.edit_avgWinSize, globalOptions.averagingWindowSize, true);
         
         % Photon conversion
-        set(h_all.cbx_usePhotonConv,'Value',generalOptions.usePhotonConversion)
-        setNum(h_all.edit_photonBias,generalOptions.photonBias, true);
-        setNum(h_all.edit_photonSensitivity,generalOptions.photonSensitivity);
-        setNum(h_all.edit_photonGain,generalOptions.photonGain, true);
+        set(h_all.cbx_usePhotonConv,'Value',globalOptions.usePhotonConversion)
+        setNum(h_all.edit_photonBias,globalOptions.photonBias, true);
+        setNum(h_all.edit_photonSensitivity,globalOptions.photonSensitivity);
+        setNum(h_all.edit_photonGain,globalOptions.photonGain, true);
         
         % % Tracking
-        set(h_all.cbx_enableTracking,'Value', generalOptions.enableTracking); % --
+        set(h_all.cbx_enableTracking,'Value', globalOptions.enableTracking); % --
         
         % Update plugins
         setPluginsBasedOnOptions();
@@ -623,30 +624,30 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         callback_updateGUIstate();
     end
 
-% Set all options structs (generalOptions, candidateOptions, fittingOptions, trackingOptions)
+% Set all options structs (globalOptions, candidateOptions, fittingOptions, trackingOptions)
 % based on the current state of the uicontrols. Also checks which
 % options structs have changed compared to the startup values.
     function storeOptions()
         % % General Options
-        generalOptions.filename_movies = strsplit(get(h_all.edit_movieList,'String'), ';');
-        generalOptions.filename_dark_movie = get(h_all.edit_darkMovie,'String');
-        generalOptions.firstFrame = getNum(h_all.edit_firstFrame);
-        generalOptions.lastFrame =  getNum(h_all.edit_lastFrame);
-        generalOptions.previewMode = get(h_all.cbx_previewMode, 'Value');
-        generalOptions.firstFrameTesting = getNum(h_all.edit_firstFrameTesting);
-        generalOptions.lastFrameTesting = getNum(h_all.edit_lastFrameTesting);
+        globalOptions.filename_movies = strsplit(get(h_all.edit_movieList,'String'), ';');
+        globalOptions.filename_dark_movie = get(h_all.edit_darkMovie,'String');
+        globalOptions.firstFrame = getNum(h_all.edit_firstFrame);
+        globalOptions.lastFrame =  getNum(h_all.edit_lastFrame);
+        globalOptions.previewMode = get(h_all.cbx_previewMode, 'Value');
+        globalOptions.firstFrameTesting = getNum(h_all.edit_firstFrameTesting);
+        globalOptions.lastFrameTesting = getNum(h_all.edit_lastFrameTesting);
         
-        generalOptions.fitForward = logical(strcmp(getPopup(h_all.popup_fitDirection), 'Forward'));
-        generalOptions.calculateCandidatesOnce = logical(get(h_all.cbx_calcOnce, 'Value'));
-        generalOptions.averagingWindowSize = getNum(h_all.edit_avgWinSize);
+        globalOptions.fitForward = logical(strcmp(getPopup(h_all.popup_fitDirection), 'Forward'));
+        globalOptions.calculateCandidatesOnce = logical(get(h_all.cbx_calcOnce, 'Value'));
+        globalOptions.averagingWindowSize = getNum(h_all.edit_avgWinSize);
         
-        generalOptions.usePhotonConversion = logical(get(h_all.cbx_usePhotonConv,'Value'));
-        generalOptions.photonBias = getNum(h_all.edit_photonBias);
-        generalOptions.photonSensitivity = getNum(h_all.edit_photonSensitivity);
-        generalOptions.photonGain = getNum(h_all.edit_photonGain);
+        globalOptions.usePhotonConversion = logical(get(h_all.cbx_usePhotonConv,'Value'));
+        globalOptions.photonBias = getNum(h_all.edit_photonBias);
+        globalOptions.photonSensitivity = getNum(h_all.edit_photonSensitivity);
+        globalOptions.photonGain = getNum(h_all.edit_photonGain);
         
         % Tracking
-        generalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
+        globalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
         
         % Store options from plugins
         candidateOptions = getappdata(h_all.panel_candidate,'options');
@@ -654,12 +655,12 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         trackingOptions = getappdata(h_all.panel_tracking,'options');        
         
         %Check if options were changed compared to intial ones
-        GUIreturns.generalOptionsChanged   = ~isequaln(generalOptions_atStartup, generalOptions);
+        GUIreturns.globalOptionsChanged   = ~isequaln(globalOptions_atStartup, globalOptions);
         GUIreturns.candidateOptionsChanged = ~isequaln(candidateOptions_atStartup, candidateOptions);
         GUIreturns.fittingOptionsChanged   = ~isequaln(fittingOptions_atStartup, fittingOptions);
         GUIreturns.trackingOptionsChanged  = ~isequaln(trackingOptions_atStartup, trackingOptions);
         %Check if preview window changed
-        GUIreturns.testWindowChanged = (generalOptions_atStartup.firstFrameTesting ~= generalOptions.firstFrameTesting) || (generalOptions_atStartup.lastFrameTesting ~= generalOptions.lastFrameTesting);
+        GUIreturns.testWindowChanged = (globalOptions_atStartup.firstFrameTesting ~= globalOptions.firstFrameTesting) || (globalOptions_atStartup.lastFrameTesting ~= globalOptions.lastFrameTesting);
     end
 
 

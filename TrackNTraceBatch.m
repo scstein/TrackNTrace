@@ -1,5 +1,5 @@
-function [] = TrackNTraceBatch(movie_list,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions,filterOptions)
-% TrackNTraceBatch(movie_list,dark_img,generalOptions,candidateOptions,fittingOptions,trackingOptions,filterOptions)
+function [] = TrackNTraceBatch(movie_list,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions,filterOptions)
+% TrackNTraceBatch(movie_list,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions,filterOptions)
 % The function complements RunTrackNTrace in that it can be used to handle
 % a large batch of movies by directly giving all relevant settings and
 % movie names. See RunTrackNTrace for details.
@@ -37,7 +37,7 @@ for i=1:numel(movie_list)
     end
     
     % Save options
-    save(filename_fitData,'filename_movie','generalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img','filterOptions');
+    save(filename_fitData,'filename_movie','globalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img','filterOptions');
     posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
 end
 
@@ -48,7 +48,7 @@ for i=1:numel(posFit_list)
     load(filename_fitData,'-mat');
     
     % Read movie  
-    movie = read_tiff(filename_movie, false, [generalOptions.firstFrame,generalOptions.lastFrame]);
+    movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
     
     % Compute the positions
     fprintf('######\nLocating particles in movie %s.\n',filename_movie);

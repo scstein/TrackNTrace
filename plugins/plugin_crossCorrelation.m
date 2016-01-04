@@ -60,7 +60,7 @@ end
 
 %   -------------- User functions --------------
 
-function candidatePos = findCandidates_crossCorrelation(img, options)
+function candidatePos = findCandidates_crossCorrelation(img, options, currentFrame)
 %Wrapper function for cross correlation candidate finding. Refer to
 %matchSpot below or tooltips above to obtain information on input and
 %output variables.
@@ -69,7 +69,7 @@ function candidatePos = findCandidates_crossCorrelation(img, options)
 %     img: 2D matrix of pixel intensities, data type and normalization
 %     arbitrary.
 %
-%     options: Struct of input parameters provided by GUI.
+%     candidateOptions: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
 %     candidatePos - Nx2 matrix of particle candidate positions [column

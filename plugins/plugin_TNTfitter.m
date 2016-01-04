@@ -67,7 +67,7 @@ end
 
 %   -------------- User functions --------------
 
-function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options)
+function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFrame)
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input
 % and output variables.

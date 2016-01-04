@@ -1,4 +1,4 @@
-function [ fitData ] = locateParticles( movieStack, imgCorrection, generalOptions, candidateOptions, fittingOptions)
+function [ fitData ] = locateParticles( movieStack, darkImage, globalOptions, candidateOptions, fittingOptions)
 % [ fitData ] = locateParticles( movieStack, imgCorrection, candidateOptions, fittingOptions)
 % Find locations of bright spots in an image, in this case a movie of
 % fluorescent molecules, and fit a Gaussian distribution to these spots to
@@ -9,11 +9,11 @@ function [ fitData ] = locateParticles( movieStack, imgCorrection, generalOption
 %     number of frames. All images are treated piecewise and only converted
 %     to double when needed to avoid memory overflow.
 %
-%     imgCorrection: 2D array of intensity correction values which is added
+%     darkImage: 2D array of intensity correction values which is added
 %     to each movie image to correct for non-isotropic camera readout.
 %     Leave empty [] if no correction is needed.
-% 
-%     generalOptions: struct of input options for this function, se
+%
+%     globalOptions: struct of input options for this function, se
 %     setDefaultOptions or TrackNTrace manual for details.
 %
 %     candidateOptions: struct of input options used to find localization
@@ -33,20 +33,20 @@ function [ fitData ] = locateParticles( movieStack, imgCorrection, generalOption
 %     constant background B. flag is the exit flag of the fitting routine,
 %     see psfFit_Image.m for details.
 
+global imgCorrection;
+
 % Parse inputs
-fitForward = generalOptions.fitForward;
-usePhoton = generalOptions.usePhotonConversion;
-if usePhoton
-    photon_bias = generalOptions.photonBias;
-    photon_factor = generalOptions.photonSensitivity/generalOptions.photonGain;
+if ~isempty(darkImage) %if correction image is provided, do it
+    imgCorrection = darkImage;
+    
+    %if image is converted to photons, correction image has to be converted too
+    %but the bias is already included. Add the bias again to avoid later
+    %confusion
+    if globalOptions.usePhotonConversion
+        imgCorrection = (imgCorrection+globalOptions.photonBias)*globalOptions.photonFactor;
+    end
 end
 
-calcOnce = generalOptions.calculateCandidatesOnce;
-if ~isempty(imgCorrection) %if correction image is provided, do it
-    correctDark = true;
-else
-    correctDark = false;
-end
 nrFrames = size(movieStack,3);
 
 candidateFun = candidateOptions.functionHandle;
@@ -54,139 +54,48 @@ fittingFun = fittingOptions.functionHandle;
 
 
 % Trace first frame
-if calcOnce %if candidate search only takes place once, an average image is calculated to achieve higher SNR
-    if fitForward
-        img = mean(double(movieStack(:,:,1:generalOptions.averagingWindowSize)),3);
-    else
-        img = mean(double(movieStack(:,:,end:-1:end-generalOptions.averagingWindowSize+1)),3);
-    end
-else
-    if fitForward
-        img = double(movieStack(:,:,1));
-    else
-        img = double(movieStack(:,:,end));
-    end
-end
+img = movieStack(:,:,1);
+iLocF = 1;
 
-%convert counts to photons
-if usePhoton
-    img = (img-photon_bias)*photon_factor;
-end
-
-%use dark image stack to correct image for camera artifacts
-if correctDark
-    if usePhoton
-        imgCorrection = (imgCorrection+photon_bias)*photon_factor;
-    end
-    img = img+imgCorrection;
-end
+%correct image
+img = correctMovie(img);
 
 % call candidate function
-candidatePos = candidateFun(img,candidateOptions);
+candidatePos = candidateFun(img,candidateOptions,iLocF);
 nrCandidates = size(candidatePos,1);
-
 
 fitData = cell(nrFrames,1);
 if nrCandidates>0
-    fitData_temp = fittingFun(img,candidatePos,fittingOptions);
-    if fitForward
-        fitData(1) = fitData_temp;
-    else
-        fitData(nrFrames) = fitData_temp;
-    end
-else
-    if calcOnce
-        fprintf('No particles in first frame, switching to always calc. candidates.\n');
-    end
-    calcOnce = false;
+    fitData_temp = fittingFun(img,candidatePos,fittingOptions,iLocF);
+    fitData(1) = fitData_temp;
 end
 
 
-
-% Fit the other frames backwards
 msgAccumulator = ''; % Needed for rewindable command line printing (rewPrintf subfunction)
 startTime = tic;
 elapsedTime = [];
 lastElapsedTime = 0;
 
-global iLocF %loop variable can be known by any function
-
-if(fitForward)
-    for iLocF = 2:nrFrames %first frame has already been dealt with
-        elapsedTime = toc(startTime);
+for iLocF = 2:nrFrames %first frame has already been dealt with
+    elapsedTime = toc(startTime);
+    
+    % Output process every 0.5 seconds
+    if( (elapsedTime-lastElapsedTime) > 0.5)
+        rewindMessages();
+        rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
+        rewPrintf('Fitting frame %i/%i\n',iLocF,nrFrames)
         
-        % Output process every 0.5 seconds
-        if( (elapsedTime-lastElapsedTime) > 0.5)
-            rewindMessages();
-            rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
-            rewPrintf('Fitting frame %i/%i\n',iLocF,nrFrames)
-            
-            lastElapsedTime = elapsedTime;
-        end
-        
-        if correctDark
-            if usePhoton
-                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor+imgCorrection;
-            else
-                img = double(movieStack(:,:,iLocF))+imgCorrection;
-            end
-        else
-            if usePhoton
-                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor;
-            else
-                img = double(movieStack(:,:,iLocF));
-            end
-        end
-        
-        if calcOnce %in this case, fitted positions of the last frame serve as candidates for this frame
-            fitData(iLocF) = fittingFun(img,fitData{iLocF-1},fittingOptions);
-        else %otherwise, find new candidates
-            candidatePos = candidateFun(img,candidateOptions);
-            nrCandidatesNew = size(candidatePos,1); %to remove empty entries, let's keep track of the largest amount of particles in one frame
-            if nrCandidatesNew>0
-                fitData(iLocF) = fittingFun(img,candidatePos,fittingOptions);
-            end
-        end
+        lastElapsedTime = elapsedTime;
     end
-else %otherwise, we go backward in time
-    for iLocF = nrFrames-1:-1:1
-        elapsedTime = toc(startTime);
-        
-        % Output process every 0.5 seconds
-        if( (elapsedTime-lastElapsedTime) > 0.5)
-            rewindMessages();
-            rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/(nrFrames-iLocF)*iLocF/60),  floor(mod(elapsedTime/(nrFrames-iLocF)*iLocF,60)))
-            rewPrintf('Fitting frame %i/%i\n',nrFrames-iLocF+1,nrFrames)
-            
-            lastElapsedTime = elapsedTime;
-        end
-        
-        if correctDark
-            if usePhoton
-                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor+imgCorrection;
-            else
-                img = double(movieStack(:,:,iLocF))+imgCorrection;
-            end
-        else
-            if usePhoton
-                img = (double(movieStack(:,:,iLocF))-photon_bias)*photon_factor;
-            else
-                img = double(movieStack(:,:,iLocF));
-            end
-        end
-        
-        if calcOnce
-            fitData(iLocF) = fittingFun(img,fitData{iLocF+1},fittingOptions);
-        else
-            candidatePos = candidateFun(img,candidateOptions);
-            nrCandidatesNew = size(candidatePos,1);
-            if nrCandidatesNew>0
-                fitData(iLocF) = fittingFun(img,candidatePos,fittingOptions);
-            end
-        end
+    
+    img = correctMovie(movieStack(:,:,iLocF));
+    
+    candidatePos = candidateFun(img,candidateOptions,iLocF);
+    nrCandidatesNew = size(candidatePos,1); %to remove empty entries, let's keep track of the largest amount of particles in one frame
+    if nrCandidatesNew>0
+        fitData(iLocF) = fittingFun(img,candidatePos,fittingOptions,iLocF);
     end
 end
-
 
 rewindMessages();
 rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
@@ -209,6 +118,5 @@ rewPrintf('Fitting done.\n');
         msgAccumulator = '';
     end
 
-clear global iLocF
 end
 

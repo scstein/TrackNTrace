@@ -37,7 +37,7 @@ add_param('thresholdRelative',...
     'Relative intensity threshold in percent [0,100). Example: 4 means only spots with intensity in the top 4% count.');
 add_param('pvalMin',...
     'float',...
-    {0.05, 0, inf},...
+    {0.05, 0, 1},...
     'P value for significance test of signal against background [0,1]. Lower means higher quality spots.');
 add_param('iterationCount',...
     'int',...
@@ -66,7 +66,7 @@ end
 
 %   -------------- User functions --------------
 
-function [candidatePos] = findCandidates_intensityFiltering(img,options)
+function [candidatePos] = findCandidates_intensityFiltering(img,options,currentFrame)
 % Find particle candidates in fluorescence images based on intensity, local
 % background and size.
 %
@@ -93,7 +93,6 @@ function [candidatePos] = findCandidates_intensityFiltering(img,options)
 %     candidatePos - Nx2 matrix of particle candidate positions [column
 %     pixel, row pixel] without subpixel position. Middle of upper left pixel would be [1,1].
 
-global iLocF;
 
 % parse options
 W0 = options.particleRadius;
@@ -101,8 +100,8 @@ INTENS_THRSH = options.thresholdRelative;
 PVAL_MIN = options.pvalMin;
 N_ITER = options.iterationCount;
 
-if ~isempty(iLocF)
-    calc_bck = mod(iLocF,N_ITER)==0 && PVAL_MIN<0.99;
+if ~isempty(currentFrame)
+    calc_bck = mod(currentFrame,N_ITER)==0 && PVAL_MIN<0.99;
 else
     calc_bck = true;
 end
