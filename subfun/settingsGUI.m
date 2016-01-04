@@ -63,9 +63,6 @@ set(h_all.edit_photonGain, 'Callback', {@callback_IntEdit,1,1000});
 
 % % Candidate Options
 set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
-% popup_fitDirection
-set(h_all.cbx_calcOnce, 'Callback', @callback_updateGUIstate);
-set(h_all.edit_avgWinSize, 'Callback', {@callback_IntEdit,1,inf});
 
 % % Fitting
 set(h_all.popup_fittingMethod, 'Callback', @callback_updateGUIstate);
@@ -227,12 +224,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         else
             set(h_all.edit_firstFrameTesting, 'Enable','off');
             set(h_all.edit_lastFrameTesting, 'Enable','off');
-        end
-        
-        if get(h_all.cbx_calcOnce, 'Value')
-            set(h_all.edit_avgWinSize, 'Enable','on');
-        else
-            set(h_all.edit_avgWinSize, 'Enable','off');
         end
         
         % Enable/disable photon conversion
@@ -597,17 +588,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         setNum(h_all.edit_firstFrameTesting, globalOptions.firstFrameTesting, true);
         setNum(h_all.edit_lastFrameTesting, globalOptions.lastFrameTesting, true);
         
-        % Candidate Options
-        if globalOptions.fitForward
-            setPopup(h_all.popup_fitDirection,'Forward');
-        else
-            setPopup(h_all.popup_fitDirection,'Backward');
-        end
-        
-        % Calc once
-        set(h_all.cbx_calcOnce, 'Value', globalOptions.calculateCandidatesOnce);
-        setNum(h_all.edit_avgWinSize, globalOptions.averagingWindowSize, true);
-        
         % Photon conversion
         set(h_all.cbx_usePhotonConv,'Value',globalOptions.usePhotonConversion)
         setNum(h_all.edit_photonBias,globalOptions.photonBias, true);
@@ -636,10 +616,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         globalOptions.previewMode = get(h_all.cbx_previewMode, 'Value');
         globalOptions.firstFrameTesting = getNum(h_all.edit_firstFrameTesting);
         globalOptions.lastFrameTesting = getNum(h_all.edit_lastFrameTesting);
-        
-        globalOptions.fitForward = logical(strcmp(getPopup(h_all.popup_fitDirection), 'Forward'));
-        globalOptions.calculateCandidatesOnce = logical(get(h_all.cbx_calcOnce, 'Value'));
-        globalOptions.averagingWindowSize = getNum(h_all.edit_avgWinSize);
         
         globalOptions.usePhotonConversion = logical(get(h_all.cbx_usePhotonConv,'Value'));
         globalOptions.photonBias = getNum(h_all.edit_photonBias);

@@ -17,11 +17,6 @@ globalOptions.lastFrame = inf; %integer, last movie frame to consider. Put inf t
 globalOptions.firstFrameTesting = 1; %integer, first movie frame to consider during testMode
 globalOptions.lastFrameTesting = 50; %integer, last movie frame to consider during testMode. Put inf to read to the end.
 
-% Options for candidate detection behaviour
-globalOptions.fitForward = true; %boolean, fit movie forwards or backwards
-globalOptions.calculateCandidatesOnce = false; %boolean, if true, routine calculates candidates only once and tries refinement afterwards. DO NOT USE for diffusing particles
-globalOptions.averagingWindowSize = 20; %integer, average of X frames is calculated and used to find first candidates if calculateCandidatesOnce = true
-
 % Options for photon conversion
 globalOptions.usePhotonConversion = false; %boolean, enables photon conversion (absolutely necessary for MLE)
 globalOptions.photonBias = 100; %integer, camera A/D count floor which is added to the image to remove negativ counts
