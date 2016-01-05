@@ -19,12 +19,14 @@ else
     end
 end
 
-% Make sure function handle is part of the options and the correct one
-% This 
+% Make sure function handle is part of the options
 if isfield(options,'functionHandle')
-    if ~isequal(options.functionHandle, plugin_function)
-       error('createOptionsPanel: Tried to create options for plugin ''%s'' with loaded inputOptions carrying a function handle different from the current plugin version. Did the plugin_function change since these options were created?',plugin_name);
-    end
+% %   According to the MATLAB documentation, checking this equality is not
+% %    a good idea, as function handles to nested functions coming from
+% %    different calls to the parent function are not considered equal.
+%     if ~isequal(options.functionHandle, plugin_function)
+%        error('createOptionsPanel: Tried to create options for plugin ''%s'' with loaded inputOptions carrying a function handle different from the current plugin version. Did the plugin_function change since these options were created?',plugin_name);
+%     end
 else
     warning('createOptionsPanel: inputOptions for plugin ''%s'' had no plugin_function. How did this happen?',plugin_name);
     options.functionHandle = plugin_function;
