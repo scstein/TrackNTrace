@@ -266,8 +266,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         % Enable/disable tracking panel
         if get(h_all.cbx_enableTracking, 'Value')
+            set(h_all.popup_trackingMethod,'Enable','on');
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
         else
+            set(h_all.popup_trackingMethod,'Enable','off');
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
         end
     end
@@ -293,6 +295,15 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         tracking_plugins{ selected_tracking_plugin,1}(h_all.panel_tracking, tracking_plugin_options{selected_tracking_plugin});
         
         updatePanelPositions();
+        
+        % Enable/disable tracking panel
+        if get(h_all.cbx_enableTracking, 'Value')
+            set(h_all.popup_trackingMethod,'Enable','on');
+            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
+        else
+            set(h_all.popup_trackingMethod,'Enable','off');
+            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
+        end
     end
 
     % Used to resize the GUI after selecting a different plugin
