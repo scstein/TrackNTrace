@@ -68,7 +68,7 @@ for i=1:numel(movie_list)
         GUIinputs.titleText = 'Adjust movie specific options.';
         [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
         if GUIreturns.userExit;
-            warning('User abort. Stopping TrackNTrace.\n Delete unwanted settings files that might have been saved already.');
+            warning(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.'));
             clear global globalOptions movie imgCorrection;
             return;
         end;
@@ -92,7 +92,7 @@ for i=1:numel(movie_list)
                 if not(first_run)
                     [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
                     if GUIreturns.userExit;
-                        warning('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.');
+                        warning(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.'));
                         clear global globalOptions movie imgCorrection;
                         return;
                     end;

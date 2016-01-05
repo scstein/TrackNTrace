@@ -118,14 +118,15 @@ for iFrame=1:nrFrames
     
     pos(iFrame).xCoord = [pos_frame_now(valid_pos,1),zeros(nCand,1)]; %careful, check if error should be >0!
     pos(iFrame).yCoord = [pos_frame_now(valid_pos,2),zeros(nCand,1)];
-    if options.track3D
-        pos(iFrame).zCoord = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
-        pos(iFrame).amp = [pos_frame_now(valid_pos,4),zeros(nCand,1)];
-        pos(iFrame).sigma = [pos_frame_now(valid_pos,6),zeros(nCand,1)];
-    else
-        pos(iFrame).amp = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
-        pos(iFrame).sigma = [pos_frame_now(valid_pos,5),zeros(nCand,1)];
-    end
+    
+    pos(iFrame).amp = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
+    pos(iFrame).sigma = [pos_frame_now(valid_pos,5),zeros(nCand,1)];
+    
+%     if options.track3D
+%         pos(iFrame).zCoord = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
+%     end
+%     pos(iFrame).amp = [pos_frame_now(valid_pos,4),zeros(nCand,1)];
+%     pos(iFrame).sigma = [pos_frame_now(valid_pos,6),zeros(nCand,1)];
 end
 
 
@@ -169,8 +170,10 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
         nrFrames = size(tracksFinal(iTrack).tracksFeatIndxCG,2); %number of frames
         frameStart = tracksFinal(iTrack).seqOfEvents(1,1)+(iDiv-1)*stack_slice; %get relative frame and correct for global frame
         xyamp = [tracksFinal(iTrack).tracksCoordAmpCG(1:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(2:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(4:8:end).']; %[x,y,amp]
+%         xyzamp = [tracksFinal(iTrack).tracksCoordAmpCG(1:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(2:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(3:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(4:8:end).']; %[x,y,amp]
         
         cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nrFrames,1), (frameStart:frameStart+nrFrames-1).', xyamp]}; %[id,frame,x,y,amp]
+%         cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nrFrames,1), (frameStart:frameStart+nrFrames-1).', xyzamp]}; %[id,frame,x,y,z,amp]
     end
     
     %finally save data
@@ -187,6 +190,9 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
             track_slice(iFrame).xCoord = [pos_frame_now(:,3),zeros(nCand,1)]; %careful, check if error should be >0!
             track_slice(iFrame).yCoord = [pos_frame_now(:,4),zeros(nCand,1)];
             track_slice(iFrame).amp = [pos_frame_now(:,5),zeros(nCand,1)];
+            
+%             track_slice(iFrame).zCoord = [pos_frame_now(:,5),zeros(nCand,1)];
+%             track_slice(iFrame).amp = [pos_frame_now(:,6),zeros(nCand,1)];
             if iFrame==1
                 pos_frame_first = pos_frame_now; %need this for getting trajectory ids back
             end
@@ -195,7 +201,7 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
         %track those two frames
         if ~isempty(pos_frame_now) && ~isempty(pos_frame_first)
             try
-                [tracksFinal_sliced,~,~] = trackCloseGapsKalmanSparse(track_slice,costMatrices_slice,gapCloseParam_slice,kalmanFunctions_slice,probDim,0,verbose);
+                [tracksFinal_sliced,~,~] = trackCloseGapsKalmanSparse(track_slice,costMatrices_slice,gapCloseParam_slice,kalmanFunctions_slice,probDim,0,false);
                 nrTracks_sliced = numel(tracksFinal_sliced);
             catch
                 %very rarely, utrack tries to index a feature track
@@ -216,7 +222,7 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
                 id_pair = [pos_frame_first(abs(pos_frame_first(:,3)-x_pos(1))<1e-6,1);pos_frame_now(abs(pos_frame_now(:,3)-x_pos(2))<1e-6,1)];
                 
                 %now correct ids
-                connected_track_idx = (trajData(:,1)==id_pair(2)); %get all entries of new trajectory to be connected to older one
+                connected_track_idx = (trajData(:,1)==id_pair(2)); %get all boolean entries of new trajectory to be connected to older one
                 trajData(connected_track_idx,1) = repmat(id_pair(1),sum(connected_track_idx),1);
             end
             
@@ -311,7 +317,7 @@ costMatrices(2).funcName = 'costMatRandomDirectedSwitchingMotionCloseGaps';
 %parameters
 
 %needed all the time
-parameters.linearMotion = 0; %use linear motion Kalman filter.
+parameters.linearMotion = costMatrices(1).parameters.linearMotion; %use linear motion Kalman filter.
 
 parameters.minSearchRadius = costMatrices(1).parameters.minSearchRadius; %minimum allowed search radius.
 parameters.maxSearchRadius = costMatrices(1).parameters.maxSearchRadius; %maximum allowed search radius.
