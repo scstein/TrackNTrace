@@ -3,7 +3,7 @@ function createOptionsPanel( h_panel, plugin_name, param_specification, inputOpt
 
 % All paramters are saved within the options struct. Variable names are
 % derived from the given parameter name by erasing all white spaces.
-if nargin < 7 || isempty(inputOptions)
+if nargin < 4 || isempty(inputOptions)
     options = [];
     options.plugin_name = plugin_name;
 else
