@@ -49,27 +49,27 @@ set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
 % edit_darkMovie
 set(h_all.edit_firstFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrame,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.cbx_previewMode, 'Callback', @callback_updateGUIstate);
+set(h_all.cbx_previewMode, 'Callback', @callback_updateMainGUIstate);
 set(h_all.edit_firstFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.button_movieList, 'Callback', @callback_selectMovieList);
 set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
 
 %Photon conversion
-set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateGUIstate);
+set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateMainGUIstate);
 set(h_all.edit_photonBias, 'Callback', {@callback_IntEdit,0,inf});
 set(h_all.edit_photonSensitivity, 'Callback', {@callback_FloatEdit,1.0,inf});
 set(h_all.edit_photonGain, 'Callback', {@callback_IntEdit,1,1000});
 
-% % Candidate Options
-set(h_all.popup_candidateMethod, 'Callback', @callback_updateGUIstate);
+% % Candidate plugin
+set(h_all.popup_candidateMethod, 'Callback', @callback_updatePlugins);
 
-% % Fitting
-set(h_all.popup_fittingMethod, 'Callback', @callback_updateGUIstate);
+% % Fitting plugin
+set(h_all.popup_fittingMethod, 'Callback', @callback_updatePlugins);
 
-% % Tracking
-set(h_all.cbx_enableTracking, 'Callback', @callback_updateGUIstate);
-set(h_all.popup_trackingMethod, 'Callback', @callback_updateGUIstate);
+% % Tracking plugin
+set(h_all.cbx_enableTracking, 'Callback', @callback_updateMainGUIstate);
+set(h_all.popup_trackingMethod, 'Callback', @callback_updatePlugins);
 % cbx_verbose
 
 % % Help buttons
@@ -102,6 +102,7 @@ uiwait(h_main);
 drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 
     % Load plugins from the plugins folder
+    % Note: This loads the plugin data, but does not build their panels
     function loadPlugins()
         fullPathToThisFile = mfilename('fullpath');
         [folderPath,~,~] = fileparts(fullPathToThisFile);
@@ -152,14 +153,26 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         candidate_plugin_options = cell(size(candidate_plugins,1),1);
         fitting_plugin_options = cell(size(fitting_plugins,1),1);
         tracking_plugin_options = cell(size(tracking_plugins,1),1);
-        
-        setPluginsBasedOnOptions();
     end
 
-    function setPluginsBasedOnOptions()
-       % Select plugin based on the input options
-        if isfield(candidateOptions,'plugin_name')
-           selected_candidate_plugin = -1; 
+% Select plugins based on the current candidateOptions, fittingOptions,
+% trackingOptions. After selection, the plugin panels are constructed
+    function selectPluginsBasedOnOptions()
+       % Store options for last selected plugins
+       if selected_candidate_plugin>0
+           candidate_plugin_options{selected_candidate_plugin} = getappdata(h_all.panel_candidate,'options');
+       end
+       if selected_fitting_plugin>0
+           fitting_plugin_options{selected_fitting_plugin} = getappdata(h_all.panel_fitting,'options');
+       end
+       if selected_tracking_plugin>0
+           tracking_plugin_options{selected_tracking_plugin} = getappdata(h_all.panel_tracking,'options');
+       end
+        
+        % Candidate detection
+        if ~isempty(candidateOptions)
+           selected_candidate_plugin = -1;
+           % Search for a loaded plugin with the same name
            for iPlug = 1:size(candidate_plugins,1)
                 if strcmp(candidateOptions.plugin_name,candidate_plugins{iPlug,2})
                     selected_candidate_plugin = iPlug;
@@ -173,9 +186,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             selected_candidate_plugin = 1; 
         end
         
-        
-        if isfield(fittingOptions,'plugin_name')
+        % Fitting
+        if ~isempty(fittingOptions)
            selected_fitting_plugin = -1; 
+           % Search for a loaded plugin with the same name
            for iPlug = 1:size(fitting_plugins,1)
                 if strcmp(fittingOptions.plugin_name,fitting_plugins{iPlug,2})
                     selected_fitting_plugin = iPlug;
@@ -189,8 +203,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             selected_fitting_plugin = 1; 
         end
         
-        if isfield(trackingOptions,'plugin_name')
-           selected_tracking_plugin = -1; 
+        % Tracking
+        if ~isempty(trackingOptions)
+           selected_tracking_plugin = -1;
+           % Search for a loaded plugin with the same name
            for iPlug = 1:size(tracking_plugins,1)
                 if strcmp(trackingOptions.plugin_name,tracking_plugins{iPlug,2})
                     selected_tracking_plugin = iPlug;
@@ -204,19 +220,22 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             selected_tracking_plugin = 1; 
         end
         
-        % Set popups to correct value
+        % Set popups to correct plugin name
         set(h_all.popup_candidateMethod, 'Value', selected_candidate_plugin);
         set(h_all.popup_fittingMethod, 'Value', selected_fitting_plugin);
         set(h_all.popup_trackingMethod, 'Value', selected_tracking_plugin);
         
-        % Build panels
+        % Build panels by invoking the selected plugins function
         candidate_plugins{ selected_candidate_plugin,1}(h_all.panel_candidate, candidateOptions);
         fitting_plugins{ selected_fitting_plugin,1}(h_all.panel_fitting, fittingOptions);
         tracking_plugins{ selected_tracking_plugin,1}(h_all.panel_tracking, trackingOptions); 
+        
+        updatePanelPositions();
     end
 
 % Update GUI based on currently set values
-    function callback_updateGUIstate(hObj, event)
+% Note: This does not update the plugins!
+    function callback_updateMainGUIstate(hObj, event)
         % Enable/disable testing fields
         if get(h_all.cbx_previewMode, 'Value');
             set(h_all.edit_firstFrameTesting, 'Enable','on');
@@ -245,7 +264,19 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 %             set(h_all.button_continueForAll, 'Visible','off');
         end
         
-        % % Plugins
+        % Enable/disable tracking panel
+        if get(h_all.cbx_enableTracking, 'Value')
+            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
+        else
+            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
+        end
+    end
+
+    % This function is called if the selection of plugins changes
+    % It saves the options for the previously selected plugin and builds
+    % the panel for the newly selected one.
+    function callback_updatePlugins(hObj, event)
+     % % Plugins
         % Store options for last selected plugins
        candidate_plugin_options{selected_candidate_plugin} = getappdata(h_all.panel_candidate,'options');
        fitting_plugin_options{selected_fitting_plugin} = getappdata(h_all.panel_fitting,'options');
@@ -262,15 +293,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         tracking_plugins{ selected_tracking_plugin,1}(h_all.panel_tracking, tracking_plugin_options{selected_tracking_plugin});
         
         updatePanelPositions();
-                
-        % Enable/disable tracking panel
-        if get(h_all.cbx_enableTracking, 'Value')
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
-        else
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
-        end
     end
 
+    % Used to resize the GUI after selecting a different plugin
     function updatePanelPositions()
         above_panel_spacing = 0.5;
         topic_spacing = 2.5;
@@ -598,10 +623,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.cbx_enableTracking,'Value', globalOptions.enableTracking); % --
         
         % Update plugins
-        setPluginsBasedOnOptions();
+        selectPluginsBasedOnOptions();
         
         % Update the GUI
-        callback_updateGUIstate();
+        callback_updateMainGUIstate();
     end
 
 % Set all options structs (globalOptions, candidateOptions, fittingOptions, trackingOptions)

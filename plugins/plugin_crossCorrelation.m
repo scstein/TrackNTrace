@@ -45,12 +45,7 @@ add_param('CorrThreshold',...
 if (nargin == 0); return; end
 
 % Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
-
-% Save handle of the plugins function
-options = getappdata(h_panel,'options');
-options.functionHandle = plugin_function;
-setappdata(h_panel,'options',options);
+createOptionsPanel(h_panel, plugin_name, plugin_function, param_specification, inputOptions);
 
     function add_param(par_name, par_type, par_settings, par_tooltip)
         param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);

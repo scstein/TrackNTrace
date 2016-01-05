@@ -52,13 +52,8 @@ function [plugin_name, plugin_type, plugin_info] = plugin_TNTfitter(h_panel, inp
     if (nargin == 0); return; end
     
     % Create the panel for this plugin
-    createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
+    createOptionsPanel(h_panel, plugin_name, plugin_function, param_specification, inputOptions);
 
-    % Save handle of the plugins function
-    options = getappdata(h_panel,'options');
-    options.functionHandle = plugin_function;
-    setappdata(h_panel,'options',options);
-    
     function add_param(par_name, par_type, par_settings, par_tooltip)
         param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
     end

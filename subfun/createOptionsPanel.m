@@ -1,4 +1,4 @@
-function createOptionsPanel( h_panel, plugin_name, param_specification, inputOptions)
+function createOptionsPanel( h_panel, plugin_name, plugin_function, param_specification, inputOptions)
 
 
 % All paramters are saved within the options struct. Variable names are
@@ -6,13 +6,33 @@ function createOptionsPanel( h_panel, plugin_name, param_specification, inputOpt
 if nargin < 4 || isempty(inputOptions)
     options = [];
     options.plugin_name = plugin_name;
+    options.functionHandle = plugin_function;
 else
+    if ~isfield(inputOptions,'plugin_name')
+        error('createOptionsPanel: Tried to create options for plugin ''%s'' with inputOptions carrying no field plugin_name.',plugin_name);
+    end
+    
     if strcmp(plugin_name,inputOptions.plugin_name)
         options = inputOptions;
     else
         error('createOptionsPanel: Tried to create options for plugin ''%s'' with inputOptions for ''%s''.',plugin_name,inputOptions.plugin_name);
     end
 end
+
+% Make sure function handle is part of the options and the correct one
+% This 
+if isfield(options,'functionHandle')
+    if ~isequal(options.functionHandle, plugin_function)
+       error('createOptionsPanel: Tried to create options for plugin ''%s'' with loaded inputOptions carrying a function handle different from the current plugin version. Did the plugin_function change since these options were created?',plugin_name);
+    end
+else
+    warning('createOptionsPanel: inputOptions for plugin ''%s'' had no plugin_function. How did this happen?',plugin_name);
+    options.functionHandle = plugin_function;
+end
+
+% Sychronize local options with stored options
+% After this, 'options' must only be changed in the callback_saveOnChange !!!
+setappdata(h_panel,'options',options);
 
 % unpack parameter specification
 par_name = param_specification(:,1);
@@ -208,6 +228,8 @@ set(h_panel,'Position',panel_pos);
     end
 
     function callback_saveOnChange(uiObj, eventdata, structVarName, pType, pSettings)
+        options = getappdata(h_panel,'options'); % Synchronize local options with stored options
+        
         switch pType
             case 'float'
                 parValue = str2double(get(uiObj,'String'));
