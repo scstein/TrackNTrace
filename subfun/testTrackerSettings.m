@@ -18,7 +18,7 @@ if nargin < 7 || isempty(vertcat(fitData{:}))
 end
 % track the particles
 if globalOptions.enableTracking
-    trajectoryData = trackParticles(fitData,trackingOptions);
+    [trajectoryData,~] = trackParticles(fitData,trackingOptions);
 end
 
 %visualize all trajectories

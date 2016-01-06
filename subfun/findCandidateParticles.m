@@ -67,7 +67,7 @@ for iLocF = 1:nrFrames %first frame has already been dealt with
     
     img = correctMovie(movieStack(:,:,iLocF));
     
-    candidateData(iLocF) = candidateOptions.perFrameFunc(img,candidateOptions,iLocF);
+    candidateData(iLocF) = candidateOptions.mainFunc(img,candidateOptions,iLocF);
 end
 
 if ~isempty(candidateOptions.postFunc)

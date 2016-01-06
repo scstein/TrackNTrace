@@ -79,7 +79,7 @@ for iLocF = 1:nrFrames %first frame has already been dealt with
     candidatePos = candidateData{iLocF};
     nrCandidates = size(candidatePos,1);
     if nrCandidates>0
-        fitData(iLocF) = fittingOptions.perFrameFunc(img,candidatePos,fittingOptions,iLocF);
+        fitData(iLocF) = fittingOptions.mainFunc(img,candidatePos,fittingOptions,iLocF);
     end
 end
 
