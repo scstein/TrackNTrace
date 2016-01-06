@@ -118,10 +118,10 @@ for i=1:numel(movie_list)
                 end
                 % IF: this is the first run, the preview window changed or the fitting/candidate options changed locate and
                 % track particles and save fitData. ELSE: reuse fitData acquired in the last run without re-fitting
-                if  first_run || GUIreturns.globalOptionsChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged
-                    [run_again, fitData_test] = testTrackerSettings(movie,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions);
+                if first_run || GUIreturns.globalOptionsChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged
+                    [run_again, candidateData_test,fitData_test] = testTrackerSettings(movie,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions);
                 else
-                    [run_again] = testTrackerSettings(movie,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions, fitData_test);
+                    [run_again] = testTrackerSettings(movie,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions, candidateData_test, fitData_test);
                 end
                 first_run = false;
             end
@@ -143,9 +143,9 @@ for i=1:numel(movie_list)
     save(filename_fitData,'filename_movie','globalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
     posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
 end
+clearvars -except posFit_list
 
 %% Compute positions
-clearvars -except posFit_list
 
 for i=1:numel(posFit_list)
     filename_fitData = posFit_list{i};
@@ -156,15 +156,16 @@ for i=1:numel(posFit_list)
     movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
     % Compute the positions
     fprintf('######\nLocating particles in movie %s.\n',filename_movie);
-    fitData = locateParticles(movie, dark_img, globalOptions, candidateOptions, fittingOptions);
+    [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
+    [fitData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
     
     % Save positions and movieSize, update globalOptions.lastFrame
     globalOptions.lastFrame = globalOptions.firstFrame + size(movie,3)-1; % lastFrame could have been set to 'inf', now we synchronize with the correct number
     movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
-    save(filename_fitData,'fitData','globalOptions','movieSize','-append');
+    save(filename_fitData,'candidateData','fitData','globalOptions','candidateOptions','fittingOptions','movieSize','-append');
 end
+clearvars -except posFit_list
 
-clear fitData movie
 %% TODO
 % correct for half pixel shift?
 % keep amplitude even if tracker cant manage
@@ -182,10 +183,10 @@ for i=1:numel(posFit_list)
     
     % Compute trajectories
     fprintf('######\nTracking particles in movie %s.\n',filename_movie);
-    trajectoryData = trackParticles(fitData,trackingOptions); %#ok<NASGU>
+    trackData = trackParticles(fitData,trackingOptions); %#ok<NASGU>
     
     %Save trajectories
-    save(posFit_list{i},'trajectoryData','-append');
+    save(posFit_list{i},'trackData','-append');
 end
 end
 

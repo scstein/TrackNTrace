@@ -85,8 +85,9 @@ function [candidatePos] = findCandidates_intensityFiltering(img,options,currentF
 %
 %
 % OUTPUT:
-%     candidatePos - Nx2 matrix of particle candidate positions [column
-%     pixel, row pixel] without subpixel position. Middle of upper left pixel would be [1,1].
+%     candidatePos - cell of Nx2 matrix of particle candidate positions
+%     [column pixel, row pixel] without subpixel position. Middle of upper
+%     left pixel would be [1,1].
 
 
 % parse options
@@ -106,7 +107,7 @@ cands_w0 = detectSpots(img,W0,INTENS_THRSH,PVAL_MIN,calc_bck);
 % n_cands = numel(cands_w0);
 
 [pos_y,pos_x] = ind2sub(size(img),cands_w0);
-candidatePos = [pos_x,pos_y]; %save candidates in [column pixels, row pixels] format
+candidatePos = {[pos_x,pos_y]}; %save candidates in [column pixels, row pixels] format
 % neighbours = zeros(n_cands,1);
 %if no smaller features can exist or the search range is too low, don't
 %bother

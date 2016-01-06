@@ -67,8 +67,9 @@ function candidatePos = findCandidates_crossCorrelation(img, options, currentFra
 %     candidateOptions: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     candidatePos - Nx2 matrix of particle candidate positions [column
-%     pixel, row pixel] without subpixel position. Middle of upper left pixel would be [1,1].
+%     candidatePos - cell of Nx2 matrix of particle candidate positions
+%     [column pixel, row pixel] without subpixel position. Middle of upper
+%     left pixel would be [1,1].
 
 sigma = options.PSFsigma;
 CORR_THRESH = options.CorrThreshold;
@@ -88,7 +89,7 @@ match_data(:,2) = match_data(:,2)+ceil(pattCols/2);
 % ATTENTION! Here we switch the coordinates
 % candidatePos(:,1) is columns (x-coordinate)
 % candidatePos(:,2) is rows    (y-coordinate)
-candidatePos = match_data(:,[2,1]);
+candidatePos = {match_data(:,[2,1])};
 
 end
 
