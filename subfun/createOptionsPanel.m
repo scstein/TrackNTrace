@@ -1,12 +1,11 @@
-function createOptionsPanel( h_panel, plugin_name, plugin_function, param_specification, inputOptions)
+function createOptionsPanel( h_panel, plugin_name, param_specification, inputOptions)
 
 
 % All paramters are saved within the options struct. Variable names are
 % derived from the given parameter name by erasing all white spaces.
-if nargin < 4 || isempty(inputOptions)
+if isempty(inputOptions)
     options = [];
     options.plugin_name = plugin_name;
-    options.functionHandle = plugin_function;
 else
     if ~isfield(inputOptions,'plugin_name')
         error('createOptionsPanel: Tried to create options for plugin ''%s'' with inputOptions carrying no field plugin_name.',plugin_name);
@@ -17,19 +16,6 @@ else
     else
         error('createOptionsPanel: Tried to create options for plugin ''%s'' with inputOptions for ''%s''.',plugin_name,inputOptions.plugin_name);
     end
-end
-
-% Make sure function handle is part of the options
-if isfield(options,'functionHandle')
-% %   According to the MATLAB documentation, checking this equality is not
-% %    a good idea, as function handles to nested functions coming from
-% %    different calls to the parent function are not considered equal.
-%     if ~isequal(options.functionHandle, plugin_function)
-%        error('createOptionsPanel: Tried to create options for plugin ''%s'' with loaded inputOptions carrying a function handle different from the current plugin version. Did the plugin_function change since these options were created?',plugin_name);
-%     end
-else
-    warning('createOptionsPanel: inputOptions for plugin ''%s'' had no plugin_function. How did this happen?',plugin_name);
-    options.functionHandle = plugin_function;
 end
 
 % Sychronize local options with stored options

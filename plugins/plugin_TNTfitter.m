@@ -23,8 +23,10 @@ function [plugin_name, plugin_type, plugin_info] = plugin_TNTfitter(h_panel, inp
     plugin_info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
                    'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
     
-    % The function this plugin implements
-    plugin_function =  @fitPositions_psfFitCeres;
+    % The functions this plugin implements
+    plugin_initFunc = [];
+    plugin_mainFunc =  @fitPositions_psfFitCeres;
+    plugin_postFunc = [];
     
     % Add parameters
     % read comments of function subfun/add_plugin_param for HOWTO
@@ -47,12 +49,19 @@ function [plugin_name, plugin_type, plugin_info] = plugin_TNTfitter(h_panel, inp
     
           
 %   -------------- TNT core code, not to change by user --------------
-%               
-    % Calling the plugin function without arguments just returns its name, type and info
-    if (nargin == 0); return; end
-    
-    % Create the panel for this plugin
-    createOptionsPanel(h_panel, plugin_name, plugin_function, param_specification, inputOptions);
+
+% Calling the plugin function without arguments just returns its name, type and info
+if (nargin == 0); return; end
+
+% Create the panel for this plugin
+createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
+
+% Store plugin functions
+options = getappdata(h_panel,'options');
+options.initFunc = plugin_initFunc;
+options.mainFunc = plugin_mainFunc;
+options.postFunc = plugin_postFunc;
+setappdata(h_panel,'options',options);
 
     function add_param(par_name, par_type, par_settings, par_tooltip)
         param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);

@@ -7,7 +7,6 @@ end
 % This stores the setup of all parameters
 param_specification = cell(0,4);
 
-
 %    -------------- User definition of plugin --------------
 
 % Name of the component these options are for
@@ -22,8 +21,10 @@ plugin_type = 1;
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin_info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross correlation.';
 
-% The function this plugin implements
-plugin_function =  @findCandidates_crossCorrelation;
+% The functions this plugin implements
+plugin_initFunc = [];
+plugin_mainFunc =  @findCandidates_crossCorrelation;
+plugin_postFunc = [];
 
 % Add parameters
 % read comments of function subfun/add_plugin_param for HOWTO
@@ -39,13 +40,19 @@ add_param('CorrThreshold',...
 
 
 %   -------------- TNT core code, not to change by user --------------
-%
 
 % Calling the plugin function without arguments just returns its name, type and info
 if (nargin == 0); return; end
 
 % Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, plugin_function, param_specification, inputOptions);
+createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
+
+% Store plugin functions
+options = getappdata(h_panel,'options');
+options.initFunc = plugin_initFunc;
+options.mainFunc = plugin_mainFunc;
+options.postFunc = plugin_postFunc;
+setappdata(h_panel,'options',options);
 
     function add_param(par_name, par_type, par_settings, par_tooltip)
         param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);

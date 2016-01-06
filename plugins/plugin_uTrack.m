@@ -23,8 +23,10 @@ plugin_type = 3;
 plugin_info = ['u-Track was programmed in the lab of Gaudenz Danuser, see: ', ...
                'Jaqaman et al, Nature Methods - 5, 695 - 702 (2008), doi:10.1038/nmeth.1237.'];
 
-% The function this plugin implements
-plugin_function =  @trackParticles_uTrack;
+% The functions this plugin implements
+plugin_initFunc = [];
+plugin_mainFunc =  @trackParticles_uTrack;
+plugin_postFunc = [];
 
 % Add parameters
 % read comments of function subfun/add_plugin_param for HOWTO
@@ -55,12 +57,19 @@ add_param('verbose',...
 
 
 %   -------------- TNT core code, not to change by user --------------
-%
+
 % Calling the plugin function without arguments just returns its name, type and info
 if (nargin == 0); return; end
 
 % Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, plugin_function, param_specification, inputOptions);
+createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
+
+% Store plugin functions
+options = getappdata(h_panel,'options');
+options.initFunc = plugin_initFunc;
+options.mainFunc = plugin_mainFunc;
+options.postFunc = plugin_postFunc;
+setappdata(h_panel,'options',options);
 
     function add_param(par_name, par_type, par_settings, par_tooltip)
         param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
