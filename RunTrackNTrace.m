@@ -183,10 +183,10 @@ for i=1:numel(posFit_list)
     
     % Compute trajectories
     fprintf('######\nTracking particles in movie %s.\n',filename_movie);
-    trackData = trackParticles(fitData,trackingOptions); %#ok<NASGU>
+    [trackData, trackingOptions] = trackParticles(fitData,trackingOptions); %#ok<ASGLU>
     
     %Save trajectories
-    save(posFit_list{i},'trackData','-append');
+    save(posFit_list{i},'trackData','trackingOptions','-append');
 end
 end
 
