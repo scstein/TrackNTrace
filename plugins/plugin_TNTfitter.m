@@ -1,71 +1,44 @@
-function [plugin_name, plugin_type, plugin_info] = plugin_TNTfitter(h_panel, inputOptions)
-%    -------------- TNT core code, not to change by user --------------    
-    if nargin < 2
-        inputOptions = [];
-    end
-    
-    % This stores the setup of all parameters
-    param_specification = cell(0,4);
-    
+function [plugin] = plugin_TNTfitter()
 
-%    -------------- User definition of plugin --------------
+%    -------------- Definition of plugin --------------
 
-    % Name of the component these options are for
-    plugin_name = 'TNT Fitter';
+% Name of the component these options are for
+name = 'TNT Fitter';
 
-    % Type of plugin.
-    % 1: Candidate detection
-    % 2: Spot fitting
-    % 3: Tracking
-    plugin_type = 2;
-    
-    % Description of plugin, supports sprintf format specifier like '\n' for a newline
-    plugin_info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
-                   'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
-    
-    % The functions this plugin implements
-    plugin_initFunc = [];
-    plugin_mainFunc =  @fitPositions_psfFitCeres;
-    plugin_postFunc = [];
-    
-    % Add parameters
-    % read comments of function subfun/add_plugin_param for HOWTO
-    add_param('PSFsigma',...
-          'float',...
-          {1.2, 0,inf},...
-          'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
-    add_param('fitPSFsigma',...
-              'bool',...
-              false,...
-              'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).');
-    add_param('usePixelIntegratedFit',...
-              'bool',...
-              true,...
-              'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.');
-    add_param('useMLE',...
-              'bool',...
-              false,...
-              'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');
-    
-          
-%   -------------- TNT core code, not to change by user --------------
+% Type of plugin.
+% 1: Candidate detection
+% 2: Spot fitting
+% 3: Tracking
+type = 2;
 
-% Calling the plugin function without arguments just returns its name, type and info
-if (nargin == 0); return; end
+% The functions this plugin implements
+mainFunc =  @fitPositions_psfFitCeres;
 
-% Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
+% Create the plugin
+plugin = TNTplugin(name, type, mainFunc);
 
-% Store plugin functions
-options = getappdata(h_panel,'options');
-options.initFunc = plugin_initFunc;
-options.mainFunc = plugin_mainFunc;
-options.postFunc = plugin_postFunc;
-setappdata(h_panel,'options',options);
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin.info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
+               'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
 
-    function add_param(par_name, par_type, par_settings, par_tooltip)
-        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
-    end
+% Add parameters
+% read comments of function TNTplugin/add_param for HOWTO
+plugin.add_param('PSFsigma',...
+      'float',...
+      {1.2, 0,inf},...
+      'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
+plugin.add_param('fitPSFsigma',...
+          'bool',...
+          false,...
+          'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).');
+plugin.add_param('usePixelIntegratedFit',...
+          'bool',...
+          true,...
+          'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.');
+plugin.add_param('useMLE',...
+          'bool',...
+          false,...
+          'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');   
 end
 
 

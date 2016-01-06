@@ -1,77 +1,51 @@
-function [plugin_name, plugin_type, plugin_info] = plugin_TNTnearestNeighbor(h_panel, inputOptions)
-%    -------------- TNT core code, not to change by user --------------
-if nargin < 2
-    inputOptions = [];
-end
+function [plugin] = plugin_TNTnearestNeighbor()
 
-% This stores the setup of all parameters
-param_specification = cell(0,4);
-
-
-%    -------------- User definition of plugin --------------
+%    -------------- Definition of plugin --------------
 
 % Name of the component these options are for
-plugin_name = 'TNT NearestNeighbor';
+name = 'TNT NearestNeighbor';
 
 % Type of plugin.
 % 1: Candidate detection
 % 2: Spot fitting
 % 3: Tracking
-plugin_type = 3;
-
-% Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin_info = 'Simple and fast nearest neighbor tracking implemented in C++.';
+type = 3;
 
 % The functions this plugin implements
-plugin_initFunc = [];
-plugin_mainFunc =  @trackParticles_nearestNeighborCPP;
-plugin_postFunc = [];
+mainFunc =  @trackParticles_nearestNeighborCPP;
+
+% Create the plugin
+plugin = TNTplugin(name,type, mainFunc);
+
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin.info = 'Simple and fast nearest neighbor tracking implemented in C++.';
 
 % Add parameters
-% read comments of function subfun/add_plugin_param for HOWTO
-add_param('minTrajLength',...
+% read comments of function TNTplugin/add_param for HOWTO
+plugin.add_param('minTrajLength',...
     'int',...
     {2, 0, inf},...
     'Minimum length of trajectories AFTER gap closing in [frames].');
-add_param('maxTrackRadius',...
+plugin.add_param('maxTrackRadius',...
     'float',...
     {6, 0, inf},...
     'Maximum allowed linking distance between two spots in [pixels].');
-add_param('maxFrameGap',...
+plugin.add_param('maxFrameGap',...
     'float',...
     {0, 0, inf},...
     'Maximum allowed time gap between two segments used for gap closing in [frames]. 0 = no gap closing.');
-add_param('minSegLength',...
+plugin.add_param('minSegLength',...
     'int',...
     {2, 0, inf},...
     'Minimum length of trajectory segments BEFORE gap closing in [frames].');
-add_param('maxGapRadius',...
+plugin.add_param('maxGapRadius',...
     'int',...
     {6, 0, inf},...
     'Maximum allowed linking distance between two segments uses for gap closing in [pixels].');
-add_param('verbose',...
+plugin.add_param('verbose',...
     'bool',...
     false,...
     'Switch on to see tracking progress in command window.');
-
-%   -------------- TNT core code, not to change by user --------------
-
-% Calling the plugin function without arguments just returns its name, type and info
-if (nargin == 0); return; end
-
-% Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
-
-% Store plugin functions
-options = getappdata(h_panel,'options');
-options.initFunc = plugin_initFunc;
-options.mainFunc = plugin_mainFunc;
-options.postFunc = plugin_postFunc;
-setappdata(h_panel,'options',options);
-
-    function add_param(par_name, par_type, par_settings, par_tooltip)
-        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
-    end
 end
 
 

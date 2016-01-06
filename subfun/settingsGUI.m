@@ -77,21 +77,15 @@ set(h_all.button_candidateHelp, 'Callback', @callback_helpButtons);
 set(h_all.button_fittingHelp, 'Callback', @callback_helpButtons);
 set(h_all.button_trackingHelp, 'Callback', @callback_helpButtons);
 
-% % Parse plugins
-% Save plugin info (function / name)
-candidate_plugins = {};
-fitting_plugins = {};
-tracking_plugins = {};
+% % Container for plugins
+candidate_plugins = [];
+fitting_plugins = [];
+tracking_plugins = [];
 
 % Save last selected plugin per category
-selected_candidate_plugin = -1; 
-selected_fitting_plugin = -1; 
+selected_candidate_plugin = -1;
+selected_fitting_plugin = -1;
 selected_tracking_plugin = -1;
-
-% Save options for every plugin
-candidate_plugin_options = {};
-fitting_plugin_options = {};
-tracking_plugin_options = {};
 
 % Load the plugins
 loadPlugins();
@@ -101,8 +95,8 @@ setGUIBasedOnOptions();
 uiwait(h_main);
 drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 
-    % Load plugins from the plugins folder
-    % Note: This loads the plugin data, but does not build their panels
+% Load plugins from the plugins folder
+% Note: This loads the plugin data, but does not build their panels
     function loadPlugins()
         fullPathToThisFile = mfilename('fullpath');
         [folderPath,~,~] = fileparts(fullPathToThisFile);
@@ -111,28 +105,28 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         for iPlug = 1:nr_plugins
             try %% Try loading this plugin
-                [~, plugin_function, ~] = fileparts(plugin_files(iPlug).name);
-                plugin_function = str2func(plugin_function); % Convert string to function handle
-                [plugin_name, plugin_type, plugin_info] = plugin_function();
-
-                switch plugin_type
+                [~, plugin_constructor, ~] = fileparts(plugin_files(iPlug).name);
+                plugin_constructor = str2func(plugin_constructor); % Convert string to function handle
+                plugin = plugin_constructor();
+                
+                switch plugin.type
                     case 1 % Candidate method
-                        candidate_plugins = [candidate_plugins; {plugin_function, plugin_name, plugin_info}];
+                        candidate_plugins = [candidate_plugins, plugin];
                     case 2 % Fitting method
-                        fitting_plugins  = [fitting_plugins; {plugin_function, plugin_name, plugin_info}];
+                        fitting_plugins  = [fitting_plugins, plugin];
                     case 3 % Tracking method
-                        tracking_plugins = [tracking_plugins; {plugin_function, plugin_name, plugin_info}];
+                        tracking_plugins = [tracking_plugins, plugin];
                     otherwise
-                        warning('Detected unknown plugin of type %i',plugin_type);
+                        warning('Detected unknown plugin of type %i',plugin.type);
                 end
             catch err
                 warning('TrackNTrace: Failed to load plugin file ''%s''. \n  Error: %s', plugin_files(iPlug).name, err.message);
             end
         end
         
-        found_candidate_plugin = size(candidate_plugins,1)>0;
-        found_fitting_plugin = size(fitting_plugins,1)>0;
-        found_tracking_plugin = size(tracking_plugins,1)>0;
+        found_candidate_plugin = numel(candidate_plugins)>0;
+        found_fitting_plugin = numel(fitting_plugins)>0;
+        found_tracking_plugin = numel(tracking_plugins)>0;
         
         if not(found_candidate_plugin)
             error('No candidate detection plugin detected.');
@@ -145,79 +139,64 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         % Set popup choices
-        set(h_all.popup_candidateMethod, 'String', candidate_plugins(:,2));
-        set(h_all.popup_fittingMethod, 'String', fitting_plugins(:,2));
-        set(h_all.popup_trackingMethod, 'String', tracking_plugins(:,2)); 
-        
-        % Allocate size to store options
-        candidate_plugin_options = cell(size(candidate_plugins,1),1);
-        fitting_plugin_options = cell(size(fitting_plugins,1),1);
-        tracking_plugin_options = cell(size(tracking_plugins,1),1);
+        set(h_all.popup_candidateMethod, 'String', {candidate_plugins(:).name});
+        set(h_all.popup_fittingMethod, 'String', {fitting_plugins(:).name});
+        set(h_all.popup_trackingMethod, 'String', {tracking_plugins(:).name});
     end
 
 % Select plugins based on the current candidateOptions, fittingOptions,
 % trackingOptions. After selection, the plugin panels are constructed
     function selectPluginsBasedOnOptions()
-       % Store options for last selected plugins
-       if selected_candidate_plugin>0
-           candidate_plugin_options{selected_candidate_plugin} = getappdata(h_all.panel_candidate,'options');
-       end
-       if selected_fitting_plugin>0
-           fitting_plugin_options{selected_fitting_plugin} = getappdata(h_all.panel_fitting,'options');
-       end
-       if selected_tracking_plugin>0
-           tracking_plugin_options{selected_tracking_plugin} = getappdata(h_all.panel_tracking,'options');
-       end
         
         % Candidate detection
         if ~isempty(candidateOptions)
-           selected_candidate_plugin = -1;
-           % Search for a loaded plugin with the same name
-           for iPlug = 1:size(candidate_plugins,1)
-                if strcmp(candidateOptions.plugin_name,candidate_plugins{iPlug,2})
+            selected_candidate_plugin = -1;
+            % Search for a loaded plugin with the same name
+            for iPlug = 1:numel(candidate_plugins)
+                if strcmp(candidateOptions.plugin_name,candidate_plugins(iPlug).name)
                     selected_candidate_plugin = iPlug;
                 end
-           end
-           
-           if selected_candidate_plugin < 0
-              error('Plugin ''%s'' not found.',candidateOptions.plugin_name) ;
-           end
+            end
+            
+            if selected_candidate_plugin < 0
+                error('Plugin ''%s'' not found.',candidateOptions.plugin_name) ;
+            end
         else
-            selected_candidate_plugin = 1; 
+            selected_candidate_plugin = 1;
         end
         
         % Fitting
         if ~isempty(fittingOptions)
-           selected_fitting_plugin = -1; 
-           % Search for a loaded plugin with the same name
-           for iPlug = 1:size(fitting_plugins,1)
-                if strcmp(fittingOptions.plugin_name,fitting_plugins{iPlug,2})
+            selected_fitting_plugin = -1;
+            % Search for a loaded plugin with the same name
+            for iPlug = 1:numel(fitting_plugins)
+                if strcmp(fittingOptions.plugin_name,fitting_plugins(iPlug).name)
                     selected_fitting_plugin = iPlug;
                 end
-           end
-           
-           if selected_fitting_plugin < 0
-              error('Plugin ''%s'' not found.',fittingOptions.plugin_name) ;
-           end
+            end
+            
+            if selected_fitting_plugin < 0
+                error('Plugin ''%s'' not found.',fittingOptions.plugin_name) ;
+            end
         else
-            selected_fitting_plugin = 1; 
+            selected_fitting_plugin = 1;
         end
         
         % Tracking
         if ~isempty(trackingOptions)
-           selected_tracking_plugin = -1;
-           % Search for a loaded plugin with the same name
-           for iPlug = 1:size(tracking_plugins,1)
-                if strcmp(trackingOptions.plugin_name,tracking_plugins{iPlug,2})
+            selected_tracking_plugin = -1;
+            % Search for a loaded plugin with the same name
+            for iPlug = 1:numel(tracking_plugins)
+                if strcmp(trackingOptions.plugin_name,tracking_plugins(iPlug).name)
                     selected_tracking_plugin = iPlug;
                 end
-           end
-           
-           if selected_tracking_plugin < 0
-              error('Plugin ''%s'' not found.',trackingOptions.plugin_name) ;
-           end
+            end
+            
+            if selected_tracking_plugin < 0
+                error('Plugin ''%s'' not found.',trackingOptions.plugin_name) ;
+            end
         else
-            selected_tracking_plugin = 1; 
+            selected_tracking_plugin = 1;
         end
         
         % Set popups to correct plugin name
@@ -226,9 +205,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.popup_trackingMethod, 'Value', selected_tracking_plugin);
         
         % Build panels by invoking the selected plugins function
-        candidate_plugins{ selected_candidate_plugin,1}(h_all.panel_candidate, candidateOptions);
-        fitting_plugins{ selected_fitting_plugin,1}(h_all.panel_fitting, fittingOptions);
-        tracking_plugins{ selected_tracking_plugin,1}(h_all.panel_tracking, trackingOptions); 
+        candidate_plugins( selected_candidate_plugin).setOptions(candidateOptions);
+        fitting_plugins( selected_fitting_plugin).setOptions(fittingOptions);
+        tracking_plugins( selected_tracking_plugin).setOptions(trackingOptions);
+        
+        % Create the panels
+        candidate_plugins( selected_candidate_plugin).createOptionsPanel(h_all.panel_candidate);
+        fitting_plugins( selected_fitting_plugin).createOptionsPanel(h_all.panel_fitting);
+        tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
         
         updatePanelPositions();
     end
@@ -256,12 +240,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.edit_photonGain, 'Enable','off');
         end
         
-        
         % In single file mode we disable choosing the movie list
         if(GUIinputs.singleFileMode)
             set(h_all.edit_movieList,'Enable', 'off');
             set(h_all.button_movieList,'Enable', 'off');
-%             set(h_all.button_continueForAll, 'Visible','off');
+            %             set(h_all.button_continueForAll, 'Visible','off');
         end
         
         % Enable/disable tracking panel
@@ -274,25 +257,18 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-    % This function is called if the selection of plugins changes
-    % It saves the options for the previously selected plugin and builds
-    % the panel for the newly selected one.
+% This function is called if the selection of plugins changes
+% It saves the options for the previously selected plugin and builds
+% the panel for the newly selected one.
     function callback_updatePlugins(hObj, event)
-     % % Plugins
-        % Store options for last selected plugins
-       candidate_plugin_options{selected_candidate_plugin} = getappdata(h_all.panel_candidate,'options');
-       fitting_plugin_options{selected_fitting_plugin} = getappdata(h_all.panel_fitting,'options');
-       tracking_plugin_options{selected_tracking_plugin} = getappdata(h_all.panel_tracking,'options');
-        
-        % Update panels to display currently selected plugin
-        % This is done by executing the plugin function with the correct panel as the argument
         selected_candidate_plugin =  get(h_all.popup_candidateMethod,'Value');
         selected_fitting_plugin = get(h_all.popup_fittingMethod,'Value');
         selected_tracking_plugin = get(h_all.popup_trackingMethod,'Value');
         
-        candidate_plugins{ selected_candidate_plugin,1}(h_all.panel_candidate, candidate_plugin_options{selected_candidate_plugin});
-        fitting_plugins{ selected_fitting_plugin,1}(h_all.panel_fitting, fitting_plugin_options{selected_fitting_plugin});
-        tracking_plugins{ selected_tracking_plugin,1}(h_all.panel_tracking, tracking_plugin_options{selected_tracking_plugin});
+        % Update panels to display currently selected plugin
+        candidate_plugins( selected_candidate_plugin).createOptionsPanel(h_all.panel_candidate);
+        fitting_plugins( selected_fitting_plugin).createOptionsPanel(h_all.panel_fitting);
+        tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
         
         updatePanelPositions();
         
@@ -306,7 +282,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-    % Used to resize the GUI after selecting a different plugin
+% Used to resize the GUI after selecting a different plugin
     function updatePanelPositions()
         above_panel_spacing = 0.5;
         topic_spacing = 2.5;
@@ -485,27 +461,27 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_darkMovie,'String',[path,darkMovie]);
     end
 
- % Shows a message dialog with the info of the currently selected plugin
+% Shows a message dialog with the info of the currently selected plugin
     function callback_helpButtons(hObj, event)
-       switch hObj
-           case h_all.button_candidateHelp
-               name = candidate_plugins{selected_candidate_plugin, 2};
-               msg = candidate_plugins{selected_candidate_plugin, 3};
-           case h_all.button_fittingHelp
-               name = fitting_plugins{selected_fitting_plugin, 2};
-               msg = fitting_plugins{selected_fitting_plugin, 3};
-           case h_all.button_trackingHelp               
-               name = tracking_plugins{selected_tracking_plugin, 2};
-               msg = tracking_plugins{selected_tracking_plugin, 3};
-           otherwise
-            error('Unknown caller of callback. Something went wront =?!');
-       end
-       
-       % Get title
-       title = ['About ', name];
-       % Show message box, the sprintf allows using commands like '\n' for a line break
-       % in the message.
-       msgbox(sprintf(msg), title, 'help','non-modal');
+        switch hObj
+            case h_all.button_candidateHelp
+                name = candidate_plugins(selected_candidate_plugin).name;
+                msg = candidate_plugins(selected_candidate_plugin).info;
+            case h_all.button_fittingHelp
+                name = fitting_plugins(selected_fitting_plugin).name;
+                msg = fitting_plugins(selected_fitting_plugin).info;
+            case h_all.button_trackingHelp
+                name = tracking_plugins(selected_tracking_plugin).name;
+                msg = tracking_plugins(selected_tracking_plugin).info;
+            otherwise
+                error('Unknown caller of callback. Something went wront =?!');
+        end
+        
+        % Get title
+        title = ['About ', name];
+        % Show message box, the sprintf allows using commands like '\n' for a line break
+        % in the message.
+        msgbox(sprintf(msg), title, 'help','non-modal');
     end
 
 % Callback for edit fields containing floats. Checks if a correct
@@ -662,9 +638,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         globalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
         
         % Store options from plugins
-        candidateOptions = getappdata(h_all.panel_candidate,'options');
-        fittingOptions = getappdata(h_all.panel_fitting,'options');
-        trackingOptions = getappdata(h_all.panel_tracking,'options');        
+        candidateOptions = candidate_plugins(selected_candidate_plugin).getOptions();
+        fittingOptions = fitting_plugins(selected_fitting_plugin).getOptions();
+        trackingOptions = tracking_plugins(selected_tracking_plugin).getOptions();
         
         %Check if options were changed compared to intial ones
         GUIreturns.globalOptionsChanged   = ~isequaln(globalOptions_atStartup, globalOptions);

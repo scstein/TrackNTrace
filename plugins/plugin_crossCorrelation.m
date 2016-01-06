@@ -1,62 +1,36 @@
-function [plugin_name, plugin_type, plugin_info] = plugin_crossCorrelation(h_panel, inputOptions)
-%    -------------- TNT core code, not to change by user --------------
-if nargin < 2
-    inputOptions = [];
-end
+function [plugin] = plugin_crossCorrelation()
 
-% This stores the setup of all parameters
-param_specification = cell(0,4);
-
-%    -------------- User definition of plugin --------------
+%    -------------- Definition of plugin --------------
 
 % Name of the component these options are for
-plugin_name = 'Cross correlation';
+name = 'Cross correlation';
 
 % Type of plugin.
 % 1: Candidate detection
 % 2: Spot fitting
 % 3: Tracking
-plugin_type = 1;
-
-% Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin_info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross correlation.';
+type = 1;
 
 % The functions this plugin implements
-plugin_initFunc = [];
-plugin_mainFunc =  @findCandidates_crossCorrelation;
-plugin_postFunc = [];
+mainFunc =  @findCandidates_crossCorrelation;
+
+% Create the plugin
+plugin = TNTplugin(name, type, mainFunc);
+
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin.info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross correlation.';
 
 % Add parameters
-% read comments of function subfun/add_plugin_param for HOWTO
-add_param('PSFsigma',...
+% read comments of function TNTplugin/add_param for HOWTO
+plugin.add_param('PSFsigma',...
     'float',...
     {1, 0, inf},...
     'Standard deviation of the PSF in pixels. sigma = FWHM/(2*sqrt(2*log(2))).');
-add_param('CorrThreshold',...
+plugin.add_param('CorrThreshold',...
     'float',...
     {0.4, 0, 1},...
     'Threshold between 0 and 1.');
 
-
-
-%   -------------- TNT core code, not to change by user --------------
-
-% Calling the plugin function without arguments just returns its name, type and info
-if (nargin == 0); return; end
-
-% Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
-
-% Store plugin functions
-options = getappdata(h_panel,'options');
-options.initFunc = plugin_initFunc;
-options.mainFunc = plugin_mainFunc;
-options.postFunc = plugin_postFunc;
-setappdata(h_panel,'options',options);
-
-    function add_param(par_name, par_type, par_settings, par_tooltip)
-        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
-    end
 end
 
 

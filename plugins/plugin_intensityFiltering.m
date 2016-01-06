@@ -1,70 +1,43 @@
-function [plugin_name, plugin_type, plugin_info] = plugin_intensityFiltering(h_panel, inputOptions)
-%    -------------- TNT core code, not to change by user --------------
-if nargin < 2
-    inputOptions = [];
-end
+function [plugin] = plugin_intensityFiltering()
 
-% This stores the setup of all parameters
-param_specification = cell(0,4);
-
-
-%    -------------- User definition of plugin --------------
+%    -------------- Definition of plugin --------------
 
 % Name of the component these options are for
-plugin_name = 'Intensity filtering';
+name = 'Intensity filtering';
 
 % Type of plugin.
 % 1: Candidate detection
 % 2: Spot fitting
 % 3: Tracking
-plugin_type = 1;
-
-% Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin_info = 'Finds candidates based on local maxima in intensity.';
+type = 1;
 
 % The functions this plugin implements
-plugin_initFunc = [];
-plugin_mainFunc =  @findCandidates_intensityFiltering;
-plugin_postFunc = [];
+mainFunc =  @findCandidates_intensityFiltering;
+
+% Create the plugin
+plugin = TNTplugin(name, type, mainFunc);
+
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin.info = 'Finds candidates based on local maxima in intensity.';
 
 % Add parameters
-% read comments of function subfun/add_plugin_param for HOWTO
-add_param('particleRadius',...
+% read comments of function TNTplugin/add_param for HOWTO
+plugin.add_param('particleRadius',...
     'int',...
     {3, 0, inf},...
     'Approximate spot radius in [pixels]');
-add_param('thresholdRelative',...
+plugin.add_param('thresholdRelative',...
     'float',...
     {5, 0, inf},...
     'Relative intensity threshold in percent [0,100). Example: 4 means only spots with intensity in the top 4% count.');
-add_param('pvalMin',...
+plugin.add_param('pvalMin',...
     'float',...
     {0.05, 0, 1},...
     'P value for significance test of signal against background [0,1]. Lower means higher quality spots.');
-add_param('iterationCount',...
+plugin.add_param('iterationCount',...
     'int',...
     {10, 0, inf},...
     'Background is estimated every N times in the main loop. Set to higher number to speed up function.');
-
-
-%   -------------- TNT core code, not to change by user --------------
-
-% Calling the plugin function without arguments just returns its name, type and info
-if (nargin == 0); return; end
-
-% Create the panel for this plugin
-createOptionsPanel(h_panel, plugin_name, param_specification, inputOptions);
-
-% Store plugin functions
-options = getappdata(h_panel,'options');
-options.initFunc = plugin_initFunc;
-options.mainFunc = plugin_mainFunc;
-options.postFunc = plugin_postFunc;
-setappdata(h_panel,'options',options);
-
-    function add_param(par_name, par_type, par_settings, par_tooltip)
-        param_specification = add_plugin_param(param_specification, par_name, par_type, par_settings, par_tooltip);
-    end
 end
 
 
