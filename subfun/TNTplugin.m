@@ -71,7 +71,8 @@ classdef TNTplugin < handle % Inherit from handle class
             %   'bool':   The default value true/false
             %   'string': The default value (a string)
             %   'list':   A cell array string list of possible choices for 'list' (first entry is default)
-            %
+            %   'filechooser': A cell array string list {'default directory','filterEnding'}
+            % 
             % par_tooltip: Tooltip shown when hovering over the parameter with the mouse
             
             
@@ -86,11 +87,11 @@ classdef TNTplugin < handle % Inherit from handle class
             switch par_type
                 case 'float'
                     if(~iscell(par_settings) || length(par_settings) ~= 3)
-                        error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {defaultValue, lowerBound, upperBound)!', par_name, par_type)
+                        error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {defaultValue, lowerBound, upperBound}!', par_name, par_type)
                     end
                 case 'int'
                     if(~iscell(par_settings) || length(par_settings) ~= 3)
-                        error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {defaultValue, lowerBound, upperBound)!', par_name, par_type)
+                        error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {defaultValue, lowerBound, upperBound}!', par_name, par_type)
                     end
                 case 'bool'
                     if(~islogical(par_settings) || length(par_settings)~= 1)
@@ -103,6 +104,10 @@ classdef TNTplugin < handle % Inherit from handle class
                 case 'list'
                     if(~iscell(par_settings))
                         error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {''choice1'',''choice2'',...})!', par_name, par_type)
+                    end
+                case 'filechooser'
+                    if(~iscell(par_settings) || length(par_settings) ~= 2)
+                        error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {''default directory'',''filterEnding''}!', par_name, par_type)
                     end
                 otherwise
                     error('add_plugin_param: Unknown parameter type ''%s'' of parameter ''%s''.', par_type, par_name);
@@ -200,7 +205,7 @@ classdef TNTplugin < handle % Inherit from handle class
             text_gap = 0.5*fontSize; % Gap between text and value field
             elemHeight = 1.4*fontSize; % Height of uicontrols
             editWidth = 6*fontSize; % width of edit fields
-            maxElemPerRow = 5; % Maximum number of elements in a row
+            maxElemPerRow = 10; % Maximum number of elements in a row
             
             %
             elemRowIdx = 1;
@@ -282,9 +287,19 @@ classdef TNTplugin < handle % Inherit from handle class
                         if(isfield(obj.options,pStructVarName))
                             setPopup(h_val, pValue);
                         end
+                    case 'filechooser'
+                        val_pos = [value_position(1), value_position(2), 3*editWidth, elemHeight];
+                        h_val= uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
+                            'Style','edit','BackgroundColor', 'w','FontSize',fontSize,'String',pValue);
+                        
+                        % Create a filechooser button
+                        button_pos = [value_position(1), value_position(2), editWidth, elemHeight*1.1];
+                        h_button= uicontrol('Parent',h_panel, 'Units','points', 'Position', button_pos, ...
+                            'Style','pushbutton','FontSize',fontSize,'String','Select');
+                        set(h_button, 'Callback', {@callback_filechooserButton, h_val, pStructVarName, pSettings});
                         
                     otherwise
-                        error('createOptionsPanel: Unknown parameter type');
+                        error('createOptionsPanel: Unknown parameter type %s for parameter %s!',pType, pName);
                 end
                 valwidth = val_pos(3);
                 
@@ -295,23 +310,9 @@ classdef TNTplugin < handle % Inherit from handle class
                 set(h_val, 'Callback', {@callback_saveOnChange,pStructVarName,pType, pSettings});
                 % Execute callback once to save the parameter starting value
                 callback_saveOnChange(h_val, [], pStructVarName, pType, pSettings);
-                
-                % Width of 'text value'
-                overall_width = textwidth + text_gap + valwidth;
-                
-                % Check if element should be placed in this row
-                elemFitsInRow = (left_pos + overall_width < panel_width);
-                if(~elemFitsInRow)
-                    newRow();
-                end
+                               
+                % Place element in panel
                 placeElement();
-                left_pos = left_pos + overall_width + col_gap; % Next column
-                elemRowIdx = elemRowIdx+1;
-                % If next element exceeds the max elements per row, begin new row
-                % (Except for the last element)
-                if( elemRowIdx > maxElemPerRow && iP~=num_pars)
-                    newRow();
-                end
             end
             
             panel_newheight = abs(bott_pos)+0.5*fontSize;
@@ -336,14 +337,81 @@ classdef TNTplugin < handle % Inherit from handle class
                 bott_pos = bott_pos-row_gap-elemHeight;
             end
             
+            % Place element in the panel
             function placeElement()
-                text_pos = get(h_text,'Position');
-                text_pos(1:2) = [left_pos,bott_pos];
-                set(h_text,'Position',text_pos);
+                % Filechoosers always occupy their own row
+                if strcmp(pType,'filechooser')
+                    if(~(elemRowIdx==1))
+                        newRow();
+                    end
+                    % Width of 'text value'
+                    overall_width = textwidth + text_gap + valwidth;
+                    
+                    text_pos = get(h_text,'Position');
+                    text_pos(1:2) = [left_pos,bott_pos];
+                    set(h_text,'Position',text_pos);
+                    
+                    val_pos = get(h_val, 'Position');
+                    val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos];
+                    set(h_val,'Position',val_pos);
+                    
+                    button_pos = get(h_button, 'Position');
+                    button_pos(1:2) = [left_pos+overall_width+text_gap, bott_pos];
+                    set(h_button,'Position',button_pos);
+                    
+                    % If this is not the last parameter
+                    if (iP~=num_pars)
+                        newRow();
+                    end
+                else % For all other parameter types:
+                    % Width of 'text value'
+                    overall_width = textwidth + text_gap + valwidth;
+                    
+                    % Check if element should be placed in this row
+                    elemFitsInRow = (left_pos + overall_width < (panel_width -text_gap) );
+                    if(~elemFitsInRow)
+                        newRow();
+                    end
+                    
+                    text_pos = get(h_text,'Position');
+                    text_pos(1:2) = [left_pos,bott_pos];
+                    set(h_text,'Position',text_pos);
+                    
+                    val_pos = get(h_val, 'Position');
+                    val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos];
+                    set(h_val,'Position',val_pos);
+                    
+                    left_pos = left_pos + overall_width + col_gap; % Next column
+                    elemRowIdx = elemRowIdx+1;
+                    % If next element exceeds the max elements per row, begin new row
+                    % (Except for the last element)
+                    if( elemRowIdx > maxElemPerRow && iP~=num_pars)
+                        newRow();
+                    end
+                end
+            end
+            
+            % Opens a filechooser and saves the result into the h_edit
+            % edit field as well as options(structVarName)
+            function callback_filechooserButton(uiObj, eventdata, h_edit, structVarName, pSettings)
+                filterEnding = pSettings{2}; % file ending to filter for
                 
-                val_pos = get(h_val, 'Position');
-                val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos];
-                set(h_val,'Position',val_pos);
+                % Opens a file chooser dialog to select the dark movie
+                lastPath = get(h_edit,'String');
+                path = [];
+                if ~isempty(lastPath)
+                    [path,~,~] = fileparts(lastPath);
+                end
+                if isempty(filterEnding)
+                    [filename, path] = uigetfile([path,filesep]);
+                else
+                    [filename, path] = uigetfile([path,filesep,'*.',filterEnding]);
+                end
+                if( isfloat(filename)); return; end; % User pressed cancel.
+
+                value = [path,filename];
+                set(h_edit,'String',value);
+                obj.options.(structVarName) = value; % Save the parameter value
             end
             
             function callback_saveOnChange(uiObj, eventdata, structVarName, pType, pSettings)
@@ -376,8 +444,12 @@ classdef TNTplugin < handle % Inherit from handle class
                         choices = get(uiObj,'String');
                         optionString = choices{get(uiObj,'Value')};
                         obj.options.(structVarName) = optionString;
+                    case 'filechooser'
+                        parValue = get(uiObj,'String');
+                        obj.options.(structVarName) = parValue;
+                        
                     otherwise
-                        error('createOptionsPanel:callback_saveOnChange: Unknown parameter type');
+                        error('createOptionsPanel:callback_saveOnChange: Unknown parameter type ''%s''!', pType);
                 end
             end
             
