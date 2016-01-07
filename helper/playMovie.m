@@ -43,7 +43,7 @@ set(h_all.but_autocontrast,'Callback',@autocontrastCallback);
 
 % Slider
 set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(movie,3) 1/size(movie,3)],'Callback', @sliderCallback);
-hLstn = handle.listener(h_all.slider,'ActionEvent',@updateSlider); % For continous update of the shown slider value
+hLstn = addlistener(h_all.slider,'ContinuousValueChange',@updateSlider); % For continous update of the shown slider value
 set(h_all.slider,'ButtonDownFcn',@onSliderClick);
 
 % Edit fields
