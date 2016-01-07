@@ -119,6 +119,9 @@ classdef TNTplugin < handle % Inherit from handle class
         
         % Add data to the options that have nothing to do with the GUI and its parameters.
         function addInternalsToOptions(obj)
+            % save plugin name
+            obj.options.plugin_name = obj.name;
+            
             % Save the functions in options
             obj.options.initFunc = obj.initFunc;
             obj.options.mainFunc = obj.mainFunc;
@@ -127,7 +130,8 @@ classdef TNTplugin < handle % Inherit from handle class
         
         % Retrieves the options for this plugin (function handles, all parameter values etc.)
         function options = getOptions(obj)
-            obj.addInternalsToOptions();            
+            % Add non-GUI parameters to options
+            obj.addInternalsToOptions();
             
             % Return the options
             options = obj.options;
@@ -139,7 +143,6 @@ classdef TNTplugin < handle % Inherit from handle class
             % derived from the given parameter name by erasing all white spaces.
             if isempty(inputOptions)
                 obj.options = [];
-                obj.options.plugin_name = obj.name;
             else
                 if ~isfield(inputOptions,'plugin_name')
                     error('createOptionsPanel: Tried to create options for plugin ''%s'' with inputOptions carrying no field plugin_name.',plugin_name);
