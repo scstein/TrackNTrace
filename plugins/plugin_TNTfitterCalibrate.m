@@ -42,7 +42,7 @@ plugin.add_param('useMLE',...
           'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');  
 plugin.add_param('zInterval',...
           'float',...
-          15,...
+          {15,0,inf},...
           'z-scan interval used for obtaining calibration stack in [nm].');  
 end
 
@@ -66,13 +66,14 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %     
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
-%     [x,y,A,B,sigma,flag]. Refer to locateParticles.m or to TrackNTrace
+%     [x,y,A,B,sigma_x,sigma_y,angle,flag]. Refer to locateParticles.m or to TrackNTrace
 %     manual for more information.  
 
-varsToFit = [1,1,1,1,options.fitPSFsigma];
+varsToFit = [ones(6,1),0]; %fit everything except angle
 halfw = round(4*options.PSFsigma);
 
 [params] = psfFit_Image( img, candidatePos.',varsToFit,options.usePixelIntegratedFit,options.useMLE,halfw,options.PSFsigma);
+params(5:6,:) = 1./sqrt(2*params(5:6,:)); %convert q_i to sigma_i
 fitData = {params(:,params(end,:)==1).'};
 
 end
@@ -178,7 +179,7 @@ if numel(varargin) >= 3;  varargin{3} = logical(varargin{3});  end
 if numel(varargin) >= 4;  varargin{4} = logical(varargin{4});  end
 
 % Convert img to double if neccessary
-[ params ] = mx_psfFit_Image( double(img), varargin{:} );
+[ params ] = mx_psfFit_ImageNEW( double(img), varargin{:} );
 
 end
 
@@ -209,7 +210,7 @@ end
 
 calibrationData.aspectRatioSigma = aspectRatioSigma;
 calibrationData.sigmaTable = sigma_xy;
-calibrationData.zInterval = fittingOptions.zInterval;
+calibrationData.zPixel = fittingOptions.zInterval;
 calibrationData.polynomFunc = p;
 calibrationData.zMidpoint = z_root;
 
