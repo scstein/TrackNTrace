@@ -76,10 +76,9 @@ for iLocF = 1:nrFrames %first frame has already been dealt with
     
     img = correctMovie(movieStack(:,:,iLocF));
     
-    candidatePos = candidateData{iLocF};
-    nrCandidates = size(candidatePos,1);
+    nrCandidates = size(candidateData{iLocF},1);
     if nrCandidates>0
-        fitData(iLocF) = fittingOptions.mainFunc(img,candidatePos,fittingOptions,iLocF);
+        fitData(iLocF) = {fittingOptions.mainFunc(img,candidateData{iLocF},fittingOptions,iLocF)};
     end
 end
 

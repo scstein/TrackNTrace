@@ -19,7 +19,6 @@ mainFunc =  @fitPositions_psfFitCeres;
 plugin = TNTplugin(name, type, mainFunc);
 
 % Additional functions to call before and after main function
-plugin.initFunc = [];
 plugin.postFunc = @createCalibrationTable;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
@@ -66,15 +65,16 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %     
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
-%     [x,y,A,B,sigma_x,sigma_y,angle,flag]. Refer to locateParticles.m or to TrackNTrace
-%     manual for more information.  
+%     [x,y,A,B,sigma_x,sigma_y,angle,flag] used for creating calibration
+%     file. Refer to locateParticles.m or to TrackNTrace manual for more
+%     information.
 
-varsToFit = [ones(6,1),0]; %fit everything except angle
+varsToFit = [ones(6,1);0]; %fit everything except angle
 halfw = round(4*options.PSFsigma);
 
 [params] = psfFit_Image( img, candidatePos.',varsToFit,options.usePixelIntegratedFit,options.useMLE,halfw,options.PSFsigma);
 params(5:6,:) = 1./sqrt(2*params(5:6,:)); %convert q_i to sigma_i
-fitData = {params(:,params(end,:)==1).'};
+fitData = params(:,params(end,:)==1).';
 
 end
 
@@ -108,8 +108,8 @@ function [ params ] = psfFit_Image( img, varargin)
 %               This overwrites the value given in param_init.
 %
 % Output
-%   params     -  Fitted parameters 6xN. Columns are in order
-%                 [xpos; ypos; A; BG; sigma; exitflag].
+%   params     -  Fitted parameters 7xN. Columns are in order
+%                 [xpos; ypos; A; BG; q1; q2; exitflag].
 %             
 %           The last row 'exitflag' returns the state of optimizer. 
 %           Positive = 'good'. Negative = 'bad'.
@@ -184,7 +184,7 @@ if numel(varargin) >= 4;  varargin{4} = logical(varargin{4});  end
 end
 
 
-function [fitData] = createCalibrationTable(fitData,fittingOptions)
+function [fitData,fittingOptions] = createCalibrationTable(fitData,fittingOptions)
 global globalOptions
 
 nrFrames = size(fitData,1);
@@ -200,7 +200,7 @@ aspectRatioSigma = sigma_xy(:,1)./sigma_xy(:,2); %simga_x/sigma_y, empty frames 
 p = polyfit((1:nrFrames).',aspectRatioSigma,4);
 p_root = p; p_root(end) = p_root(end)-1;
 z_root = roots(p_root);
-z_root = z_root(isreal(z_root));
+z_root = z_root(imag(z_root)==0);
 if ~isempty(z_root)
     z_root = z_root(z_root>nrFrames*0.1 & z_root<nrFrames*0.9); %middle point must be in the inner 80% of the whole z-interval
     if numel(z_root)~=1
@@ -209,13 +209,14 @@ if ~isempty(z_root)
 end
 
 calibrationData.aspectRatioSigma = aspectRatioSigma;
+calibrationData.aspectRatioSigmaSmooth = polyval(p,1:0.1:nrFrames);
 calibrationData.sigmaTable = sigma_xy;
 calibrationData.zPixel = fittingOptions.zInterval;
 calibrationData.polynomFunc = p;
 calibrationData.zMidpoint = z_root;
 
 % save calibration file next to movie and TNT file
-[movie_path,movie_name,~] = fileparts(globalOptions.filename_movie);
+[movie_path,movie_name,~] = fileparts(globalOptions.filename_movies{:});
 save([movie_path,filesep,movie_name,'_calibrationData.mat'],'calibrationData');
 
 end

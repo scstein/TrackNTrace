@@ -70,7 +70,7 @@ match_data(:,2) = match_data(:,2)+ceil(pattCols/2);
 % ATTENTION! Here we switch the coordinates
 % candidatePos(:,1) is columns (x-coordinate)
 % candidatePos(:,2) is rows    (y-coordinate)
-candidatePos = {match_data(:,[2,1])};
+candidatePos = match_data(:,[2,1]);
 
 end
 

@@ -17,28 +17,41 @@ mainFunc =  @fitPositions_psfFitCeres;
 % Create the plugin
 plugin = TNTplugin(name, type, mainFunc);
 
+% Additional functions to call before and after main function
+plugin.initFunc = @consolidateOptions;
+plugin.postFunc = @calculateZAxis;
+
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
-               'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
+    'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
 plugin.add_param('PSFsigma',...
-      'float',...
-      {1.2, 0,inf},...
-      'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
+    'float',...
+    {1.2, 0,inf},...
+    'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
 plugin.add_param('fitPSFsigma',...
-          'bool',...
-          false,...
-          'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).');
+    'bool',...
+    false,...
+    'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).');
 plugin.add_param('usePixelIntegratedFit',...
-          'bool',...
-          true,...
-          'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.');
+    'bool',...
+    true,...
+    'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.');
 plugin.add_param('useMLE',...
-          'bool',...
-          false,...
-          'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');   
+    'bool',...
+    false,...
+    'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');
+plugin.add_param('fitRotation',...
+    'bool',...
+    false,...
+    'Fit rotation angle of anisotropic Gaussian function.');
+plugin.add_param('astigmaticCalibrationFile',...
+    'filechooser',...
+    {'','mat'},...
+    'For astigmtic imaging, please select a calibration file created with z-calibration plugin. Leave empty otherwise!');
+
 end
 
 
@@ -48,27 +61,24 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input
 % and output variables.
-% 
+%
 % INPUT:
 %     img: 2D matrix of pixel intensities, data type and normalization
 %     arbitrary.
-%     
+%
 %     candidatePos: 2D double row array of localization candidates created
 %     by locateParticles.m. Refer to that function or to TrackNTrace manual
 %     for more information.
-%     
+%
 %     options: Struct of input parameters provided by GUI.
-%     
+%
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
 %     [x,y,A,B,sigma,flag]. Refer to locateParticles.m or to TrackNTrace
-%     manual for more information.  
+%     manual for more information.
 
-varsToFit = [1,1,1,1,options.fitPSFsigma];
-halfw = round(4*options.PSFsigma);
-
-[params] = psfFit_Image( img, candidatePos.',varsToFit,options.usePixelIntegratedFit,options.useMLE,halfw,options.PSFsigma);
-fitData = {params(:,params(end,:)==1).'};
+[params] = psfFit_Image( img, candidatePos.',options.varsToFit,options.usePixelIntegratedFit,options.useMLE,options.halfw,options.PSFsigma);
+fitData = params(:,params(end,:)==1).';
 
 end
 
@@ -76,7 +86,7 @@ function [ params ] = psfFit_Image( img, varargin)
 % Short usage: params = psfFit_Image( img, param_init );
 % Full usage: [ params, exitflag ] = psfFit_Image( img, param_init, param_optimizeMask, useIntegratedGauss, hWinSize, sigma_init )
 %  Fit multiple spot candidates in a given image with a gaussian point spread function model.
-% 
+%
 % Coordinate convention: Integer coordinates are centered in pixels. I.e.
 % the position xpos=3, ypos=5 is exactly the center of pixel img(5,3). Thus
 % pixel center coordinates range from 1 to size(img,2) for x and 1 to
@@ -87,25 +97,25 @@ function [ params ] = psfFit_Image( img, varargin)
 % Input:
 %   img        - Image to fit to. (internally converted to double)
 %   param_init - Initial values PxN to fit N spot candidates in the given image with
-%                initial conditions for P parameters. At least position [xpos; ypos] 
-%                must be specified (P>=2). You can specify up to [xpos;ypos;A;BG;sigma]. 
+%                initial conditions for P parameters. At least position [xpos; ypos]
+%                must be specified (P>=2). You can specify up to [xpos;ypos;A;BG;sigma].
 %                If negative values are given, the fitter estimates a value for that parameter.
-%   param_optimizeMask - Must be true(1)/false(0) for every parameter [xpos,ypos,A,BG,sigma]. 
+%   param_optimizeMask - Must be true(1)/false(0) for every parameter [xpos,ypos,A,BG,sigma].
 %                Parameters with value 'false' are not fitted. | default: ones(5,1) -> 'optimize all'
 %   useIntegratedGauss - Wether to use pixel integrated gaussian or not | default: 'false'
 %   useMLErefine - Use Poissonian noise based maximum likelihood estimation after
-%                  least squares fit. Make sure to input image intensities in photons 
+%                  least squares fit. Make sure to input image intensities in photons
 %                  for this to make sense. | default: false
 %   hWinSize   - window around each candidate is (2*hWinsize+1)x(2*hWinsize+1) | default: 5
 %   sigma_init - For convenience sigma can also be given as an extra parameter.
-%               This simply sets all candidates initial sigma to sigma_init. 
+%               This simply sets all candidates initial sigma to sigma_init.
 %               This overwrites the value given in param_init.
 %
 % Output
 %   params     -  Fitted parameters 6xN. Columns are in order
 %                 [xpos; ypos; A; BG; sigma; exitflag].
-%             
-%           The last row 'exitflag' returns the state of optimizer. 
+%
+%           The last row 'exitflag' returns the state of optimizer.
 %           Positive = 'good'. Negative = 'bad'.
 %             1 - CONVERGENCE
 %            -1 - NO_CONVERGENCE
@@ -117,16 +127,16 @@ function [ params ] = psfFit_Image( img, varargin)
 
 % Copyright (c) 2015, Simon Christoph Stein
 % All rights reserved.
-% 
+%
 % Redistribution and use in source and binary forms, with or without
 % modification, are permitted provided that the following conditions are met:
-% 
+%
 % 1. Redistributions of source code must retain the above copyright notice, this
 %    list of conditions and the following disclaimer.
 % 2. Redistributions in binary form must reproduce the above copyright notice,
 %    this list of conditions and the following disclaimer in the documentation
 %    and/or other materials provided with the distribution.
-% 
+%
 % THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 % ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 % WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -137,31 +147,31 @@ function [ params ] = psfFit_Image( img, varargin)
 % ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 % (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-% 
+%
 % The views and conclusions contained in the software and documentation are those
 % of the authors and should not be interpreted as representing official policies,
 % either expressed or implied, of the FreeBSD Project.
-% 
-% 
+%
+%
 % -- Licensing --
-% 
+%
 % License ceres-solver:
-% 
+%
 % Copyright 2015 Google Inc. All rights reserved.
-% 
-% Redistribution and use in source and binary forms, with or without modification, 
+%
+% Redistribution and use in source and binary forms, with or without modification,
 % are permitted provided that the following conditions are met:
-% 
-%     1. Redistributions of source code must retain the above copyright notice, this list 
+%
+%     1. Redistributions of source code must retain the above copyright notice, this list
 % of conditions and the following disclaimer.
 %     2. Redistributions in binary form must reproduce the above copyright notice, this list
 % of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 %     3. Neither the name of Google Inc., nor the names of its contributors may be used to
 % endorse or promote products derived from this software without specific prior written permission.
-% 
-% This software is provided by the copyright holders and contributors “AS IS” and any express or 
-% implied warranties, including, but not limited to, the implied warranties of merchantability and 
-% fitness for a particular purpose are disclaimed. In no event shall Google Inc. be liable for any 
+%
+% This software is provided by the copyright holders and contributors “AS IS” and any express or
+% implied warranties, including, but not limited to, the implied warranties of merchantability and
+% fitness for a particular purpose are disclaimed. In no event shall Google Inc. be liable for any
 % direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited
 % to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption)
 % however caused and on any theory of liability, whether in contract, strict liability, or tort (including
@@ -177,3 +187,43 @@ if numel(varargin) >= 4;  varargin{4} = logical(varargin{4});  end
 
 end
 
+
+function [fittingOptions] = consolidateOptions(fittingOptions)
+
+if 1
+    return
+end
+
+fittingOptions.halfw = round(4*options.PSFsigma);
+
+fitBothSigma = false;
+if ~isempty(fittingOptions.calibrationFile)
+    cal_struct = load(fittingOptions.calibrationFile,'calibrationData');
+    if isfield(cal_struct,'calibrationData')
+        fittingOptions.fitPsfsigma = true;
+        fitBothSigma = true;
+        fittingOptions.calibrationData = cal_struct.calibrationData;
+    else
+        error('%s is not a valid calibration file. Aborting.',fittingOptions.calibrationFile);
+    end
+end
+
+if fittingOptions.fitRotation
+    fittingOptions.fitPsfsigma = true;
+    fitBothSigma = true;
+    if fittingOptions.pixelIntegratedFit
+        fittingOptions.pixelIntegratedFit = false;
+        warning(sprintf('Fitting a rotation angle is not possible while using pixel-integrated Gaussian model. \nSwitching to sampled Gaussian.'));
+    end
+end
+
+%always fit x,y,A,BG, determine if one has to fit sigma_x,
+%sigma_y,theta_rot
+fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPsfsigma;fitBothSigma;fittingOptions.fitRotation];
+
+end
+
+function [fitData,fittingOptions] = calculateZAxis(fitData,fittingOptions)
+    
+return
+end
