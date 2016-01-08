@@ -43,7 +43,7 @@ plugin.add_param('useMLE',...
     'bool',...
     false,...
     'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');
-plugin.add_param('fitRotation',...
+plugin.add_param('fitAngle',...
     'bool',...
     false,...
     'Fit rotation angle of anisotropic Gaussian function.');
@@ -211,7 +211,7 @@ if ~isempty(fittingOptions.astigmaticCalibrationFile)
     end
 end
 
-if fittingOptions.fitRotation
+if fittingOptions.fitAngle
     fittingOptions.fitPSFsigma = true;
     fitBothSigma = true;
     if fittingOptions.usePixelIntegratedFit
@@ -223,7 +223,7 @@ end
 %always fit x,y,A,BG, determine if one has to fit sigma_x,
 %sigma_y,theta_rot
 fittingOptions.halfw = round(4*fittingOptions.PSFsigma);
-fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPSFsigma;fitBothSigma;fittingOptions.fitRotation];
+fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPSFsigma;fitBothSigma;fittingOptions.fitAngle];
 
 end %consolidateOptions
 
@@ -236,7 +236,7 @@ emptyFrames = cellfun('isempty',fitData);
 
 % without astigmatism or rotation, there is only one sigma value sigma =
 % 1/sqrt(2*q1) which has to be corrected
-if ~calibrationFileExists && ~fittingOptions.fitRotation
+if ~calibrationFileExists && ~fittingOptions.fitAngle
     % back calculate sigma, delete q2, q3
     fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6)),var(:,end)],fitData(~emptyFrames),'UniformOutput',false);
     return
@@ -250,7 +250,7 @@ for iFrame = 1:numel(fitData)
     end
     
     fitData_frame = fitData{iFrame};
-    if fittingOptions.fitRotation
+    if fittingOptions.fitAngle
         q1 = fitData_frame(:,6); q2 = fitData_frame(:,7); q3 = fitData_frame(:,8);
         
         angle = 0.5*atan(2*q3./(q2-q1)); %angle towards largest eigenvector axis in radian
