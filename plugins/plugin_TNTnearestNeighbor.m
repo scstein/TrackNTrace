@@ -71,20 +71,24 @@ function [trajData] = trackParticles_nearestNeighborCPP(fitData,options)
 % convert fitData cell array to adjust to tracker function input
 nrFrames = size(fitData,1);
 nrPos = zeros(nrFrames,1);
+nrParam = 0
 for iFrame=1:nrFrames
     if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
-    nrPos(iFrame) = sum((fitData{iFrame}(:,6)==1)); %error flag is 1?
+    nrPos(iFrame) = sum((fitData{iFrame}(:,end)==1)); %error flag is 1?
+    if size(fitData{iFrame},2)>nrParam
+        nrParam = size(fitData{iFrame},2);
+    end
 end
-pos = zeros(6,sum(nrPos));
+pos = zeros(nrParamm,sum(nrPos));
 
 nrPos_cs = [0;cumsum(nrPos)];
 
 for iFrame = 1:nrFrames
     if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
     pos_frame_now = fitData{iFrame}.';
-    valid_pos = pos_frame_now(6,:)==1; %error flag is 1?
+    valid_pos = pos_frame_now(end,:)==1; %error flag is 1?
     pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
-    pos(:,nrPos_cs(iFrame)+1:nrPos_cs(iFrame+1)) = [repmat(iFrame,1,nrPos(iFrame));pos_frame_now(1:5,valid_pos)];
+    pos(:,nrPos_cs(iFrame)+1:nrPos_cs(iFrame+1)) = [repmat(iFrame,1,nrPos(iFrame));pos_frame_now(1:end-1,valid_pos)];
 end
 
 

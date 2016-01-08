@@ -88,21 +88,21 @@ end
 for iFrame=1:nrFrames
     if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
     pos_frame_now = fitData{iFrame};
-    valid_pos = pos_frame_now(:,6)==1; %error flag is 1?
+    valid_pos = pos_frame_now(:,end)==1; %error flag is 1?
     nCand = sum(valid_pos);
     pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
     
     pos(iFrame).xCoord = [pos_frame_now(valid_pos,1),zeros(nCand,1)]; %careful, check if error should be >0!
     pos(iFrame).yCoord = [pos_frame_now(valid_pos,2),zeros(nCand,1)];
     
-    pos(iFrame).amp = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
-    pos(iFrame).sigma = [pos_frame_now(valid_pos,5),zeros(nCand,1)];
+%     pos(iFrame).amp = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
+%     pos(iFrame).sigma = [pos_frame_now(valid_pos,5),zeros(nCand,1)];
     
-%     if options.track3D
-%         pos(iFrame).zCoord = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
-%     end
-%     pos(iFrame).amp = [pos_frame_now(valid_pos,4),zeros(nCand,1)];
-%     pos(iFrame).sigma = [pos_frame_now(valid_pos,6),zeros(nCand,1)];
+    if options.track3D
+        pos(iFrame).zCoord = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
+    end
+    pos(iFrame).amp = [pos_frame_now(valid_pos,4),zeros(nCand,1)];
+    pos(iFrame).sigma = [pos_frame_now(valid_pos,6),zeros(nCand,1)];
 end
 
 
@@ -118,8 +118,8 @@ function [trajData] = uTrackMain(pos,trackingOptions)
 trajData = [];
 traj_id = 0; %global trajectory idx
 
-probDim = 2;
-% probDim = 2+trackingOptions.track3D;
+% probDim = 2;
+probDim = 2+trackingOptions.track3D;
 nrSplit = trackingOptions.splitMovieIntervals;
 verbose = trackingOptions.verbose;
 n_frames = size(pos,1); %number of frames
@@ -145,11 +145,11 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
     for iTrack = 1:nrTracks
         nrFrames = size(tracksFinal(iTrack).tracksFeatIndxCG,2); %number of frames
         frameStart = tracksFinal(iTrack).seqOfEvents(1,1)+(iDiv-1)*stack_slice; %get relative frame and correct for global frame
-        xyamp = [tracksFinal(iTrack).tracksCoordAmpCG(1:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(2:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(4:8:end).']; %[x,y,amp]
-%         xyzamp = [tracksFinal(iTrack).tracksCoordAmpCG(1:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(2:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(3:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(4:8:end).']; %[x,y,amp]
+%         xyamp = [tracksFinal(iTrack).tracksCoordAmpCG(1:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(2:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(4:8:end).']; %[x,y,amp]
+        xyzamp = [tracksFinal(iTrack).tracksCoordAmpCG(1:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(2:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(3:8:end).',tracksFinal(iTrack).tracksCoordAmpCG(4:8:end).']; %[x,y,amp]
         
-        cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nrFrames,1), (frameStart:frameStart+nrFrames-1).', xyamp]}; %[id,frame,x,y,amp]
-%         cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nrFrames,1), (frameStart:frameStart+nrFrames-1).', xyzamp]}; %[id,frame,x,y,z,amp]
+%         cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nrFrames,1), (frameStart:frameStart+nrFrames-1).', xyamp]}; %[id,frame,x,y,amp]
+        cell_coord_tracks(iTrack) = {[repmat(traj_id+iTrack,nrFrames,1), (frameStart:frameStart+nrFrames-1).', xyzamp]}; %[id,frame,x,y,z,amp]
     end
     
     %finally save data
@@ -159,16 +159,17 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
     %slices, so only connect adjacent frames
     if iDiv>1
         %get trajectories in frames adjacent to slice border
-        track_slice = repmat(struct('xCoord',[],'yCoord',[],'amp',[]),2,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
+%         track_slice = repmat(struct('xCoord',[],'yCoord',[],'amp',[]),2,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
+        track_slice = repmat(struct('xCoord',[],'yCoord',[],'zCoord',[],'amp',[]),2,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
         for iFrame=1:2
             pos_frame_now = trajData(trajData(:,2)==(slice(1)-2+iFrame),:);
             nCand = size(pos_frame_now,1);
             track_slice(iFrame).xCoord = [pos_frame_now(:,3),zeros(nCand,1)]; %careful, check if error should be >0!
             track_slice(iFrame).yCoord = [pos_frame_now(:,4),zeros(nCand,1)];
-            track_slice(iFrame).amp = [pos_frame_now(:,5),zeros(nCand,1)];
+%             track_slice(iFrame).amp = [pos_frame_now(:,5),zeros(nCand,1)];
             
-%             track_slice(iFrame).zCoord = [pos_frame_now(:,5),zeros(nCand,1)];
-%             track_slice(iFrame).amp = [pos_frame_now(:,6),zeros(nCand,1)];
+            track_slice(iFrame).zCoord = [pos_frame_now(:,5),zeros(nCand,1)];
+            track_slice(iFrame).amp = [pos_frame_now(:,6),zeros(nCand,1)];
             if iFrame==1
                 pos_frame_first = pos_frame_now; %need this for getting trajectory ids back
             end

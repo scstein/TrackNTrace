@@ -19,7 +19,7 @@ plugin = TNTplugin(name, type, mainFunc);
 
 % Additional functions to call before and after main function
 plugin.initFunc = @consolidateOptions;
-plugin.postFunc = @calculateZAxis;
+plugin.postFunc = @calculateZRot;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
@@ -74,10 +74,17 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
-%     [x,y,A,B,sigma,flag]. Refer to locateParticles.m or to TrackNTrace
-%     manual for more information.
+%     [x,y,z,A,B,[other parameters],flag]. Other parameters can be q1, q2,
+%     q3 (refer to locateParticles.m or to TrackNTrace manual for more
+%     information). q_i will be calculated back to sigma_x,sigma_y and
+%     rotation angle later.
+
+
+% varsToFit = [ones(6,1);0]; %fit everything except angle
+% halfw = round(4*options.PSFsigma);
 
 [params] = psfFit_Image( img, candidatePos.',options.varsToFit,options.usePixelIntegratedFit,options.useMLE,options.halfw,options.PSFsigma);
+params = [params(1:2,:);zeros(1,size(params,2));params(3:end,:)]; %adding z = 0
 fitData = params(:,params(end,:)==1).';
 
 end
@@ -112,8 +119,8 @@ function [ params ] = psfFit_Image( img, varargin)
 %               This overwrites the value given in param_init.
 %
 % Output
-%   params     -  Fitted parameters 6xN. Columns are in order
-%                 [xpos; ypos; A; BG; sigma; exitflag].
+%   params     -  Fitted parameters 8xN. Columns are in order
+%                 [xpos; ypos; A; BG; q1; q2; q3; exitflag].
 %
 %           The last row 'exitflag' returns the state of optimizer.
 %           Positive = 'good'. Negative = 'bad'.
@@ -183,47 +190,93 @@ if numel(varargin) >= 3;  varargin{3} = logical(varargin{3});  end
 if numel(varargin) >= 4;  varargin{4} = logical(varargin{4});  end
 
 % Convert img to double if neccessary
-[ params ] = mx_psfFit_Image( double(img), varargin{:} );
+[ params ] = mx_psfFit_ImageNEW( double(img), varargin{:} );
 
 end
 
 
 function [fittingOptions] = consolidateOptions(fittingOptions)
-
-if 1
-    return
-end
-
-fittingOptions.halfw = round(4*options.PSFsigma);
+%initializer function
 
 fitBothSigma = false;
-if ~isempty(fittingOptions.calibrationFile)
-    cal_struct = load(fittingOptions.calibrationFile,'calibrationData');
+
+if ~isempty(fittingOptions.astigmaticCalibrationFile)
+    cal_struct = load(fittingOptions.astigmaticCalibrationFile,'calibrationData');
     if isfield(cal_struct,'calibrationData')
         fittingOptions.fitPsfsigma = true;
         fitBothSigma = true;
         fittingOptions.calibrationData = cal_struct.calibrationData;
     else
-        error('%s is not a valid calibration file. Aborting.',fittingOptions.calibrationFile);
+        error('%s is not a valid calibration file. Aborting.',fittingOptions.astigmaticCalibrationFile);
     end
 end
 
 if fittingOptions.fitRotation
-    fittingOptions.fitPsfsigma = true;
+    fittingOptions.fitPSFsigma = true;
     fitBothSigma = true;
-    if fittingOptions.pixelIntegratedFit
-        fittingOptions.pixelIntegratedFit = false;
+    if fittingOptions.usePixelIntegratedFit
+        fittingOptions.usePixelIntegratedFit = false;
         warning(sprintf('Fitting a rotation angle is not possible while using pixel-integrated Gaussian model. \nSwitching to sampled Gaussian.'));
     end
 end
 
 %always fit x,y,A,BG, determine if one has to fit sigma_x,
 %sigma_y,theta_rot
-fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPsfsigma;fitBothSigma;fittingOptions.fitRotation];
+fittingOptions.halfw = round(4*fittingOptions.PSFsigma);
+fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPSFsigma;fitBothSigma;fittingOptions.fitRotation];
 
+end %consolidateOptions
+
+
+function [fitData,fittingOptions] = calculateZRot(fitData,fittingOptions)
+%post-processing function
+
+calibrationFileExists = isfield(fittingOptions,'calibrationData');
+emptyFrames = cellfun('isempty',fitData);
+
+% without astigmatism or rotation, there is only one sigma value sigma =
+% 1/sqrt(2*q1) which has to be corrected
+if ~calibrationFileExists && ~fittingOptions.fitRotation
+    % back calculate sigma, delete q2, q3
+    fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6)),var(:,end)],fitData(~emptyFrames),'UniformOutput',false);
+    return
 end
 
-function [fitData,fittingOptions] = calculateZAxis(fitData,fittingOptions)
+% otherwise, the calculation is more complicated. Go through frame by
+% frame...
+for iFrame = 1:numel(fitData)
+    if emptyFrames(iFrame)
+        continue
+    end
     
-return
+    fitData_frame = fitData{iFrame};
+    if fittingOptions.fitRotation
+        q1 = fitData_frame(:,6); q2 = fitData_frame(:,7); q3 = fitData_frame(:,8);
+        
+        angle = 0.5*atan(2*q3./(q2-q1)); %angle towards largest eigenvector axis in radian
+        sigma_x = 1./sqrt(q1+q2-2*q3./sin(2*angle));
+        sigma_y = 1./sqrt(q1+q2+2*q3./sin(2*angle));
+        
+        % if the angle is 0 or very close to 0, calculating sigma will fail
+        idxFaultyValues = (angle == 0 | sum(isnan([sigma_x,sigma_y]),2)>0);
+        sigma_x(idxFaultyValues) = 1./sqrt(2*q1(idxFaultyValues));
+        sigma_y(idxFaultyValues) = 1./sqrt(2*q2(idxFaultyValues));
+        angle(idxFaultyValues) = 0;
+        
+        fitData_frame(:,6:8) = [sigma_x,sigma_y,angle];
+    else
+        fitData_frame = [fitData_frame(:,1:5),1./sqrt(2*fitData_frame(:,6:7)),fitData_frame(:,end)]; %delete q3, calc. sigma_x, sigma_y
+    end
+    
+    if calibrationFileExists
+        fitData_frame(:,3) = interp1(fittingOptions.calibrationData.aspectRatioSigmaSmooth(:,2),...
+            fittingOptions.calibrationData.aspectRatioSigmaSmooth(:,1),...
+            fitData_frame(:,6)./fitData_frame(:,7),'linear','extrap')-repmat(fittingOptions.calibrationData.zMidpoint,size(fitData_frame,1),1);
+        %we have sigma_x/sigma_y(z) curve -> interpolate from inverse function
+        %alternative: evaluate polynom and find minimum of curve difference
+    end
+    
+    fitData{iFrame} = fitData_frame;
 end
+
+end %calculateZRot

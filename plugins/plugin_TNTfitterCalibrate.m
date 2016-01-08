@@ -185,6 +185,7 @@ end
 
 
 function [fitData,fittingOptions] = createCalibrationTable(fitData,fittingOptions)
+% post-processing function
 global globalOptions
 
 nrFrames = size(fitData,1);
@@ -196,7 +197,7 @@ sigma_values = vertcat(cellfun(@(var) [mean(var(:,5),1),mean(var(:,6),1)],fitDat
 sigma_xy(~emptyFrames,:) = vertcat(sigma_values{:});
 aspectRatioSigma = sigma_xy(:,1)./sigma_xy(:,2); %simga_x/sigma_y, empty frames show as NaN
 
-% find calibration curve and middle of curve
+% find calibration curve and z-middle of curve
 p = polyfit((1:nrFrames).',aspectRatioSigma,4);
 p_root = p; p_root(end) = p_root(end)-1;
 z_root = roots(p_root);
@@ -204,19 +205,35 @@ z_root = z_root(imag(z_root)==0);
 if ~isempty(z_root)
     z_root = z_root(z_root>nrFrames*0.1 & z_root<nrFrames*0.9); %middle point must be in the inner 80% of the whole z-interval
     if numel(z_root)~=1
-        z_root = [];
+        z_root = 0; %if there's no unique solution, disable correction by middle point
     end
 end
 
+% cut off part where derivative of interpolation function gets close to
+% zero or where derivative changes sign. Instead, only pick part of the
+% calibration curve which is monotonous
+smooth_interval = (1:0.1:nrFrames).';
+numder = polyval(polyder(p),smooth_interval); 
+[~,idxMax] = max(abs(numder));
+numder = numder/numder(idxMax); %numder is now mostly positive definite and normalized to max = 1.0
+idxGood = numder>0.3;
+%now find the longest interval of appropriate values. This ensures monotonicity
+idx_delta = diff([0;idxGood;0]);
+idx_starts = find(idx_delta > 0);
+idx_ends = find(idx_delta < 0) - 1;
+idx_lengths = idx_ends-idx_starts+1;
+startIdx = idx_starts(idx_lengths == max(idx_lengths));
+endIdx = idx_ends(idx_lengths == max(idx_lengths));
+
+% save calibration file next to movie and TNT file
 calibrationData.aspectRatioSigma = aspectRatioSigma;
-calibrationData.aspectRatioSigmaSmooth = polyval(p,1:0.1:nrFrames);
+calibrationData.aspectRatioSigmaSmooth = [smooth_interval(startIdx:endIdx),polyval(p,smooth_interval(startIdx:endIdx))];
 calibrationData.sigmaTable = sigma_xy;
 calibrationData.zPixel = fittingOptions.zInterval;
 calibrationData.polynomFunc = p;
 calibrationData.zMidpoint = z_root;
 
-% save calibration file next to movie and TNT file
 [movie_path,movie_name,~] = fileparts(globalOptions.filename_movies{:});
-save([movie_path,filesep,movie_name,'_calibrationData.mat'],'calibrationData');
+save([movie_path,filesep,movie_name,'_calibrationData_TNT.mat'],'calibrationData');
 
 end
