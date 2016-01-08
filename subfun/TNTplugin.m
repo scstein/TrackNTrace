@@ -300,7 +300,7 @@ classdef TNTplugin < handle % Inherit from handle class
                         h_button= uicontrol('Parent',h_panel, 'Units','points', 'Position', button_pos, ...
                             'Style','pushbutton','FontSize',fontSize,'String','Select');
                         set(h_button, 'Callback', {@callback_filechooserButton, h_val, pStructVarName, pSettings});
-                        
+                        buttonwidth = button_pos(3);
                     otherwise
                         error('createOptionsPanel: Unknown parameter type %s for parameter %s!',pType, pName);
                 end
@@ -344,11 +344,14 @@ classdef TNTplugin < handle % Inherit from handle class
             function placeElement()
                 % Filechoosers always occupy their own row
                 if strcmp(pType,'filechooser')
-                    if(~(elemRowIdx==1))
+                    % Width of 'text value'
+                    overall_width = textwidth + text_gap + valwidth + text_gap + buttonwidth;
+                    
+                    % Check if element should be placed in this row
+                    elemFitsInRow = (left_pos + overall_width < (panel_width -text_gap) );
+                    if(~elemFitsInRow)
                         newRow();
                     end
-                    % Width of 'text value'
-                    overall_width = textwidth + text_gap + valwidth;
                     
                     text_pos = get(h_text,'Position');
                     text_pos(1:2) = [left_pos,bott_pos];
@@ -359,11 +362,14 @@ classdef TNTplugin < handle % Inherit from handle class
                     set(h_val,'Position',val_pos);
                     
                     button_pos = get(h_button, 'Position');
-                    button_pos(1:2) = [left_pos+overall_width+text_gap, bott_pos];
+                    button_pos(1:2) = [left_pos+textwidth+text_gap+text_gap+valwidth+text_gap, bott_pos];
                     set(h_button,'Position',button_pos);
                     
-                    % If this is not the last parameter
-                    if (iP~=num_pars)
+                    left_pos = left_pos + overall_width + col_gap; % Next column
+                    
+                    % If next element exceeds the max elements per row, begin new row
+                    % (Except for the last element)
+                    if( elemRowIdx > maxElemPerRow && iP~=num_pars)
                         newRow();
                     end
                 else % For all other parameter types:
