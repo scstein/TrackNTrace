@@ -60,7 +60,7 @@ for iLocF = 1:nrFrames %first frame has already been dealt with
     if( (elapsedTime-lastElapsedTime) > 0.5)
         rewindMessages();
         rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
-        rewPrintf('Fitting frame %i/%i\n',iLocF,nrFrames)
+        rewPrintf('Locating candidates in frame %i/%i\n',iLocF,nrFrames)
         
         lastElapsedTime = elapsedTime;
     end

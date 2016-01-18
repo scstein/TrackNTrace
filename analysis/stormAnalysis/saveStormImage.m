@@ -55,7 +55,7 @@ axis off
 outname = [name '_storm.png'];
 fprintf('Saving image %s ..\n', outname);
 % save_tiff(outname, storm_img, 'uint',16);
-save_img_col(outname, storm_img, minval, maxval);
+% save_img_col(outname, storm_img, minval, maxval);
 
 end
 

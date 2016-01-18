@@ -30,6 +30,10 @@ plugin.add_param('CorrThreshold',...
     'float',...
     {0.4, 0, 1},...
     'Threshold between 0 and 1.');
+plugin.add_param('distanceFactor',...
+    'float',...
+    {0.1, 2, inf},...
+    'The search window size is 2*round(PSFsigma*distanceFactor)+1.');
 
 end
 
@@ -60,7 +64,7 @@ model = gaussian2d(round(10*sigma),sigma,true);
 pattRows = size(model,1);
 pattCols = size(model,2);
 
-MIN_DIST = round(6*sigma);
+MIN_DIST = round(options.distanceFactor*sigma);
 [ match_data, ~ ] = matchPattern( img, model, CORR_THRESH, MIN_DIST);
 
 % convert to pixel position
@@ -141,14 +145,13 @@ function [ match_data, match_img ] = matchPattern( img, patt, CORR_THRESH, MIN_D
 % Date: 2014
 % EMail: scstein@phys.uni-goettingen.de
 
-MIN_DIST = max(1, MIN_DIST); % Distance should be at least 1.
-
-
 imgRows = size(img,1);
 imgCols = size(img,2);
 
 pattRows = size(patt,1);
 pattCols = size(patt,2);
+
+MIN_DIST = min(max(1, MIN_DIST),min(imgRows,imgCols)); % Distance should be at least 1 and not greater than image size
 
 % -- Pattern detection by cross-correlation --
 % NOTE: Normalized cross correlation should to be used for feature matching,

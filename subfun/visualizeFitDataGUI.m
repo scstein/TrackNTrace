@@ -305,10 +305,10 @@ end
         snrMask = ones(size(fitData{iF},1),1);
         
         if( ~isempty(ampThresh) && ~(ampThresh==0) )
-            ampMask = fitData{iF}(:,3)>ampThresh;
+            ampMask = fitData{iF}(:,4)>ampThresh;
         end
         if( ~isempty(ampThresh) && ~(snrThresh==0) )
-            snrMask = (fitData{iF}(:,3)./fitData{iF}(:,4))>snrThresh;
+            snrMask = (fitData{iF}(:,4)./fitData{iF}(:,5))>snrThresh;
         end
         toPlotMask = ampMask & snrMask; % Particles with high enough amplitude AND signal-to-background
         
@@ -394,16 +394,16 @@ end
         switch(selected_parameter)
             case 1 % Amplitude (Peak)
 %               hist(allFramesData(:,3), getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,3), getNum(h_all.edit_distributionBins),dataRange);
+                rangedHist(allFramesData(:,4), getNum(h_all.edit_distributionBins),dataRange);
             case 2 % Intensity (Integral) = Amplitude*2*pi*sigma^2
 %               hist(allFramesData(:,3).*allFramesData(:,5).^2*2*pi, getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,3).*allFramesData(:,5).^2*2*pi, getNum(h_all.edit_distributionBins),dataRange);
+                rangedHist(allFramesData(:,4).*allFramesData(:,6).^2*2*pi, getNum(h_all.edit_distributionBins),dataRange);
             case 3 % Background
 %               hist(allFramesData(:,4), getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,4), getNum(h_all.edit_distributionBins),dataRange);
+                rangedHist(allFramesData(:,5), getNum(h_all.edit_distributionBins),dataRange);
             case 4 % Psf standard deviation
 %               hist(allFramesData(:,5), getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,5), getNum(h_all.edit_distributionBins),dataRange);
+                rangedHist(allFramesData(:,6), getNum(h_all.edit_distributionBins),dataRange);
             otherwise
                 warning('Unknown distribution to plot.')
         end
