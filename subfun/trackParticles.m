@@ -32,7 +32,7 @@ end
 trajectoryData = trackingOptions.mainFunc(fitData,trackingOptions);
 
 if ~isempty(trackingOptions.postFunc)
-    trajectoryData = trackingOptions.postFunc(trajectoryData,trackingOptions);
+    [trajectoryData,trackingOptions] = trackingOptions.postFunc(trajectoryData,trackingOptions);
 end
 
 fprintf('\b done\n');

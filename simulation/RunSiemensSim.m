@@ -5,6 +5,7 @@ optionsSim.frames = 5000;
 optionsSim.density = 750; %per micron
 optionsSim.arms = 6; %siemens star arms
 optionsSim.NA = 1.4;
+optionsSim.fullActivationOnce = true; %if an emitter is active, it will have maximum signal (set below) for one single frame only. Useful for SNR/accuracy test
 
 optionsCamera.pixelSize = 100; %in nm
 optionsCamera.fov = [64;64];

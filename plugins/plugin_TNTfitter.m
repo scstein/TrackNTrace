@@ -74,7 +74,7 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
-%     [x,y,z,A,B,[other parameters],flag]. Other parameters can be q1, q2,
+%     [x,y,z,A,B,[other parameters]]. Other parameters can be q1, q2,
 %     q3 (refer to locateParticles.m or to TrackNTrace manual for more
 %     information). q_i will be calculated back to sigma_x,sigma_y and
 %     rotation angle later.
@@ -85,7 +85,7 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 
 [params] = psfFit_Image( img, candidatePos.',options.varsToFit,options.usePixelIntegratedFit,options.useMLE,options.halfw,options.PSFsigma);
 params = [params(1:2,:);zeros(1,size(params,2));params(3:end,:)]; %adding z = 0
-fitData = params(:,params(end,:)==1).';
+fitData = params(1:end-1,params(end,:)==1).';
 
 end
 
@@ -222,7 +222,7 @@ end
 
 %always fit x,y,A,BG, determine if one has to fit sigma_x,
 %sigma_y,theta_rot
-fittingOptions.halfw = round(4*fittingOptions.PSFsigma);
+fittingOptions.halfw = round(3*fittingOptions.PSFsigma);
 fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPSFsigma;fitBothSigma;fittingOptions.fitAngle];
 
 end %consolidateOptions
@@ -238,7 +238,7 @@ emptyFrames = cellfun('isempty',fitData);
 % 1/sqrt(2*q1) which has to be corrected
 if ~calibrationFileExists && ~fittingOptions.fitAngle
     % back calculate sigma, delete q2, q3
-    fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6)),var(:,end)],fitData(~emptyFrames),'UniformOutput',false);
+    fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6))],fitData(~emptyFrames),'UniformOutput',false);
     return
 end
 
@@ -265,7 +265,7 @@ for iFrame = 1:numel(fitData)
         
         fitData_frame(:,6:8) = [sigma_x,sigma_y,angle];
     else
-        fitData_frame = [fitData_frame(:,1:5),1./sqrt(2*fitData_frame(:,6:7)),fitData_frame(:,end)]; %delete q3, calc. sigma_x, sigma_y
+        fitData_frame = [fitData_frame(:,1:5),1./sqrt(2*fitData_frame(:,6:7))]; %delete q3, calc. sigma_x, sigma_y
     end
     
     if calibrationFileExists

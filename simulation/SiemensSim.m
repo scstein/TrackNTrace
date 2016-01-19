@@ -61,6 +61,13 @@ for iParticle = 1:nrParticles
     if nr_events(iParticle)<1
         continue
     end
+    
+    if optionsSim.fullActivationOnce
+        % let particle "blink" once and die
+        nr_events(iParticle) = 1;
+        nrFrames_active = 1;
+        active_time = 1;
+    else
     % Get frames of activation events and the activation starting time plus
     % duration
     frames_activation = sort(randperm(nrFrames,nr_events(iParticle)));
@@ -70,6 +77,8 @@ for iParticle = 1:nrParticles
     % Determine [frame,time of activation in frame] vector
     nrFrames_active = ceil(start_time+active_time);
     all_frames_active = []; %[x y frame amp]
+    end
+    
     for jEvent = 1:nr_events(iParticle)
         if nrFrames_active(jEvent)>1
             time_vec = [(frames_activation(jEvent):frames_activation(jEvent)+nrFrames_active(jEvent)-1).', ...

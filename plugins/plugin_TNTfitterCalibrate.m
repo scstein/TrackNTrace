@@ -65,16 +65,16 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %     
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
-%     [x,y,A,B,sigma_x,sigma_y,angle,flag] used for creating calibration
+%     [x,y,A,B,sigma_x,sigma_y,angle] used for creating calibration
 %     file. Refer to locateParticles.m or to TrackNTrace manual for more
 %     information.
 
 varsToFit = [ones(6,1);0]; %fit everything except angle
-halfw = round(4*options.PSFsigma);
+halfw = round(3*options.PSFsigma);
 
 [params] = psfFit_Image( img, candidatePos.',varsToFit,options.usePixelIntegratedFit,options.useMLE,halfw,options.PSFsigma);
 params(5:6,:) = 1./sqrt(2*params(5:6,:)); %convert q_i to sigma_i
-fitData = params(:,params(end,:)==1).';
+fitData = params(1:end-1,params(end,:)==1).'; %delete exitflag
 
 end
 

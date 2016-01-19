@@ -88,7 +88,7 @@ end
 for iFrame=1:nrFrames
     if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
     pos_frame_now = fitData{iFrame};
-    valid_pos = pos_frame_now(:,end)==1; %error flag is 1?
+    valid_pos = pos_frame_now(:,1)>=0; %error flag is 1?
     nCand = sum(valid_pos);
     pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
     
@@ -113,7 +113,6 @@ end
 
 
 function [trajData] = uTrackMain(pos,trackingOptions)
-% TODO: enable 3D tracking!
 
 trajData = [];
 traj_id = 0; %global trajectory idx
