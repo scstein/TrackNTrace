@@ -44,7 +44,7 @@ if ~isempty(darkImage) %if correction image is provided, do it
     %but the bias is already included. Add the bias again to avoid later
     %confusion
     if globalOptions.usePhotonConversion
-        imgCorrection = (imgCorrection+globalOptions.photonBias)*globalOptions.photonFactor;
+        imgCorrection = (imgCorrection+globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain);
     end
 end
 

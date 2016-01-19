@@ -22,7 +22,6 @@ globalOptions.usePhotonConversion = false; %boolean, enables photon conversion (
 globalOptions.photonBias = 100; %integer, camera A/D count floor which is added to the image to remove negativ counts
 globalOptions.photonSensitivity = 4; %double, electrons per image count, depends on pre-amp setting and readout mode. Check your camera manual and spec sheet!
 globalOptions.photonGain = 100; %integer, EMCCD gain of camera
-globalOptions.photonFactor = globalOptions.photonSensitivity/globalOptions.photonGain;
 
 % Options for tracking particle positions
 globalOptions.enableTracking = true;

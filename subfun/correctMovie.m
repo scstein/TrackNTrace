@@ -40,13 +40,13 @@ nImages = size(movieStack,3);
 
 if correctDark
     if usePhoton
-        correctedStack = (double(movieStack)-globalOptions.photonBias)*globalOptions.photonFactor+repmat(imgCorrection,[1,1,nImages]);
+        correctedStack = (double(movieStack)-globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain)+repmat(imgCorrection,[1,1,nImages]);
     else
         correctedStack = double(movieStack)+repmat(imgCorrection,[1,1,nImages]);
     end
 else
     if usePhoton
-        correctedStack = (double(movieStack)-globalOptions.photonBias)*globalOptions.photonFactor;
+        correctedStack = (double(movieStack)-globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain);
     else
         correctedStack = double(movieStack);
     end

@@ -139,7 +139,6 @@ for i=1:numel(movie_list)
     
     % Save options
     globalOptions.filename_movies = {filename_movie}; % Save only name of this file in its settings (important when loading options)
-    globalOptions.photonFactor = globalOptions.photonSensitivity/globalOptions.photonGain;
     save(filename_fitData,'filename_movie','globalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
     posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
 end
