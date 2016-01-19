@@ -13,21 +13,29 @@ nrTruePositive = 0;
 nrFalsePositive = 0;
 nrFalseNegative = 0;
 RMSE = zeros(nrFrames,1);
+emptyFrames = [];
 
 for iFrame = 1:nrFrames
-    [pos,id_frames] = preparePosArray(fitData{iFrame},fitData_truth{iFrame});
-    track = nn_tracker_cpp(pos,minTrackLength,linkingDistance,[],[],minTrackLength).';
-    id_track = [track(track(:,5)<0), track(track(:,5)>0)];
-    
-    nrTruePositive = nrTruePositive+max(track(:,1)); %particles present in both frames are true localizations
-    nrFalsePositive = nrFalsePositive+sum(~ismember(id_frames(:,2),id_track(:,1))); %particles present in loc frame but not in tracks are false positives
-    nrFalseNegative = nrFalseNegative+sum(~ismember(id_frames(:,1),id_track(:,1))); %particles present in true frame but not in tracks are false negatives
-    
-    RMSE(iFrame) = 1/max(track(:,1))*sum(sum((track(2:end,3:4)-track(1:end-1,3:4)).^2,2),1); %1/N*sum( (x-x_truhe)^2+(y-ytrue)^2)
+    if ~isempty(fitData{iFrame}) && ~isempty(fitData_truth{iFrame})
+        [pos,id_true,id_loc] = preparePosArray(fitData{iFrame},fitData_truth{iFrame});
+        track = nn_tracker_cpp(pos,minTrackLength,linkingDistance,[],[],minTrackLength).';
+        id_track = [track(track(:,5)<0,5), track(track(:,5)>0,5)];
+        
+        nrTruePositive = nrTruePositive+max(track(:,1)); %particles present in both frames are true localizations
+        nrFalsePositive = nrFalsePositive+sum(~ismember(id_loc,id_track(:,2))); %particles present in loc frame but not in tracks are false positives
+        nrFalseNegative = nrFalseNegative+sum(~ismember(id_true,id_track(:,1))); %particles present in true frame but not in tracks are false negatives
+        
+        RMSE(iFrame) = 1/max(track(:,1))*sum(sum((track(2:2:end,3:4)-track(1:2:end-1,3:4)).^2,2),1); %1/N*sum( (x-x_true)^2+(y-ytrue)^2)
+    else
+        nrFalsePositive = nrFalsePositive+size(fitData{iFrame},1);
+        nrFalseNegative = nrFalseNegative+size(fitData{iFrame},1);
+        emptyFrames = [emptyFrames;iFrame];
+    end
 end
+RMSE(emptyFrames) = [];
 
 
-resultStatistics.accuracy = [sqrt(mean(RMSE)), 0.5*std(RMSE)*1/sqrt(mean(RMSE))]; %value, standard deviation
+resultStatistics.accuracy = [sqrt(mean(RMSE)), 0.5*std(RMSE)*1/sqrt(mean(RMSE))]*options.pixelSize; %value, standard deviation
 resultStatistics.truePositive = nrTruePositive;
 resultStatistics.falsePositive = nrFalsePositive;
 resultStatistics.falseNegative = nrFalseNegative;
@@ -46,14 +54,15 @@ resultStatistics.resolutionFRC = resolutionFRC;
 end
 
 
-function [pos,id] = preparePosArray(frame1,frame2)
+function [pos,id_true,id_loc] = preparePosArray(frame1,frame2)
 
 %give pos array for tracker, first frame is ground truth
 
-pos_loc1 = [ones(1,size(frame1,1)); frame1(:,1:2).'; 1:size(frame1,1)];
-pos_loc2 = [2*ones(1,size(frame2,1)); frame2(:,1:2).'; -(1:size(frame2,1))];
+pos_loc1 = [2*ones(1,size(frame1,1)); frame1(:,1:2).'; 1:size(frame1,1)];
+pos_loc2 = [ones(1,size(frame2,1)); frame2(:,1:2).'; -(1:size(frame2,1))];
 pos = [pos_loc2,pos_loc1]; %track from ground truth to localized data. in general, localization will be erroneous and contain false negatives
-id = [pos_loc2(end,:).', pos_loc1(end,:).'];
+id_true = pos_loc2(end,:).';
+id_loc = pos_loc1(end,:).';
 
 end
 
@@ -141,7 +150,7 @@ frc_curve = numerator./sqrt(img1_cumsum.*img2_cumsum);
 q = (0:1:numel(frc_curve)-1).'/(im_w*px_size); %spatial frequency in units of 1/nm
 
 
-if isfield(options.estimateSpurious) && options.estimateSpurious
+if isfield(options,'estimateSpurious') && options.estimateSpurious
     L = im_w*px_size;
     v = 1./(2*pi*q*L).*numerator./(sinc(pi*q*L).^2);
     
