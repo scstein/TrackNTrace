@@ -18,7 +18,7 @@ mainFunc =  @trackParticles_nearestNeighborCPP;
 plugin = TNTplugin(name,type, mainFunc);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Simple and fast nearest neighbor tracking implemented in C++.';
+plugin.info = 'Simple and fast nearest neighbor tracking implemented in C++\n\n Implementation uses the nanoflann library written by Marius Muja, David G. Lowe and Jose Luis Blanco. Nanoflann is under the BSD license.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
@@ -64,7 +64,7 @@ function [trajData] = trackParticles_nearestNeighborCPP(fitData,options)
 %
 % OUTPUT:
 %     trajData: 2D double array of trajectories in format
-%     [id,frame,xpos,ypos,amp]. Refer to trackParticles.m or to TrackNTrace
+%     [id,frame,xpos,ypos,zpos,amp]. Refer to trackParticles.m or to TrackNTrace
 %     manual for more information.
 
 
