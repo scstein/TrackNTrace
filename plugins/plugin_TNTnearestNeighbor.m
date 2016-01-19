@@ -71,7 +71,7 @@ function [trajData] = trackParticles_nearestNeighborCPP(fitData,options)
 % convert fitData cell array to adjust to tracker function input
 nrFrames = size(fitData,1);
 nrPos = zeros(nrFrames,1);
-nrParam = 0
+nrParam = 0;
 for iFrame=1:nrFrames
     if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
     nrPos(iFrame) = sum((fitData{iFrame}(:,end)==1)); %error flag is 1?
@@ -79,7 +79,7 @@ for iFrame=1:nrFrames
         nrParam = size(fitData{iFrame},2);
     end
 end
-pos = zeros(nrParamm,sum(nrPos));
+pos = zeros(nrParam,sum(nrPos));
 
 nrPos_cs = [0;cumsum(nrPos)];
 
