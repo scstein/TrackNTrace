@@ -70,27 +70,15 @@ function [trajData] = trackParticles_nearestNeighborCPP(fitData,options)
 
 % convert fitData cell array to adjust to tracker function input
 nrFrames = size(fitData,1);
-nrPos = zeros(nrFrames,1);
-nrParam = 0;
-for iFrame=1:nrFrames
-    if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
-    nrPos(iFrame) = sum((fitData{iFrame}(:,1)>=0)); %error flag is 1?
-    if size(fitData{iFrame},2)>nrParam
-        nrParam = size(fitData{iFrame},2);
-    end
-end
-pos = zeros(nrParam,sum(nrPos));
+nrPosInFrame = cellfun('size',fitData,1);
 
-nrPos_cs = [0;cumsum(nrPos)];
+% Builds a vector with the frame number for every position
+% e.g. [1,1,1,2,2,3,3,3,3] for 3 particles in frame 1, 2 p. in fr. 2, 4 p. in fr. 3 etc.
+frameVec = arrayfun( @(val,nr) repmat(val,nr,1), [1:nrFrames].',nrPosInFrame,'UniformOutput',false);
+frameVec = vertcat(frameVec{:});
 
-for iFrame = 1:nrFrames
-    if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
-    pos_frame_now = fitData{iFrame}.';
-    valid_pos = pos_frame_now(1,:)>=0; %not out of frame?
-    pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
-    pos(:,nrPos_cs(iFrame)+1:nrPos_cs(iFrame+1)) = [repmat(iFrame,1,nrPos(iFrame));pos_frame_now(1:end-1,valid_pos)];
-end
-
+% Array with frame,x,y,z,... for every detected candidate
+pos = [frameVec, vertcat(fitData{:})].';
 
 % call main function
 trajData = nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,options.maxGapRadius,options.maxFrameGap,options.minTrajLength,options.verbose).';
