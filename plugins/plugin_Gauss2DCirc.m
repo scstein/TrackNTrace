@@ -37,6 +37,28 @@ end
 
 
 function [fitData] = refineParticles_gauss2dcirc(img,candidatePos,options,currentFrame)
+% Wrapper function for gauss2dcirc function (see below). Refer to tooltips
+% above and to gauss2dcirc help to obtain information on input and output
+% variables. gauss2dcirc.m was released as part of the following
+% publication under the GNU public licence: 
+% Anthony, S.M. & Granick, S. Image analysis with rapid and accurate
+% two-dimensional Gaussian fitting. Langmuir 25, 8152–8160 (2009).
+% 
+%
+% INPUT:
+%     img: 2D matrix of pixel intensities, data type and normalization
+%     arbitrary.
+%
+%     candidatePos: 2D double row array of localization candidates created
+%     by locateParticles.m. Refer to that function or to TrackNTrace manual
+%     for more information.
+%
+%     options: Struct of input parameters provided by GUI.
+%
+% OUTPUT:
+%     fitData: 1x1 cell of 2D double array of fitted parameters
+%     [x,y,z,A,B,particle width]. 
+
 persistent x_mesh y_mesh
 
 fitData = zeros(size(candidatePos,1),6);

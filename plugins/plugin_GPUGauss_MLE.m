@@ -43,6 +43,29 @@ end
 
 
 function [fitData] = refineParticles_gpugaussmle(img,candidatePos,options,currentFrame)
+% Wrapper function for gaussmlev2 function (see below). Refer to tooltips
+% above and to gaussmlev2 help to obtain information on input and output
+% variables. gaussmlev2.m was released as part of the following
+% publication under the GNU public licence: 
+% Smith et al, Fast, single-molecule localization that achieves
+% theoretically minimum uncertainty, Nature Methods 7, 373-375 (2010),
+% doi:10.1038/nmeth.1449
+% 
+%
+% INPUT:
+%     img: 2D matrix of pixel intensities, data type and normalization
+%     arbitrary.
+%
+%     candidatePos: 2D double row array of localization candidates created
+%     by locateParticles.m. Refer to that function or to TrackNTrace manual
+%     for more information.
+%
+%     options: Struct of input parameters provided by GUI.
+%
+% OUTPUT:
+%     fitData: 1x1 cell of 2D double array of fitted parameters
+%     [x,y,z,A,B,[other parameters]]. Other parameters can be PSF standard
+%     deviation, both in x and y.
 
 fitData = zeros(size(candidatePos,1),5+options.nrParam);
 
@@ -50,7 +73,7 @@ for iCand = 1:size(candidatePos,1)
     pos = candidatePos(iCand,1:2);
     idx_x = max(1,pos(1)-options.halfWindowSize):min(size(img,2),pos(1)+options.halfWindowSize);
     idx_y = max(1,pos(2)-options.halfWindowSize):min(size(img,1),pos(2)+options.halfWindowSize);
-    [param,~,~]=gaussmlev2(single(img(idx_y,idx_x)),options.PSFSigma,options.Iterations,options.fitType,options.functionName); %[x,y,z,A,BG,[rest params],exitflag]
+    [param,~,~]=gaussmlev2(single(img(idx_y,idx_x)),options.PSFSigma,options.Iterations,options.fitType,options.functionName); %[x,y,z,A,BG,[rest params]]
     fitData(iCand,:) = [param(1:2)+[idx_x(1),idx_y(1)],0,param(3:end)]; %correct position relative to fit window, middle of first pixel is [0,0]
 end
 
