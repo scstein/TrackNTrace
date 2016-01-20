@@ -270,7 +270,7 @@ classdef TNTplugin < handle % Inherit from handle class
                         h_val= uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
                             'Style','edit','BackgroundColor', 'w','FontSize',fontSize,'String',pValue);
                     case 'list'
-                        val_pos = [value_position(1), value_position(2), editWidth, elemHeight];
+                        val_pos = [value_position(1), value_position(2), editWidth, max(elemHeight,17)]; % popupmenus are at least 17 points high to be displayed right
                         h_val = uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
                             'Style','popupmenu','BackgroundColor', 'w','FontSize',fontSize,'String',par_settings{iP});
                         % Determine neccessary width of popup based on choosable options
@@ -387,7 +387,8 @@ classdef TNTplugin < handle % Inherit from handle class
                     set(h_text,'Position',text_pos);
                     
                     val_pos = get(h_val, 'Position');
-                    val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos];
+                    % Note: +(elemHeight-val_pos(4))/2 is needed to center Elements that are note elemHeight high (like poupmenus which need at least 17 points in height.
+                    val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos+(elemHeight-val_pos(4))/2]; 
                     set(h_val,'Position',val_pos);
                     
                     left_pos = left_pos + overall_width + col_gap; % Next column
