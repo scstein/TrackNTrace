@@ -1,8 +1,8 @@
 function [globalOptions] = getDefaultGlobalOptions()
-% [candidateOptions,fittingOptions,trackingOptions] = setOptionsTrackNTrace 
+% [globalOptions] = getDefaultGlobalOptions 
 % 
 % Set default options for TrackNTrace program and return them
-% to main script. See relevant entries for details.
+% to main script.
 % 
 % OUTPUT:
 %     globalOptions: struct containing general options (filename,
