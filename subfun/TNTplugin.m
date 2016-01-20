@@ -301,6 +301,9 @@ classdef TNTplugin < handle % Inherit from handle class
                             'Style','pushbutton','FontSize',fontSize,'String','Select');
                         set(h_button, 'Callback', {@callback_filechooserButton, h_val, pStructVarName, pSettings});
                         buttonwidth = button_pos(3);
+                        
+                        % Set Tooltip
+                        set(h_button, 'TooltipString',par_tooltip{iP});
                     otherwise
                         error('createOptionsPanel: Unknown parameter type %s for parameter %s!',pType, pName);
                 end
