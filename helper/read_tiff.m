@@ -38,8 +38,14 @@ end
 if strcmp(ext, '.tif') == 0
     filename = [filename '.tif'];
 end
-warning('off','all');
-t = Tiff(filename,'r');
+
+try
+    warning('off','all');
+    t = Tiff(filename,'r');
+catch err
+    warning('on','all');
+    rethrow(err);
+end
 cleanupTrigger = onCleanup(@() cleanupFunc(t));
 
 

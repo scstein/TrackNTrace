@@ -1,4 +1,4 @@
-function [globalOptions] = setDefaultOptions()
+function [globalOptions] = getDefaultGlobalOptions()
 % [candidateOptions,fittingOptions,trackingOptions] = setOptionsTrackNTrace 
 % 
 % Set default options for TrackNTrace program and return them
@@ -25,6 +25,5 @@ globalOptions.photonGain = 100; %integer, EMCCD gain of camera
 
 % Options for tracking particle positions
 globalOptions.enableTracking = true;
-
 
 end
