@@ -228,6 +228,9 @@ end
 fittingOptions.halfw = round(3*fittingOptions.PSFsigma);
 fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPSFsigma;fitBothSigma;fittingOptions.fitAngle];
 
+% updating parameter description
+fittingOptions.outParamDescription = fittingOptions.outParamDescription(1:6+fitBothSigma+fittingOptions.fitAngle);
+
 end %consolidateOptions
 
 
