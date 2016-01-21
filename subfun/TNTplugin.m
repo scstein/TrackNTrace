@@ -10,6 +10,7 @@ classdef TNTplugin < handle % Inherit from handle class
         initFunc
         mainFunc
         postFunc
+        outParamDescription
     end
     
     properties(Access = private)
@@ -18,7 +19,7 @@ classdef TNTplugin < handle % Inherit from handle class
     
     methods
         % Constructor
-        function obj = TNTplugin(name, type, mainFunc)
+        function obj = TNTplugin(name, type, mainFunc, outParamDescription)
             % Check input
             if isempty(name)
                 error('Empty plugin name not allowed!');
@@ -29,11 +30,30 @@ classdef TNTplugin < handle % Inherit from handle class
                 case 2 % Fitting method
                 case 3 % Tracking method
                 otherwise
-                    warning('Invalid plugin type ''%i'' when constructing plugin ''%s''', type, name);
+                    error('Invalid plugin type ''%i'' when constructing plugin ''%s''', type, name);
             end
             
             if isempty(mainFunc) || ~isa(mainFunc,'function_handle')
                 error('Invalid or empty mainFunc handle when constructing plugin ''%s''', name);
+            end
+            
+            % Output parameter description
+            if (nargin < 4 || isempty(outParamDescription))
+                switch type
+                    case 1 % Candidate method
+                        obj.outParamDescription = {'x','y'};
+                    case 2 % Fitting method
+                        obj.outParamDescription = {'x','y','z','Amplitude','Background'};
+                    case 3 % Tracking method
+                        obj.outParamDescription = {'Track','Frame','x','y','z'};
+                    otherwise
+                        warning('Invalid plugin type ''%i'' when constructing plugin ''%s''', type, name);
+                end
+                warning off backtrace
+                warning('Plugin ''%s'' does not specify an output parameter description in its constructor. Assuming ''%s''.',  name, strjoin(obj.outParamDescription));
+                warning on backtrace
+            else
+                obj.outParamDescription = outParamDescription;
             end
             
             % Internal
@@ -126,6 +146,8 @@ classdef TNTplugin < handle % Inherit from handle class
             obj.options.initFunc = obj.initFunc;
             obj.options.mainFunc = obj.mainFunc;
             obj.options.postFunc = obj.postFunc;
+            
+            obj.options.outParamDescription = obj.outParamDescription;
         end
         
         % Retrieves the options for this plugin (function handles, all parameter values etc.)

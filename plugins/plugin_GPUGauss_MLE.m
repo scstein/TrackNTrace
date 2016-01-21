@@ -86,7 +86,9 @@ function [fittingOptions] = refineParticles_gpugaussinit(fittingOptions)
 global globalOptions
 
 if ~globalOptions.usePhotonConversion
-    warning('GPU-Gauss MLE requires photon conversion');
+    warning off backtrace
+    warning('GPU-Gauss MLE requires photon conversion.');
+    warning on backtrace
 end
 
 fittingOptions.halfWindowSize = min(10,ceil(3*fittingOptions.PSFSigma));
@@ -112,7 +114,9 @@ functions = {'gaussmlev2_cuda50','gaussmlev2_cuda42','gaussmlev2_cuda40',...
 try
     evalc(listgpus());
 catch
+    warning off backtrace
     warning('Could not find CUDA GPU. Verify your CUDA installation if possible.');
+    warning on backtrace
     functions = functions(4:end);
 end
 

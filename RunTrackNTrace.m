@@ -1,11 +1,17 @@
 function RunTrackNTrace()
-clear global globalOptions movie imgCorrection
+clearGlobals(); % Clear global variables used by TNT
+
 % Global variables accessible by plugins
 global globalOptions;
+global candidateOptions
+global fittingOptions
+global trackingOptions
 global movie;
 global imgCorrection; %#ok<NUSED>
 
 addRequiredPathsTNT();
+
+fprintf('Starting Track''N''Trace.\n')
 
 %% Load and adjust the default settings for this batch
 GUIinputs.titleText = 'Please select a list of movies to process.';
@@ -35,7 +41,7 @@ posFit_list = cell(0);
 for i=1:numel(movie_list)
     filename_movie = movie_list{i};
     [path,filename,~] = fileparts(filename_movie);
-    filename_fitData = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
+    filename_fittingData = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
     
     % Check if movie can be read
     if(~isempty(filename_movie))
@@ -115,11 +121,11 @@ for i=1:numel(movie_list)
                 end
                 
                 % IF: this is the first run, the preview window changed or the fitting/candidate options changed locate and
-                % track particles and save fitData. ELSE: reuse fitData acquired in the last run without re-fitting
+                % track particles and save fittingData. ELSE: reuse fittingData acquired in the last run without re-fitting
                 if first_run || GUIreturns.globalOptionsChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged
-                    [run_again, candidateData_test,fitData_test] = testTrackerSettings(movie,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions);
+                    [run_again, candidateData_test,fittingData_test] = runPreview(movie,dark_img);
                 else
-                    [run_again] = testTrackerSettings(movie,dark_img,globalOptions,candidateOptions,fittingOptions,trackingOptions, candidateData_test, fitData_test);
+                    [run_again] = runPreview(movie,dark_img, candidateData_test, fittingData_test);
                 end
                 first_run = false;
             end
@@ -137,34 +143,34 @@ for i=1:numel(movie_list)
     
     % Save options
     globalOptions.filename_movies = {filename_movie}; % Save only name of this file in its settings (important when loading options)
-    save(filename_fitData,'filename_movie','globalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
-    posFit_list = [posFit_list;{filename_fitData}]; %#ok<AGROW>
+    save(filename_fittingData,'filename_movie','globalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
+    posFit_list = [posFit_list;{filename_fittingData}]; %#ok<AGROW>
 end
 clearvars -except posFit_list
 
 %% Candidate detection and fitting for every movie
 for i=1:numel(posFit_list)
-    filename_fitData = posFit_list{i};
+    filename_fittingData = posFit_list{i};
     
-    load(filename_fitData,'-mat');
+    load(filename_fittingData,'-mat');
     
     % Read movie
     movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
     % Compute the positions
     fprintf('######\nLocating particles in movie %s.\n',filename_movie);
     [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
-    [fitData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
+    [fittingData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
     
     % Save positions and movieSize, update globalOptions.lastFrame
     globalOptions.lastFrame = globalOptions.firstFrame + size(movie,3)-1; % lastFrame could have been set to 'inf', now we synchronize with the correct number
     movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
-    save(filename_fitData,'candidateData','fitData','globalOptions','candidateOptions','fittingOptions','movieSize','-append');
+    save(filename_fittingData,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','-append');
 end
 clearvars -except posFit_list
 
 %% Compute trajectories for every movie
 for i=1:numel(posFit_list)
-    load(posFit_list{i},'globalOptions','trackingOptions','fitData','filename_movie');
+    load(posFit_list{i},'globalOptions','trackingOptions','fittingData','filename_movie');
     
     % If no tracking is desired for this movie, continue
     if (~globalOptions.enableTracking)
@@ -173,11 +179,14 @@ for i=1:numel(posFit_list)
     
     % Compute trajectories
     fprintf('######\nTracking particles in movie %s.\n',filename_movie);
-    [trackData, trackingOptions] = trackParticles(fitData,trackingOptions); %#ok<ASGLU>
+    [trackingData, trackingOptions] = trackParticles(fittingData,trackingOptions); %#ok<ASGLU>
     
     %Save trajectories
-    save(posFit_list{i},'trackData','trackingOptions','-append');
+    save(posFit_list{i},'trackingData','trackingOptions','-append');
 end
+
+% Clear globals
+clearGlobals();
 end
 
 %% Add required folders and subfolders to path
@@ -193,6 +202,13 @@ end
 
 %% Cleanup function if something goes wrong
 function exitFunc()
+    warning off backtrace
     warning(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.'));
-    clear global globalOptions movie imgCorrection;
+    warning on backtrace
+    clearGlobals();
+end
+
+% Clear all global variables
+function clearGlobals()
+    clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection;
 end

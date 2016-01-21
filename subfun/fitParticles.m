@@ -1,5 +1,5 @@
-function [ fitData, fittingOptions ] = fitParticles( movieStack, darkImage, globalOptions, fittingOptions, candidateData)
-% [ fitData ] = locateParticles( movieStack, darkImage, globalOptions, fittingOptions, candidateData)
+function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, globalOptions, fittingOptions, candidateData)
+% [ fittingData ] = locateParticles( movieStack, darkImage, globalOptions, fittingOptions, candidateData)
 % Find locations of bright spots in an image, in this case a movie of
 % fluorescent molecules, and fit a Gaussian distribution to these spots to
 % obtain position, amplitude, background level and standard deviation.
@@ -23,7 +23,7 @@ function [ fitData, fittingOptions ] = fitParticles( movieStack, darkImage, glob
 %
 %
 % OUTPUT:
-%     fitData: 1D cell array of of Gaussian distribution parameters for all
+%     fittingData: 1D cell array of of Gaussian distribution parameters for all
 %     found particles with one cell per frame. The column order in one cell
 %     is [x,y,A,B,sigma,flag], the line order is the particle index. The
 %     positions x (img column) and y (img row) are not corrected by a middle pixel
@@ -49,7 +49,7 @@ if ~isempty(darkImage) %if correction image is provided, do it
 end
 
 nrFrames = size(movieStack,3);
-fitData = cell(nrFrames,1);
+fittingData = cell(nrFrames,1);
 
 %Call fit init function
 if ~isempty(fittingOptions.initFunc)
@@ -78,18 +78,20 @@ for iLocF = 1:nrFrames %first frame has already been dealt with
     
     nrCandidates = size(candidateData{iLocF},1);
     if nrCandidates>0
-        fitData(iLocF) = {fittingOptions.mainFunc(img,candidateData{iLocF},fittingOptions,iLocF)};
+        fittingData(iLocF) = {fittingOptions.mainFunc(img,candidateData{iLocF},fittingOptions,iLocF)};
     end
 end
 
 if ~isempty(fittingOptions.postFunc)
-    [fitData,fittingOptions] = fittingOptions.postFunc(fitData,fittingOptions);
+    [fittingData,fittingOptions] = fittingOptions.postFunc(fittingData,fittingOptions);
 end
 
 rewindMessages();
 rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
 rewPrintf('Fitting done.\n');
 
+% Verify the outParamDescription, make it fit to the data if neccessary
+fittingOptions = verifyOutParamDescription(fittingData, fittingOptions);
 
     function rewPrintf(msg, varargin)
         % Rewindable message printing: Print msg and cache it.

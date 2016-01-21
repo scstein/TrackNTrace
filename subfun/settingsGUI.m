@@ -88,7 +88,14 @@ selected_fitting_plugin = -1;
 selected_tracking_plugin = -1;
 
 % Load the plugins
-loadPlugins();
+if ~GUIinputs.singleFileMode % Show warnings only on startup
+    fprintf('TNT: Loading plugins ...\n')
+    loadPlugins();    
+else
+    warning off;
+    loadPlugins();
+    warning on;
+end
 
 % % GUI main
 setGUIBasedOnOptions();

@@ -18,11 +18,11 @@ function [ candidateData, candidateOptions ] = findCandidateParticles( movieStac
 %     candidateOptions: struct of input options used to find localization
 %     candidates. See respective plugin function for details.
 %
-% 
+%
 % OUTPUT:
 %     candidateData: 1D cell array of xy position estimates (2D row array)
 %     used in later fitParticles routine.
-% 
+%
 %     candidateOptions: see above
 
 global imgCorrection;
@@ -78,6 +78,8 @@ rewindMessages();
 rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
 rewPrintf('Candidate search done.\n');
 
+% Verify the outParamDescription, make it fit to the data if neccessary
+candidateOptions = verifyOutParamDescription(candidateData, candidateOptions);
 
     function rewPrintf(msg, varargin)
         % Rewindable message printing: Print msg and cache it.

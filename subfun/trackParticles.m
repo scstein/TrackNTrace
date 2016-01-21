@@ -1,5 +1,5 @@
-function [trajectoryData, trackingOptions] = trackParticles(fitData,trackingOptions)
-% trajData = trackParticles(fitData,trackingOptions)
+function [trackingData, trackingOptions] = trackParticles(fittingData,trackingOptions)
+% trajData = trackParticles(fittingData,trackingOptions)
 % This function handles particle positions within movies obtained by the
 % TrackNTrace routine "locateParticles" and passes them to a particle
 % tracking plugin to obtain trajectories.
@@ -8,7 +8,7 @@ function [trajectoryData, trackingOptions] = trackParticles(fitData,trackingOpti
 % respective tracking plugin.
 %
 % INPUT:
-%     fitData: Cell array of particle positions to track. Refer to
+%     fittingData: Cell array of particle positions to track. Refer to
 %     locateParticles or TrackNTrace manual for details.
 %
 %     trackingOptions: Struct of input paramter options for tracking
@@ -25,16 +25,29 @@ function [trajectoryData, trackingOptions] = trackParticles(fitData,trackingOpti
 
 fprintf('Tracking particles using %s .. \n',trackingOptions.plugin_name);
 
+% Execute the initializing function
 if ~isempty(trackingOptions.initFunc)
     trackingOptions = trackingOptions.initFunc(trackingOptions);
 end
 
-trajectoryData = trackingOptions.mainFunc(fitData,trackingOptions);
+% Execute the tracking function
+switch nargout(trackingOptions.mainFunc)
+    case 1 % Only tracking data assigned during call
+        trackingData = trackingOptions.mainFunc(fittingData,trackingOptions);
+    case 2 % Tracking data assigned + options changed
+        [trackingData, trackingOptions] = trackingOptions.mainFunc(fittingData,trackingOptions);
+    otherwise
+        warning('Too many output arguments in mainFunc of tracking plugin ''%s''. Ignoring additional outputs', trackingOptions.plugin_name);
+end
 
+% Execute the post-processing function
 if ~isempty(trackingOptions.postFunc)
-    [trajectoryData,trackingOptions] = trackingOptions.postFunc(trajectoryData,trackingOptions);
+    [trackingData,trackingOptions] = trackingOptions.postFunc(trackingData,trackingOptions);
 end
 
 fprintf('\b done\n');
+
+% Verify the outParamDescription, make it fit to the data if neccessary
+trackingOptions = verifyOutParamDescription(trackingData, trackingOptions);
 
 end

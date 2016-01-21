@@ -1,4 +1,4 @@
-function [h_main, run_again] = visualizeFitDataGUI(movie, fitData, FPS, use_bw, show_RunAgain)
+function [h_main, run_again] = visualizeFitDataGUI(movie, fitData, paramDescription, FPS, use_bw, show_RunAgain)
 % USAGE: visualizeFitDataGUI(movie, trajectoryData)
 % [ Full USAGE: visualizeFitDataGUI(movie, fitData, FPS, use_bw, show_RunAgain) ]
 %
@@ -81,6 +81,10 @@ setNum(h_all.edit_distributionRange,100);
 
 % Checkbox
 set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
+
+% Popupmenu
+% !!!!!
+set(h_all.popup_distribution, 'String', paramDescription);
 
 % Timer -> this controls playing the movie
 h_all.timer = timer(...
@@ -391,24 +395,9 @@ end
         dataRange = getNum(h_all.edit_distributionRange); % Range of data to histogram
         
         figure;
-        switch(selected_parameter)
-            case 1 % Amplitude (Peak)
-%               hist(allFramesData(:,3), getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,4), getNum(h_all.edit_distributionBins),dataRange);
-            case 2 % Intensity (Integral) = Amplitude*2*pi*sigma^2
-%               hist(allFramesData(:,3).*allFramesData(:,5).^2*2*pi, getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,4).*allFramesData(:,6).^2*2*pi, getNum(h_all.edit_distributionBins),dataRange);
-            case 3 % Background
-%               hist(allFramesData(:,4), getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,5), getNum(h_all.edit_distributionBins),dataRange);
-            case 4 % Psf standard deviation
-%               hist(allFramesData(:,5), getNum(h_all.edit_distributionBins));
-                rangedHist(allFramesData(:,6), getNum(h_all.edit_distributionBins),dataRange);
-            otherwise
-                warning('Unknown distribution to plot.')
-        end
+        rangedHist(allFramesData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
         
-        xlabel(selected_string);
+        xlabel(paramDescription{selected_parameter});
         ylabel('frequency');
     end
 
@@ -508,16 +497,41 @@ end
 
 % Parse input variables
     function parse_inputs(num_argin)
+        
+        % Find number of parameters in fitData
+        nrFitDataParams = 0;
+        for iFrame = 1:size(fitData,1)
+            if ~isempty(fitData{iFrame})
+                nrFitDataParams = size(fitData{iFrame},2);
+                break;
+            end
+        end
+        
+        % Make paramDescription the same size as the number of params
+        if num_argin <3 || isempty(paramDescription)
+            paramDescription = repmat({'<Unknown>'}, nrFitDataParams,1);
+        else
+            if numel(paramDescription) > nrFitDataParams
+                paramDescription = paramDescription(1:nrFitDataParams);
+            elseif numel(paramDescription) < nrFitDataParams
+                tmp = paramDescription;
+                paramDescription = cell(nrFitDataParams,1);
+                paramDescription(:) = {'<Unknown>'};
+                paramDescription(1:numel(tmp)) = tmp(1:numel(tmp));
+            end
+            
+        end
+        
         % input parsing
-        if num_argin <3 || isempty(FPS)
+        if num_argin <4 || isempty(FPS)
             FPS = 30;
         end
         
-        if num_argin <4 || isempty(use_bw)
+        if num_argin <5 || isempty(use_bw)
             use_bw = false;
         end
         
-        if num_argin < 5 || isempty(show_RunAgain)
+        if num_argin < 6 || isempty(show_RunAgain)
             show_RunAgain = false;
         end
         

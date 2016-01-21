@@ -36,7 +36,7 @@ plugin.add_param('backgroundNoiseLevel',...
 end
 
 
-function [fitData] = refineParticles_gauss2dcirc(img,candidatePos,options,currentFrame)
+function [fittingData] = refineParticles_gauss2dcirc(img,candidatePos,options,currentFrame)
 % Wrapper function for gauss2dcirc function (see below). Refer to tooltips
 % above and to gauss2dcirc help to obtain information on input and output
 % variables. gauss2dcirc.m was released as part of the following
@@ -56,12 +56,12 @@ function [fitData] = refineParticles_gauss2dcirc(img,candidatePos,options,curren
 %     options: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     fitData: 1x1 cell of 2D double array of fitted parameters
+%     fittingData: 1x1 cell of 2D double array of fitted parameters
 %     [x,y,z,A,B,particle width]. 
 
 persistent x_mesh y_mesh
 
-fitData = zeros(size(candidatePos,1),6);
+fittingData = zeros(size(candidatePos,1),6);
 if isempty(x_mesh)
     [x_mesh,y_mesh] = meshgrid(1:size(img,1),1:size(img,2));
 end
@@ -72,10 +72,10 @@ for iCand = 1:size(candidatePos,1)
     idx_y = max(1,candPos(2)-options.windowHalfSize):min(size(img,1),candPos(2)+options.windowHalfSize);
     try
         [xc,yc,Amp,width] = gauss2dcirc(img(idx_y,idx_x),x_mesh(idx_y,idx_x),y_mesh(idx_y,idx_x),options.backgroundNoiseLevel);
-        fitData(iCand,:) = [xc,yc,0,Amp,0,width];
+        fittingData(iCand,:) = [xc,yc,0,Amp,0,width];
     end
 end
-fitData = fitData(fitData(:,1)>0,:);
+fittingData = fittingData(fittingData(:,1)>0,:);
 
 end
 

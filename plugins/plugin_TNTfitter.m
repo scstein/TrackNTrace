@@ -14,8 +14,11 @@ type = 2;
 % The functions this plugin implements
 mainFunc =  @fitPositions_psfFitCeres;
 
+% Description of output parameters
+outParamDescription = {'x','y','z','Amp (Peak)', 'Background', 'sigma_x', 'sigma_y', 'angle'};
+
 % Create the plugin
-plugin = TNTplugin(name, type, mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Additional functions to call before and after main function
 plugin.initFunc = @consolidateOptions;
