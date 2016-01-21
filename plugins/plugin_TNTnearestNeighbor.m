@@ -98,7 +98,7 @@ function [ tracks ] = nn_tracker_cpp(  Localizations, varargin)
 % Gap closing connects endpoints of tracks to the next startpoint of a
 % track popping up within the specified distance.
 
-% SYNTAX [ drift ] = drift_calculation_cpp(  Localizations, min_track_length, max_linking_distance)
+% SYNTAX [ tracks ] = nn_tracker_cpp( Localizations, min_track_length,max_linking_distance,max_distance_gap,max_frame_gap,min_track_length_afterGapClosing,verbose )
 %
 % Input:
 %     Localizations - (4+n)xN matrix of points, where N is the number of points 
