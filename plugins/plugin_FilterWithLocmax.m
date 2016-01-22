@@ -73,7 +73,7 @@ function [candidateData] = findCandidates_filter(img,options,currentFrame)
 %     left pixel would be [1,1].
 
 % filter image
-if iscell(options.kernel) || ~isnan(options.kernel)
+if iscell(options.kernel) || ~max(isnan(options.kernel))
     img_filtered = filterImageGeneral(img,options.kernel,options.isSeparable,'valid');
 else
     img_filtered = medfilt2(img,[options.kernelSize,options.kernelSize]);

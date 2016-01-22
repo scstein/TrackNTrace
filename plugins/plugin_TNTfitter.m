@@ -15,7 +15,7 @@ type = 2;
 mainFunc =  @fitPositions_psfFitCeres;
 
 % Description of output parameters
-outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'; 'angle'};
+outParamDescription = {' '}; % set depending on plugin options in init function
 
 % Create the plugin
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
@@ -248,7 +248,18 @@ fittingOptions.halfw = round(3*fittingOptions.PSFsigma);
 fittingOptions.varsToFit = varsToFit;
 
 % updating parameter description
-fittingOptions.outParamDescription = fittingOptions.outParamDescription(1:6+sum(varsToFit(end-1:end)));
+switch sum(varsToFit(5:end))
+    case 0 % Sigma not fitted
+        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma'};
+    case 1
+        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma'};
+    case 2
+        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'};
+    case 3
+        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'; 'angle [rad]'};
+    otherwise
+        warning('TNT fitter init func: Unknown case');
+end
 
 end %consolidateOptions
 
@@ -276,9 +287,9 @@ calibrationFileExists = isfield(fittingOptions,'calibrationData');
 emptyFrames = cellfun('isempty',fitData);
 
 % without rotation, there is only sigma_x = 1/sqrt(2*q_1) to calculate
-if ~calibrationFileExists && sum(fittingOptions.varsToFit(end-1:end))==2
+if ~calibrationFileExists && sum(fittingOptions.varsToFit(end-1:end))==0
     % back calculate sigma, delete q2,q3
-    fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6:7))],fitData(~emptyFrames),'UniformOutput',false);
+    fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6))],fitData(~emptyFrames),'UniformOutput',false);
     return
 end
 
