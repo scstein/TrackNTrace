@@ -18,7 +18,7 @@ function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, 
 %
 %     fittingOptions: struct of input options used to fit localization
 %     candidates. See respective plugin function for details.
-% 
+%
 %     candidateData: Cell array of position estimates used in fitting routine
 %
 %
@@ -31,10 +31,11 @@ function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, 
 %     unnormalized amplitude of a Gaussian distribution A*exp(...)+B with
 %     constant background B. flag is the exit flag of the fitting routine,
 %     see psfFit_Image.m for details.
-% 
+%
 %     fittingOptions: see above
 
 global imgCorrection;
+global parallelProcessingAvailable
 
 % Parse inputs
 if ~isempty(darkImage) %if correction image is provided, do it
@@ -51,44 +52,82 @@ end
 nrFrames = size(movieStack,3);
 fittingData = cell(nrFrames,1);
 
-%Call fit init function
+%Call plugins init function
 if ~isempty(fittingOptions.initFunc)
     fittingOptions = fittingOptions.initFunc(fittingOptions);
 end
 
 
-msgAccumulator = ''; % Needed for rewindable command line printing (rewPrintf subfunction)
-startTime = tic;
-elapsedTime = [];
-lastElapsedTime = 0;
-
-for iLocF = 1:nrFrames %first frame has already been dealt with
-    elapsedTime = toc(startTime);
-    
-    % Output process every 0.5 seconds
-    if( (elapsedTime-lastElapsedTime) > 0.5)
-        rewindMessages();
-        rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
-        rewPrintf('Fitting frame %i/%i\n',iLocF,nrFrames)
+% Try parallel processing of plugins main function
+parallelProcessing_Failed = false;
+if parallelProcessingAvailable && fittingOptions.useParallelProcessing
+    try      
+        imgCorrectionLocal = imgCorrection; % Need a copy for parallel processing
         
-        lastElapsedTime = elapsedTime;
-    end
-    
-    img = correctMovie(movieStack(:,:,iLocF));
-    
-    nrCandidates = size(candidateData{iLocF},1);
-    if nrCandidates>0
-        fittingData(iLocF) = {fittingOptions.mainFunc(img,candidateData{iLocF},fittingOptions,iLocF)};
+        fprintf('TNT: Fitting candidates using parallel processing (Frame by Frame).\n');
+        startTime = tic;        
+        parfor iFrame = 1:nrFrames
+            img = correctMovie_Parallel(movieStack(:,:,iFrame), globalOptions, imgCorrectionLocal);
+            nrCandidates = size(candidateData{iFrame},1);
+            if nrCandidates>0
+                fittingData(iFrame) = {fittingOptions.mainFunc(img,candidateData{iFrame},fittingOptions,iFrame)};
+            end
+        end
+        totalTime = toc(startTime);
+        fprintf('TNT: Time elapsed %im %is.\n',floor(totalTime/60), floor(mod(totalTime,60)));
+    catch err
+        warning off backtrace
+        warning('Parallel execution failed. Switching to serial execution.\n Error: %s.',err.message);
+        warning on backtrace
+        parallelProcessing_Failed = true;
     end
 end
 
+% Standard serial processing of plugins main function
+if not(parallelProcessingAvailable) || not(fittingOptions.useParallelProcessing) || parallelProcessing_Failed
+    if parallelProcessingAvailable && not(fittingOptions.useParallelProcessing)
+        fprintf('TNT: Fitting candidates (parallel processing disabled by plugin).\n');
+    else
+        fprintf('TNT: Fitting candidates.\n');
+    end
+    
+    msgAccumulator = ''; % Needed for rewindable command line printing (rewPrintf subfunction)
+    startTime = tic;
+    elapsedTime = [];
+    lastElapsedTime = 0;
+    
+    
+    for iLocF = 1:nrFrames %first frame has already been dealt with
+        elapsedTime = toc(startTime);
+        
+        % Output process every 0.5 seconds
+        if( (elapsedTime-lastElapsedTime) > 0.5)
+            rewindMessages();
+            rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
+            rewPrintf('TNT: Fitting frame %i/%i\n',iLocF,nrFrames)
+            
+            lastElapsedTime = elapsedTime;
+        end
+        
+        img = correctMovie(movieStack(:,:,iLocF));
+        
+        nrCandidates = size(candidateData{iLocF},1);
+        if nrCandidates>0
+            fittingData(iLocF) = {fittingOptions.mainFunc(img,candidateData{iLocF},fittingOptions,iLocF)};
+        end
+    end
+    rewindMessages();
+    rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
+end
+
+
+% Call plugins post-processing function
 if ~isempty(fittingOptions.postFunc)
     [fittingData,fittingOptions] = fittingOptions.postFunc(fittingData,fittingOptions);
 end
 
-rewindMessages();
-rewPrintf('Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
-rewPrintf('Fitting done.\n');
+fprintf('TNT: Fitting done.\n');
+
 
 % Verify the outParamDescription, make it fit to the data if neccessary
 fittingOptions = verifyOutParamDescription(fittingData, fittingOptions);

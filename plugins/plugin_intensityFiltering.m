@@ -23,6 +23,10 @@ plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = 'Finds candidates based on local maxima in intensity.';
 
+% Deactivate TNT's parallel processing, as plugin relys on persistent
+% variables depending on previous loop iterations
+plugin.useParallelProcessing = false;
+
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
 % types are int, float, bool, list, string, filechooser

@@ -13,13 +13,38 @@ addRequiredPathsTNT();
 
 fprintf('Starting Track''N''Trace.\n')
 
+%% Load default options
+[globalOptions_def] = getDefaultGlobalOptions(); 
+
+%% Check if parallel processing is available
+global parallelProcessingAvailable
+parallelProcessingAvailable = false;
+closeMatlabpoolOnExit = globalOptions_def.closeMatlabpoolOnExit ;
+
+if globalOptions_def.enableParallelProcessing    
+    try
+        nrRunningWorkers = matlabpool('size');
+        if(nrRunningWorkers == 0);
+            matlabpool('open');
+        end
+        parallelProcessingAvailable = true;
+        fprintf('TNT: Parallel processing available (%i workers).\n', matlabpool('size'))
+    catch
+        parallelProcessingAvailable = false;
+        fprintf('TNT: Parallel processing unavailable.\n')
+    end
+end
+
 %% Load and adjust the default settings for this batch
 GUIinputs.titleText = 'Please select a list of movies to process.';
 GUIinputs.fileText  = 'Default settings for this batch';
 GUIinputs.singleFileMode = false; % false -> movie list can be edited
-[globalOptions_def] = getDefaultGlobalOptions(); % Load default options
+
 [globalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(globalOptions_def, [],[],[], GUIinputs);
-if GUIreturns.userExit; return; end;
+if GUIreturns.userExit;
+    exitFunc()
+    return; 
+end;
 
 %% Adjust options for each movie and test settings if desired
 GUIinputs.singleFileMode = true; % No editing of movie list possible
@@ -157,7 +182,7 @@ for i=1:numel(posFit_list)
     % Read movie
     movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
     % Compute the positions
-    fprintf('######\nLocating particles in movie %s.\n',filename_movie);
+    fprintf('######\nTNT: Locating particles in movie %s.\n',filename_movie);
     [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
     [fittingData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
     
@@ -178,7 +203,7 @@ for i=1:numel(posFit_list)
     end
     
     % Compute trajectories
-    fprintf('######\nTracking particles in movie %s.\n',filename_movie);
+    fprintf('######\nTNT: Tracking particles in movie %s.\n',filename_movie);
     [trackingData, trackingOptions] = trackParticles(fittingData,trackingOptions); %#ok<ASGLU>
     
     %Save trajectories
@@ -187,7 +212,6 @@ end
 
 % Clear globals
 clearGlobals();
-end
 
 %% Add required folders and subfolders to path
 function addRequiredPathsTNT()
@@ -205,10 +229,16 @@ function exitFunc()
     warning off backtrace
     warning(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.'));
     warning on backtrace
+    if parallelProcessingAvailable && closeMatlabpoolOnExit
+        matlabpool('close');
+    end
     clearGlobals();
 end
 
 % Clear all global variables
 function clearGlobals()
-    clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection;
+    clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection parallelProcessingAvailable;
 end
+end
+
+

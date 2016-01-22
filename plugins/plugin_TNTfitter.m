@@ -28,6 +28,9 @@ plugin.postFunc = @calculateZRot;
 plugin.info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
     'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
 
+% Deactivate TNT's parallel processing, as fitter is parallelized in C++
+plugin.useParallelProcessing = false;
+
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
 % types are int, float, bool, list, string, filechooser

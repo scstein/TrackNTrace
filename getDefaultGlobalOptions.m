@@ -9,6 +9,9 @@ function [globalOptions] = getDefaultGlobalOptions()
 %     processing modes etc.)
 
 % General Options
+globalOptions.enableParallelProcessing = true;
+globalOptions.closeMatlabpoolOnExit = false;
+
 globalOptions.filename_movies = ''; % This directory is chosen as startup when clicking to select movies
 globalOptions.filename_dark_movie = ''; % This directory is chosen as startup when clicking to select a movie
 globalOptions.previewMode = true; %enable/disable testMode by setting true/false.

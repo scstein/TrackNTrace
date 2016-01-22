@@ -90,7 +90,8 @@ selected_tracking_plugin = -1;
 % Load the plugins
 if ~GUIinputs.singleFileMode % Show warnings only on startup
     fprintf('TNT: Loading plugins ...\n')
-    loadPlugins();    
+    loadPlugins();
+    fprintf('TNT: Successfully imported %i plugins (%i candidate detection, %i fitting, %i tracking).\n',numel(candidate_plugins)+numel(fitting_plugins)+numel(tracking_plugins),numel(candidate_plugins),numel(fitting_plugins),numel(tracking_plugins));
 else
     warning off;
     loadPlugins();

@@ -11,6 +11,7 @@ classdef TNTplugin < handle % Inherit from handle class
         mainFunc
         postFunc
         outParamDescription
+        useParallelProcessing
     end
     
     properties(Access = private)
@@ -68,6 +69,7 @@ classdef TNTplugin < handle % Inherit from handle class
             obj.info = '';
             obj.initFunc = [];
             obj.postFunc = [];
+            obj.useParallelProcessing = true;
         end
         
         % Add parameter to this plugin
@@ -148,6 +150,7 @@ classdef TNTplugin < handle % Inherit from handle class
             obj.options.postFunc = obj.postFunc;
             
             obj.options.outParamDescription = obj.outParamDescription;
+            obj.options.useParallelProcessing = obj.useParallelProcessing;
         end
         
         % Retrieves the options for this plugin (function handles, all parameter values etc.)
