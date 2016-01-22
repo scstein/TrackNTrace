@@ -14,8 +14,11 @@ type = 2;
 % The functions this plugin implements
 mainFunc =  @refineParticles_gauss2dcirc;
 
+% Description of output parameters
+outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
+
 % Create the plugin
-plugin = TNTplugin(name,type, mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Add initial function
 plugin.initFunc = @refineParticles_gauss2dcirc_init;
@@ -25,13 +28,14 @@ plugin.info = 'Fit PSF by matrix inversion using gauss2dcirc.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
+% types are int, float, bool, list, string, filechooser
 plugin.add_param('PSFSigma',...
     'float',...
-    {0, 1.3, inf},...
+    {1.3, 0, inf},...
     'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma.');
 plugin.add_param('backgroundNoiseLevel',...
     'float',...
-    {0, 10, inf},...
+    {10, 0, inf},...
     'Standard deviation of background noise in [ADU].');
 end
 
@@ -70,10 +74,9 @@ for iCand = 1:size(candidatePos,1)
     candPos = round(candidatePos(iCand,:));
     idx_x = max(1,candPos(1)-options.windowHalfSize):min(size(img,1),candPos(1)+options.windowHalfSize);
     idx_y = max(1,candPos(2)-options.windowHalfSize):min(size(img,1),candPos(2)+options.windowHalfSize);
-    try
-        [xc,yc,Amp,width] = gauss2dcirc(img(idx_y,idx_x),x_mesh(idx_y,idx_x),y_mesh(idx_y,idx_x),options.backgroundNoiseLevel);
-        fittingData(iCand,:) = [xc,yc,0,Amp,0,width];
-    end
+    
+    [xc,yc,Amp,width] = gauss2dcirc(img(idx_y,idx_x),x_mesh(idx_y,idx_x),y_mesh(idx_y,idx_x),options.backgroundNoiseLevel);
+    fittingData(iCand,:) = [xc,yc,0,Amp,0,width];
 end
 fittingData = fittingData(fittingData(:,1)>0,:);
 

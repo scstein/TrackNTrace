@@ -14,8 +14,11 @@ type = 2;
 % The functions this plugin implements
 mainFunc = @refineParticles_gpugaussmle;
 
+% Description of output parameters
+outParamDescription = {'x';'y';'z';'Intens. (integ.)'; 'Background'; 'sigma_x'; 'sigma_y'};
+
 % Create the plugin
-plugin = TNTplugin(name,type, mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Add initial function
 plugin.initFunc = @refineParticles_gpugaussinit;
@@ -87,7 +90,7 @@ global globalOptions
 
 if ~globalOptions.usePhotonConversion
     warning off backtrace
-    warning('GPU-Gauss MLE requires photon conversion.');
+    warning('GPU-Gauss MLE strictly requires photon conversion!');
     warning on backtrace
 end
 
@@ -106,6 +109,7 @@ end
 
 fittingOptions.fitType = fitType;
 fittingOptions.nrParam = nrParam;
+fittingOptions.outParamDescription = fittingOptions.outParamDescription(1:5+nrParam);
 
 functions = {'gaussmlev2_cuda50','gaussmlev2_cuda42','gaussmlev2_cuda40',...
     'gaussmlev2_c_thread','gaussmlev2_c','gaussmlev2_matlab'};
@@ -221,6 +225,7 @@ function [P,CRLB,LL]=gaussmlev2(data,PSFSigma,iterations,fittype,function_name,A
             case 2
                 [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,fittype);
             case 3
+                %not reachable here
                 [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,fittype,Ax,Ay,Bx,By,gamma,d);
             case 4
                 [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,fittype);

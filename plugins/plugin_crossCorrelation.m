@@ -14,8 +14,11 @@ type = 1;
 % The functions this plugin implements
 mainFunc =  @findCandidates_crossCorrelation;
 
+% Description of output parameters
+outParamDescription = {'x';'y';'Corr'};
+
 % Create the plugin
-plugin = TNTplugin(name, type, mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross correlation.';
@@ -184,9 +187,10 @@ match_data = [max_shifts, CC(mask)]; % (rowShift, colShift, corrVal)
 
 
 % image of matches with their correlation value
-match_img = CC;
-match_img(~mask) = 0;
-match_img = padarray(match_img,[(pattRows-1)/2, (pattCols-1)/2]);
+match_img = []; %not used here
+% match_img = CC;
+% match_img(~mask) = 0;
+% match_img = padarray(match_img,[(pattRows-1)/2, (pattCols-1)/2]);
 end
 
 

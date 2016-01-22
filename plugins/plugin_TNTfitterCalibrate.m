@@ -14,22 +14,25 @@ type = 2;
 % The functions this plugin implements
 mainFunc =  @fitPositions_psfFitCeres;
 
+% Description of output parameters
+outParamDescription = {'x';'y';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'};
 
 % Create the plugin
-plugin = TNTplugin(name, type, mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Additional functions to call before and after main function
 plugin.postFunc = @createCalibrationTable;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = ['Calibration version of TNT fitter for getting obtaining calibration curve.\n\n', ...
+plugin.info = ['Calibration version of TNT fitter for obtaining calibration curve.\n\n', ...
                'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
+% types are int, float, bool, list, string, filechooser
 plugin.add_param('PSFsigma',...
       'float',...
-      {1.2, 0,inf},...
+      {1.3, 0,inf},...
       'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
 plugin.add_param('usePixelIntegratedFit',...
           'bool',...
@@ -65,7 +68,7 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %     
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
-%     [x,y,A,B,sigma_x,sigma_y,angle] used for creating calibration
+%     [x,y,A,B,sigma_x,sigma_y] used for creating calibration
 %     file. Refer to locateParticles.m or to TrackNTrace manual for more
 %     information.
 

@@ -13,8 +13,11 @@ type = 3;
 % The functions this plugin implements
 mainFunc =  @trackParticles_uTrack;
 
+% Description of output parameters
+outParamDescription = {'Track-ID';'Frame';'x';'y';'z';'Amplitude'};
+
 % Create the plugin
-plugin = TNTplugin(name,type,mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = ['u-Track was programmed in the lab of Gaudenz Danuser, see: ', ...
@@ -68,7 +71,7 @@ function [trajData] = trackParticles_uTrack(fitData,options)
 %
 % OUTPUT:
 %     trajData: 2D double array of trajectories in format
-%     [id,frame,[xpos,ypos,...],amp]. Refer to trackParticles.m or to TrackNTrace
+%     [id,frame,xpos,ypos,zpos,amp]. Refer to trackParticles.m or to TrackNTrace
 %     manual for more information.
 
 
@@ -79,11 +82,8 @@ if nrFrames<200
     options.splitMovieIntervals=1; %no need to split small movies
 end
 
-if options.track3D
-    pos = repmat(struct('xCoord',[],'yCoord',[],'zCoord',[],'amp',[],'sigma',[]),nrFrames,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
-else
-    pos = repmat(struct('xCoord',[],'yCoord',[],'amp',[],'sigma',[]),nrFrames,1);
-end
+pos = repmat(struct('xCoord',[],'yCoord',[],'zCoord',[],'amp',[],'sigma',[]),nrFrames,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
+
 
 for iFrame=1:nrFrames
     if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
@@ -95,12 +95,12 @@ for iFrame=1:nrFrames
     pos(iFrame).xCoord = [pos_frame_now(valid_pos,1),zeros(nCand,1)]; %careful, check if error should be >0!
     pos(iFrame).yCoord = [pos_frame_now(valid_pos,2),zeros(nCand,1)];
     
-%     pos(iFrame).amp = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
-%     pos(iFrame).sigma = [pos_frame_now(valid_pos,5),zeros(nCand,1)];
-    
     if options.track3D
         pos(iFrame).zCoord = [pos_frame_now(valid_pos,3),zeros(nCand,1)];
+    else
+        pos(iFrame).zCoord = [zeros(nCand,2)];
     end
+    
     pos(iFrame).amp = [pos_frame_now(valid_pos,4),zeros(nCand,1)];
     pos(iFrame).sigma = [pos_frame_now(valid_pos,6),zeros(nCand,1)];
 end

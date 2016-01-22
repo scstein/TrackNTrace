@@ -25,6 +25,7 @@ plugin.info = 'Simple and fast nearest neighbor tracking implemented in C++\n\n 
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
+% types are int, float, bool, list, string, filechooser
 plugin.add_param('minTrajLength',...
     'int',...
     {2, 0, inf},...
@@ -88,7 +89,7 @@ trackingData = nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,op
 
 % Set name of output variables
 global fittingOptions % Needed as we drag along names specified here
-options.outParamDescription = ['Frame'; 'Track'; fittingOptions.outParamDescription(:)];
+options.outParamDescription = ['Track-ID'; 'Frame'; fittingOptions.outParamDescription(:)];
 
 end
 

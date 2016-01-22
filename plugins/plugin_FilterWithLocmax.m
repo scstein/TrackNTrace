@@ -15,7 +15,7 @@ type = 1;
 mainFunc =  @findCandidates_filter;
 
 % Description of output parameters
-outParamDescription = {'x','y'};
+outParamDescription = {'x';'y'};
 
 % Create the plugin
 plugin = TNTplugin(name,type, mainFunc,outParamDescription);
@@ -34,11 +34,11 @@ plugin.add_param('kernelName',...
 plugin.add_param('PSFSigma',...
     'float',...
     {1.3, 0, inf},...
-    'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma');
+    'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma. Applies to Gaussian filters and overwrites kernelSize.');
 plugin.add_param('kernelSize',...
     'int',...
     {5,3,inf},...
-    'Window size of first kernel.');
+    'Window size of first kernel. Does not apply to Gaussian filters.');
 plugin.add_param('filterBlowup',...
     'float',...
     {1.5,1.01,inf},...
@@ -57,7 +57,7 @@ end
 function [candidateData] = findCandidates_filter(img,options,currentFrame)
 
 % filter image
-if ~isnan(options.kernel)
+if iscell(options.kernel) || ~isnan(options.kernel)
     img_filtered = filterImageGeneral(img,options.kernel,options.isSeparable,'valid');
 else
     img_filtered = medfilt2(img,[options.kernelSize,options.kernelSize]);
@@ -92,8 +92,8 @@ switch candidateOptions.kernelName
         
     case 'Average Difference'
         kernelSizeLarge = round(kernelSize*sizeFactor)+1*(round(kernelSize*sizeFactor)==kernelSize);
-%         kernel2D = {ones(kernelSize)/kernelSize^2,ones(kernelSizeLarge)/kernelSizeLarge^2};
         kernel1D = {ones(kernelSize,1)/kernelSize,ones(kernelSizeLarge,1)/kernelSizeLarge};
+%         kernel2D = {ones(kernelSize)/kernelSize^2,ones(kernelSizeLarge)/kernelSizeLarge^2};
 %         [kernel,isSeparable] = testFilterPerformance(kernel1D,kernel2D);
         
     case 'Gauss'
@@ -128,7 +128,7 @@ switch candidateOptions.kernelName
 %         [kernel,isSeparable] = testFilterPerformance(kernel1D,kernel2D);
 
 end
-% testing on a variety of kernels and image size has determined that 2D
+% testing on a variety of kernels and image sizes has determined that 2D
 % convolution only makes sense for either a large image and a very small
 % kernel or a very small image and a very large kernel, and even then the
 % difference is neglible. 
@@ -137,7 +137,7 @@ kernel = kernel1D; isSeparable = true;
 
 candidateOptions.kernel = kernel;
 candidateOptions.isSeparable = isSeparable;
-candidateOptions.kernelSize = kernelSizeLarge;
+candidateOptions.kernelSize = max(kernelSizeLarge,kernelSize);
 
     function [gauss_norm] = gauss_window(w,s)
     gauss_norm = exp(-((1:w).'-(w+1)/2).^2/(2*s^2));

@@ -14,8 +14,11 @@ type = 2;
 % The functions this plugin implements
 mainFunc =  @refineParticles_radialsymmetry;
 
+% Description of output parameters
+outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
+
 % Create the plugin
-plugin = TNTplugin(name,type, mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = 'Particle localization by radial symmetry centers. See Parthasarathy, NatMet 2012(9).';
@@ -25,7 +28,7 @@ plugin.info = 'Particle localization by radial symmetry centers. See Parthasarat
 % types are int, float, bool, list, string, filechooser
 plugin.add_param('PSFSigma',...
     'float',...
-    {0,1.3,inf},...
+    {1.3,0,inf},...
     'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma.');
 plugin.add_param('estimateWidth',...
     'bool',...

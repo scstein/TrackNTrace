@@ -14,14 +14,18 @@ type = 1;
 % The functions this plugin implements
 mainFunc =  @findCandidates_intensityFiltering;
 
+% Description of output parameters
+outParamDescription = {'x';'y'};
+
 % Create the plugin
-plugin = TNTplugin(name, type, mainFunc);
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = 'Finds candidates based on local maxima in intensity.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
+% types are int, float, bool, list, string, filechooser
 plugin.add_param('particleRadius',...
     'int',...
     {3, 0, inf},...

@@ -34,7 +34,7 @@ end
 
 % Create timestamp for output files
 time = clock;
-timestamp = sprintf('%i-m%02i-d%02i-%ih%i',time(1),time(2),time(3),time(4),time(5));
+timestamp = sprintf('%i-m%02i-d%02i-%02ih%i',time(1),time(2),time(3),time(4),time(5));
 
 % Iterate through all movies in the list
 posFit_list = cell(0);
