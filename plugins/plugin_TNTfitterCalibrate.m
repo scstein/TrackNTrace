@@ -12,7 +12,7 @@ name = 'TNT z-Calibration';
 type = 2;
 
 % The functions this plugin implements
-mainFunc =  @fitPositions_psfFitCeres;
+mainFunc =  @fitPositions_psfFitCeres_calibrate;
 
 % Description of output parameters
 outParamDescription = {'x';'y';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'};
@@ -21,6 +21,7 @@ outParamDescription = {'x';'y';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'}
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Additional functions to call before and after main function
+plugin.initFunc = @consolidateOptions;
 plugin.postFunc = @createCalibrationTable;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
@@ -51,7 +52,7 @@ end
 
 %   -------------- User functions --------------
 
-function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFrame)
+function [fitData] = fitPositions_psfFitCeres_calibrate(img,candidatePos,options,currentFrame)
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input
 % and output variables.
@@ -67,17 +68,23 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %     options: Struct of input parameters provided by GUI.
 %     
 % OUTPUT:
-%     fitData: 1x1 cell of 2D double array of fitted parameters
+%     fitData: 2D double array of fitted parameters
 %     [x,y,A,B,sigma_x,sigma_y] used for creating calibration
 %     file. Refer to locateParticles.m or to TrackNTrace manual for more
 %     information.
 
-varsToFit = [ones(6,1);0]; %fit everything except angle
-halfw = round(3*options.PSFsigma);
 
-[params] = psfFit_Image( img, candidatePos.',varsToFit,options.usePixelIntegratedFit,options.useMLE,halfw,options.PSFsigma);
+
+[params] = psfFit_Image( img, candidatePos.',fittingOptions.varsToFit,options.usePixelIntegratedFit,options.useMLE,fittingOptions.halfw,options.PSFsigma);
 params(5:6,:) = 1./sqrt(2*params(5:6,:)); %convert q_i to sigma_i
 fitData = params(1:end-1,params(end,:)==1).'; %delete exitflag
+
+end
+
+function [fittingOptions] = consolidateOptions(fittingOptions)
+
+fittingOptions.varsToFit = [ones(6,1);0]; %don't fit angle
+fittingOptions.halfw = ceil(3*options.PSFsigma);
 
 end
 
@@ -188,6 +195,25 @@ end
 
 
 function [fitData,fittingOptions] = createCalibrationTable(fitData,fittingOptions)
+% This function creates a calibration Table [z,sigma_x/sigma_y] from an
+% astigmatic calibration movie where a number of diffraction-limited
+% fluorescent emitters was recorded at different axial positions with a
+% scanning stage.
+% 
+% It's assumed that drastic outliers (particles in focus before stage moves
+% to defocused position) were removed by editing the movie beforehand and
+% that the z-stage moves smoothly at linear intervals from a position below
+% (or above) the focus to another position above (or below) the focus.
+% Parts of the curve where the aspect ratio gradually saturates (derivate
+% close to 0) are removed from the smoothed interpolation curve.
+% 
+% The functions fits a polynom of 4th degree to the aspect ratio
+% (sigma_x/sigma_y)(z) and also finds the midpoint z-pixel where the aspect
+% ratio is equal to 1. A smooth interpolation curve with a resolution of
+% 0.1 z-pixels is calculated and everything's saved to a calibration file
+% in the same folder as the movie.
+
+
 % post-processing function
 global globalOptions
 

@@ -55,6 +55,22 @@ end
 
 
 function [candidateData] = findCandidates_filter(img,options,currentFrame)
+% Find candidates in 2D image by filtering, image dilation, and
+% thresholding (in that order). Possible filters are Average, Difference of
+% averages, Gauss, Difference of Gauss, Zeroed Gauss and Median.
+% 
+% INPUT:
+%     img: 2D matrix of pixel intensities, data type and normalization
+%     arbitrary.
+%
+%     candidateOptions: Struct of input parameters provided by GUI.
+% 
+%     currentFrame: Integer, current movie frame in main loop.
+%
+% OUTPUT:
+%     candidatePos - 2D array of Nx2 matrix of particle candidate positions
+%     [column pixel, row pixel] without subpixel position. Middle of upper
+%     left pixel would be [1,1].
 
 % filter image
 if iscell(options.kernel) || ~isnan(options.kernel)

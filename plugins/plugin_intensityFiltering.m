@@ -50,28 +50,17 @@ end
 function [candidatePos] = findCandidates_intensityFiltering(img,options,currentFrame)
 % Find particle candidates in fluorescence images based on intensity, local
 % background and size.
-%
+% 
 % INPUT:
-%     img - 2D matrix of pixel intensities, data type and normalisation
-%     arbitrary
+%     img: 2D matrix of pixel intensities, data type and normalization
+%     arbitrary.
 %
-%     W0 - 1D positive integer, search window size used for filtering image
-%     and detecting local maximas
-%
-%     INTENS_THRSH - 1D positive double percentage [0,100), used to
-%     consider only the top INTENS_THRSH percent highest pixel intensities.
-%     Lower means less candidates.
-%
-%     PVAL_MIN - 1D positive double [0,1], used to reject candidates whose
-%     intensities fail a P-test against their local background (assumed to
-%     be Gaussian). Lower means less candidates.
-%
-%     N_ITER - 1D positive integer, background is calculated every time
-%     main loop variable every time mod(loop_var,N_ITER) is 0
-%
+%     candidateOptions: Struct of input parameters provided by GUI.
+% 
+%     currentFrame: Integer, current movie frame in main loop.
 %
 % OUTPUT:
-%     candidatePos - cell of Nx2 matrix of particle candidate positions
+%     candidatePos - 2D array of Nx2 matrix of particle candidate positions
 %     [column pixel, row pixel] without subpixel position. Middle of upper
 %     left pixel would be [1,1].
 

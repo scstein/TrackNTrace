@@ -35,10 +35,14 @@ plugin.add_param('PSFsigma',...
     'float',...
     {1.2, 0,inf},...
     'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
-plugin.add_param('fitPSFsigma',...
-    'bool',...
-    false,...
-    'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).');
+plugin.add_param('fitType',...
+    'list',...
+    {'[x,y,A,BG]', '[x,y,A,BG,s]', '[x,y,A,BG,sx,sy]', '[x,y,A,BG,sx,sy,angle]'},...
+    'Fit positions (xy), amplitude & background (A,BG), sigma (s, or sx & sy for elliptic Gaussian), and angle (for a rotated elliptic Gaussian).');
+% plugin.add_param('fitPSFsigma',...
+%     'bool',...
+%     false,...
+%     'Controls if the PSF standard deviation is optimized by the fitting routine (true) or kept fixed (false).');
 plugin.add_param('usePixelIntegratedFit',...
     'bool',...
     true,...
@@ -47,10 +51,10 @@ plugin.add_param('useMLE',...
     'bool',...
     false,...
     'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');
-plugin.add_param('fitAngle',...
-    'bool',...
-    false,...
-    'Fit rotation angle of anisotropic Gaussian function.');
+% plugin.add_param('fitAngle',...
+%     'bool',...
+%     false,...
+%     'Fit rotation angle of anisotropic Gaussian function.');
 plugin.add_param('astigmaticCalibrationFile',...
     'filechooser',...
     {'','mat'},...
@@ -78,14 +82,12 @@ function [fitData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFr
 %
 % OUTPUT:
 %     fitData: 1x1 cell of 2D double array of fitted parameters
-%     [x,y,z,A,B,[other parameters]]. Other parameters can be q1, q2,
-%     q3 (refer to locateParticles.m or to TrackNTrace manual for more
-%     information). q_i will be calculated back to sigma_x,sigma_y and
-%     rotation angle later.
+%     [x,y,z,A,B,[other parameters]]. Other parameters can be q1, q2, q3
+%     (refer to locateParticles.m or to TrackNTrace manual for more
+%     information). q_i will be calculated back to sigma_x,sigma_y,
+%     rotation angle and possibly z in post-processing function (see
+%     below).
 
-
-% varsToFit = [ones(6,1);0]; %fit everything except angle
-% halfw = round(4*options.PSFsigma);
 
 [params] = psfFit_Image( img, candidatePos.',options.varsToFit,options.usePixelIntegratedFit,options.useMLE,options.halfw,options.PSFsigma);
 params = [params(1:2,:);zeros(1,size(params,2));params(3:end,:)]; %adding z = 0
@@ -201,63 +203,93 @@ end
 
 function [fittingOptions] = consolidateOptions(fittingOptions)
 %initializer function
+% plugin.add_param('fitType',...
+%     'list',...
+%     {'[x,y,A,BG]', '[x,y,A,BG,s]','[x,y,A,BG,sx,sy], [x,y,A,BG,sx,sy,angle]'},...
+switch fittingOptions.fitType
+    case '[x,y,A,BG]'
+        varsToFit = [ones(4,1);zeros(3,1)];
+    case '[x,y,A,BG,s]'
+        varsToFit = [ones(5,1);zeros(2,1)];
+    case '[x,y,A,BG,sx,sy]'
+        varsToFit = [ones(6,1);0];
+    case '[x,y,A,BG,sx,sy,angle]'
+        varsToFit = ones(7,1);
+    otherwise
+        warning off backtrace
+        warning('Unrecognized fit type. Switching to [x,y,A,BG].');
+        warning on backtrace
+        varsToFit = [ones(4,1);zeros(3,1)];
+end
 
-fitBothSigma = false;
 
 if ~isempty(fittingOptions.astigmaticCalibrationFile)
     cal_struct = load(fittingOptions.astigmaticCalibrationFile,'calibrationData');
     if isfield(cal_struct,'calibrationData')
-        fittingOptions.fitPsfsigma = true;
-        fitBothSigma = true;
+        varsToFit(5:6) = ones(2,1);
         fittingOptions.calibrationData = cal_struct.calibrationData;
     else
         error('%s is not a valid calibration file. Aborting.',fittingOptions.astigmaticCalibrationFile);
     end
 end
 
-if fittingOptions.fitAngle
-    fittingOptions.fitPSFsigma = true;
-    fitBothSigma = true;
+if varsToFit(7) == 1 %fit angle?
     if fittingOptions.usePixelIntegratedFit
         fittingOptions.usePixelIntegratedFit = false;
+        warning off backtrace
         warning(sprintf('Fitting a rotation angle is not possible while using pixel-integrated Gaussian model. \nSwitching to sampled Gaussian.'));
+        warning on backtrace
     end
 end
 
 %always fit x,y,A,BG, determine if one has to fit sigma_x,
 %sigma_y,theta_rot
 fittingOptions.halfw = round(3*fittingOptions.PSFsigma);
-fittingOptions.varsToFit = [ones(4,1);fittingOptions.fitPSFsigma;fitBothSigma;fittingOptions.fitAngle];
+fittingOptions.varsToFit = varsToFit;
 
 % updating parameter description
-fittingOptions.outParamDescription = fittingOptions.outParamDescription(1:6+fitBothSigma+fittingOptions.fitAngle);
+fittingOptions.outParamDescription = fittingOptions.outParamDescription(1:6+sum(varsToFit(end-1:end)));
 
 end %consolidateOptions
 
 
 function [fitData,fittingOptions] = calculateZRot(fitData,fittingOptions)
-%post-processing function
+% As the fitting functions fits a model exp(-q_1*x^2-q_2*y^2+2*q_3*xy),
+% these q_i values have to be calculated back to sigma_x,sigma_y and a
+% rotation angle. With rotation=0, sigma_i is obviously 1/sqrt(2*q_i).
+% 
+% Furthermore, if astigmatic imaging was performed, the axial position is
+% extrapolated from the calibration file. The axial position is given in
+% pixels (z in nm = z*fittingOptions.calibrationData.zPixel).
+%     
+% The rotation angle is associated with the axis of the largest eigenvalue
+% given by [-pi/4:pi/4]. Therefore, an elliptic Gaussian with its major
+% axis closer to the y-axis will have a larger sigma_y and a smaller
+% sigma_x value and the rotation angle shows how much a hypothetical
+% ellipse whose major axis is perfectly aligned with the y-axis is rotated.
+% Thus, rotation and sigma values are uniquely defined up to a symmetric
+% 180° rotation.
+% A positive angle corresponds to a counter-clockwise rotation
+% (mathematically positive).
 
 calibrationFileExists = isfield(fittingOptions,'calibrationData');
 emptyFrames = cellfun('isempty',fitData);
 
-% without astigmatism or rotation, there is only one sigma value sigma =
-% 1/sqrt(2*q1) which has to be corrected
-if ~calibrationFileExists && ~fittingOptions.fitAngle
-    % back calculate sigma, delete q2, q3
-    fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6))],fitData(~emptyFrames),'UniformOutput',false);
+% without rotation, there is only sigma_x = 1/sqrt(2*q_1) to calculate
+if ~calibrationFileExists && sum(fittingOptions.varsToFit(end-1:end))==2
+    % back calculate sigma, delete q2,q3
+    fitData(~emptyFrames) = cellfun(@(var) [var(:,1:5),1./sqrt(2*var(:,6:7))],fitData(~emptyFrames),'UniformOutput',false);
     return
 end
 
-% otherwise, the calculation is more complicated. Go through frame by
-% frame...
+% otherwise, the calculation is more complicated. Go through frame by frame...
 for iFrame = 1:numel(fitData)
     if emptyFrames(iFrame)
         continue
     end
     
     fitData_frame = fitData{iFrame};
-    if fittingOptions.fitAngle
+    if fittingOptions.varsToFit(end)
         q1 = fitData_frame(:,6); q2 = fitData_frame(:,7); q3 = fitData_frame(:,8);
         
         angle = 0.5*atan(2*q3./(q2-q1)); %angle towards largest eigenvector axis in radian

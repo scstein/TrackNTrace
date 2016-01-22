@@ -12,7 +12,7 @@ name = 'GPU-Gauss MLE';
 type = 2;
 
 % The functions this plugin implements
-mainFunc = @refineParticles_gpugaussmle;
+mainFunc = @fitPositions_gpugaussmle;
 
 % Description of output parameters
 outParamDescription = {'x';'y';'z';'Intens. (integ.)'; 'Background'; 'sigma_x'; 'sigma_y'};
@@ -24,14 +24,14 @@ plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 plugin.initFunc = @refineParticles_gpugaussinit;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Fit a Gaussian PSF via GPU-MLE fitting. Absolutely requires photon conversion.';
+plugin.info = 'Fit a Gaussian PSF via GPU-MLE fitting. Absolutely requires photon conversion. \nFunction published in Smith et al,NatMet 7,373-375(2010),doi:10.1038/nmeth.1449';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
 % types are int, float, bool, list, string, filechooser
 plugin.add_param('PSFSigma',...
     'float',...
-    {0, 1.3, inf},...
+    {1.3, 0, inf},...
     'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma.');
 plugin.add_param('fitType',...
     'list',...
@@ -39,13 +39,13 @@ plugin.add_param('fitType',...
     'Fit positions (xy), amplitude & background (A,BG), and sigma (s, or sx & sy for elliptic Gaussian).');
 plugin.add_param('Iterations',...
     'int',...
-    {3, 10, inf},...
+    {10, 3, inf},...
     'Number of fit iterations.');
 
 end
 
 
-function [fitData] = refineParticles_gpugaussmle(img,candidatePos,options,currentFrame)
+function [fitData] = fitPositions_gpugaussmle(img,candidatePos,options,currentFrame)
 % Wrapper function for gaussmlev2 function (see below). Refer to tooltips
 % above and to gaussmlev2 help to obtain information on input and output
 % variables. gaussmlev2.m was released as part of the following
@@ -54,7 +54,6 @@ function [fitData] = refineParticles_gpugaussmle(img,candidatePos,options,curren
 % theoretically minimum uncertainty, Nature Methods 7, 373-375 (2010),
 % doi:10.1038/nmeth.1449
 % 
-%
 % INPUT:
 %     img: 2D matrix of pixel intensities, data type and normalization
 %     arbitrary.

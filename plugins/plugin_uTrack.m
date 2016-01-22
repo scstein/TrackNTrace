@@ -55,13 +55,12 @@ end
 %   -------------- User functions --------------
 
 function [trajData] = trackParticles_uTrack(fitData,options)
-% u-Track was programmed in the lab of Gaudenz Danuser, see:
-% Jaqaman et al, Nature Methods - 5, 695 - 702 (2008), doi:10.1038/nmeth.1237
-% Refer to GPL-License.txt for licensing information.
-%
 % Wrapper function for u-Track (see below). Refer to tooltips above, to
 % parseUtrackOptions function and to u-Track manual to obtain information
 % on input and output variables.
+% u-Track was programmed in the lab of Gaudenz Danuser, see:
+% Jaqaman et al, Nature Methods - 5, 695 - 702 (2008), doi:10.1038/nmeth.1237
+% Refer to GPL-License.txt for licensing information.
 %
 % INPUT:
 %     fitData: Cell array of localizations created by locateParticles.m

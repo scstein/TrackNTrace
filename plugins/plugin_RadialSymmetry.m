@@ -21,7 +21,7 @@ outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Particle localization by radial symmetry centers. See Parthasarathy, NatMet 2012(9).';
+plugin.info = 'Particle localization by radial symmetry centers. Algorithm published in Parthasarathy, NatMet 2012(9).';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO

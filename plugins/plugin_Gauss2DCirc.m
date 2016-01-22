@@ -47,7 +47,6 @@ function [fittingData] = refineParticles_gauss2dcirc(img,candidatePos,options,cu
 % publication under the GNU public licence: 
 % Anthony, S.M. & Granick, S. Image analysis with rapid and accurate
 % two-dimensional Gaussian fitting. Langmuir 25, 8152–8160 (2009).
-% 
 %
 % INPUT:
 %     img: 2D matrix of pixel intensities, data type and normalization

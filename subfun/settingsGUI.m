@@ -108,6 +108,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         fullPathToThisFile = mfilename('fullpath');
         [folderPath,~,~] = fileparts(fullPathToThisFile);
         plugin_files = dir([folderPath filesep '..' filesep 'plugins' filesep 'plugin_*.m']);
+%         plugin_files = plugin_files(~cellfun(@(var) strcmp(var,'plugin_default.m'), {plugin_files(:).name}).');
         nr_plugins = numel(plugin_files);
         
         for iPlug = 1:nr_plugins

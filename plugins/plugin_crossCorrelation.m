@@ -15,7 +15,7 @@ type = 1;
 mainFunc =  @findCandidates_crossCorrelation;
 
 % Description of output parameters
-outParamDescription = {'x';'y';'Corr'};
+outParamDescription = {'x';'y'};
 
 % Create the plugin
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
@@ -53,9 +53,11 @@ function candidatePos = findCandidates_crossCorrelation(img, options, currentFra
 %     arbitrary.
 %
 %     candidateOptions: Struct of input parameters provided by GUI.
+% 
+%     currentFrame: Integer, current movie frame in main loop.
 %
 % OUTPUT:
-%     candidatePos - cell of Nx2 matrix of particle candidate positions
+%     candidatePos - 2D array of Nx2 matrix of particle candidate positions
 %     [column pixel, row pixel] without subpixel position. Middle of upper
 %     left pixel would be [1,1].
 
