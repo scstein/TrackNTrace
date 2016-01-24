@@ -83,24 +83,24 @@ if not(parallelProcessingAvailable) || not(candidateOptions.useParallelProcessin
     elapsedTime = [];
     lastElapsedTime = 0;
     
-    for iLocF = 1:nrFrames %first frame has already been dealt with
+    for iFrame = 1:nrFrames %first frame has already been dealt with
         elapsedTime = toc(startTime);
         
         % Output process every 0.5 seconds
         if( (elapsedTime-lastElapsedTime) > 0.5)
             rewindMessages();
-            rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
-            rewPrintf('TNT: Locating candidates in frame %i/%i\n',iLocF,nrFrames)
+            rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(elapsedTime/iFrame*(nrFrames-iFrame),60)))
+            rewPrintf('TNT: Locating candidates in frame %i/%i\n',iFrame,nrFrames)
             
             lastElapsedTime = elapsedTime;
         end
         
-        img = correctMovie(movieStack(:,:,iLocF));
+        img = correctMovie(movieStack(:,:,iFrame));
         
-        candidateData(iLocF) = {candidateOptions.mainFunc(img,candidateOptions,iLocF)};
+        candidateData(iFrame) = {candidateOptions.mainFunc(img,candidateOptions,iFrame)};
     end
     rewindMessages();
-    rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
+    rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(elapsedTime/iFrame*(nrFrames-iFrame),60)))
 end
 
 % Call plugins post-processing function

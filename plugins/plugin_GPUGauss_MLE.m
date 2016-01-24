@@ -21,7 +21,7 @@ outParamDescription = {'x';'y';'z';'Intens. (integ.)'; 'Background'; 'sigma_x'; 
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Add initial function
-plugin.initFunc = @refineParticles_gpugaussinit;
+plugin.initFunc = @fitPositions_gpugaussinit;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = 'Fit a Gaussian PSF via GPU-MLE fitting. Absolutely requires photon conversion. \nFunction published in Smith et al,NatMet 7,373-375(2010),doi:10.1038/nmeth.1449';
@@ -75,6 +75,9 @@ for iCand = 1:size(candidatePos,1)
     pos = candidatePos(iCand,1:2);
     idx_x = max(1,pos(1)-options.halfWindowSize):min(size(img,2),pos(1)+options.halfWindowSize);
     idx_y = max(1,pos(2)-options.halfWindowSize):min(size(img,1),pos(2)+options.halfWindowSize);
+    if numel(idx_x)~=numel(idx_y)
+        continue; %gaussmlev2 cannot deal with asymmetric fit windows
+    end
     [param,~,~]=gaussmlev2(single(img(idx_y,idx_x)),options.PSFSigma,options.Iterations,options.fitType,options.functionName); %[x,y,z,A,BG,[rest params]]
     fitData(iCand,:) = [param(1:2)+[idx_x(1),idx_y(1)],0,param(3:end)]; %correct position relative to fit window, middle of first pixel is [0,0]
 end
@@ -84,7 +87,7 @@ fitData = fitData(fitData(:,1)>0,:);
 end
 
 
-function [fittingOptions] = refineParticles_gpugaussinit(fittingOptions)
+function [fittingOptions] = fitPositions_gpugaussinit(fittingOptions)
 global globalOptions
 
 if ~globalOptions.usePhotonConversion

@@ -21,8 +21,8 @@ outParamDescription = {'x';'y';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'}
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Additional functions to call before and after main function
-plugin.initFunc = @consolidateOptions;
-plugin.postFunc = @createCalibrationTable;
+plugin.initFunc = @fitPositions_psfFitCeres_consolidateOptions;
+plugin.postFunc = @fitPositions_psfFitCeres_createCalibrationTable;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = ['Calibration version of TNT fitter for obtaining calibration curve.\n\n', ...
@@ -81,7 +81,7 @@ fitData = params(1:end-1,params(end,:)==1).'; %delete exitflag
 
 end
 
-function [fittingOptions] = consolidateOptions(fittingOptions)
+function [fittingOptions] = fitPositions_psfFitCeres_consolidateOptions(fittingOptions)
 
 fittingOptions.varsToFit = [ones(6,1);0]; %don't fit angle
 fittingOptions.halfw = ceil(3*options.PSFsigma);
@@ -194,7 +194,7 @@ if numel(varargin) >= 4;  varargin{4} = logical(varargin{4});  end
 end
 
 
-function [fitData,fittingOptions] = createCalibrationTable(fitData,fittingOptions)
+function [fitData,fittingOptions] = fitPositions_psfFitCeres_createCalibrationTable(fitData,fittingOptions)
 % This function creates a calibration Table [z,sigma_x/sigma_y] from an
 % astigmatic calibration movie where a number of diffraction-limited
 % fluorescent emitters was recorded at different axial positions with a

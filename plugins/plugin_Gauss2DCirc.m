@@ -12,7 +12,7 @@ name = 'Gauss-2D-Circ';
 type = 2;
 
 % The functions this plugin implements
-mainFunc =  @refineParticles_gauss2dcirc;
+mainFunc =  @fitParticles_gauss2dcirc;
 
 % Description of output parameters
 outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
@@ -21,7 +21,7 @@ outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Add initial function
-plugin.initFunc = @refineParticles_gauss2dcirc_init;
+plugin.initFunc = @fitParticles_gauss2dcirc_init;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
 plugin.info = 'Fit PSF by matrix inversion using gauss2dcirc.';
@@ -40,7 +40,7 @@ plugin.add_param('backgroundNoiseLevel',...
 end
 
 
-function [fittingData] = refineParticles_gauss2dcirc(img,candidatePos,options,currentFrame)
+function [fittingData] = fitParticles_gauss2dcirc(img,candidatePos,options,currentFrame)
 % Wrapper function for gauss2dcirc function (see below). Refer to tooltips
 % above and to gauss2dcirc help to obtain information on input and output
 % variables. gauss2dcirc.m was released as part of the following
@@ -82,7 +82,7 @@ fittingData = fittingData(fittingData(:,1)>0,:);
 end
 
 
-function [fittingOptions] = refineParticles_gauss2dcirc_init(fittingOptions)
+function [fittingOptions] = fitParticles_gauss2dcirc_init(fittingOptions)
 
 fittingOptions.windowHalfSize = ceil(3*fittingOptions.PSFSigma);
 

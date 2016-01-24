@@ -97,27 +97,27 @@ if not(parallelProcessingAvailable) || not(fittingOptions.useParallelProcessing)
     lastElapsedTime = 0;
     
     
-    for iLocF = 1:nrFrames %first frame has already been dealt with
+    for iFrame = 1:nrFrames %first frame has already been dealt with
         elapsedTime = toc(startTime);
         
         % Output process every 0.5 seconds
         if( (elapsedTime-lastElapsedTime) > 0.5)
             rewindMessages();
-            rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
-            rewPrintf('TNT: Fitting frame %i/%i\n',iLocF,nrFrames)
+            rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(elapsedTime/iFrame*(nrFrames-iFrame),60)))
+            rewPrintf('TNT: Fitting frame %i/%i\n',iFrame,nrFrames)
             
             lastElapsedTime = elapsedTime;
         end
         
-        img = correctMovie(movieStack(:,:,iLocF));
+        img = correctMovie(movieStack(:,:,iFrame));
         
-        nrCandidates = size(candidateData{iLocF},1);
+        nrCandidates = size(candidateData{iFrame},1);
         if nrCandidates>0
-            fittingData(iLocF) = {fittingOptions.mainFunc(img,candidateData{iLocF},fittingOptions,iLocF)};
+            fittingData(iFrame) = {fittingOptions.mainFunc(img,candidateData{iFrame},fittingOptions,iFrame)};
         end
     end
     rewindMessages();
-    rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iLocF*(nrFrames-iLocF)/60),  floor(mod(elapsedTime/iLocF*(nrFrames-iLocF),60)))
+    rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(elapsedTime/iFrame*(nrFrames-iFrame),60)))
 end
 
 

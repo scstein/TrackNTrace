@@ -12,7 +12,7 @@ name = 'Radial symmetry';
 type = 2;
 
 % The functions this plugin implements
-mainFunc =  @refineParticles_radialsymmetry;
+mainFunc =  @fitParticles_radialsymmetry;
 
 % Description of output parameters
 outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
@@ -37,7 +37,7 @@ plugin.add_param('estimateWidth',...
 end
 
 
-function [fitData] = refineParticles_radialsymmetry(img,candidatePos,options,currentFrame)
+function [fitData] = fitParticles_radialsymmetry(img,candidatePos,options,currentFrame)
 % Wrapper function for radialcenter function (see below). Refer to tooltips
 % above and to radialcenter help to obtain information on input and output
 % variables. radialcenter.m was released as part of the following
