@@ -19,7 +19,7 @@ GUIreturns.globalOptionsChanged = false;
 GUIreturns.candidateOptionsChanged = false;
 GUIreturns.fittingOptionsChanged = false;
 GUIreturns.trackingOptionsChanged  = false;
-GUIreturns.testWindowChanged = false;
+GUIreturns.previewIntervalChanged = false;
 
 % Save options at startup (to check later if options changed)
 globalOptions_atStartup = globalOptions;
@@ -657,7 +657,16 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         GUIreturns.fittingOptionsChanged   = ~isequaln(fittingOptions_atStartup, fittingOptions);
         GUIreturns.trackingOptionsChanged  = ~isequaln(trackingOptions_atStartup, trackingOptions);
         %Check if preview window changed
-        GUIreturns.testWindowChanged = (globalOptions_atStartup.firstFrameTesting ~= globalOptions.firstFrameTesting) || (globalOptions_atStartup.lastFrameTesting ~= globalOptions.lastFrameTesting);
+        GUIreturns.previewIntervalChanged = (globalOptions_atStartup.firstFrameTesting ~= globalOptions.firstFrameTesting) || (globalOptions_atStartup.lastFrameTesting ~= globalOptions.lastFrameTesting);
+        
+        % Check if only change in globalOptions is enableTracking
+        GUIreturns.globalOptionsChanged_ExcludingEnableTracking = false;
+        if GUIreturns.globalOptionsChanged
+            globalOptions_tmp = globalOptions;
+            globalOptions_tmp.enableTracking = globalOptions_atStartup.enableTracking;
+             
+            GUIreturns.globalOptionsChanged_ExcludingEnableTracking = ~isequaln(globalOptions_atStartup, globalOptions_tmp);
+        end
     end
 
 

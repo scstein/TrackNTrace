@@ -113,7 +113,7 @@ for i=1:numel(movie_list)
         % Set same settings for all remaining movies if user said so
         if GUIreturns.useSettingsForAll; globalOptions.previewMode = false; end;
         
-        % If test mode is enabled, analyze first X frames and show GUI
+        % If preview mode is enabled, analyze first X frames and show GUI
         if globalOptions.previewMode
             run_again = true;
             first_run = true;
@@ -128,9 +128,9 @@ for i=1:numel(movie_list)
                     if GUIreturns.useSettingsForAll; globalOptions.previewMode = false; end; %dont go through other movies anymore
                 end
                 
-                if not(globalOptions.previewMode); break; end; % If test mode was disabled by user in the settingsGUI
+                if not(globalOptions.previewMode); break; end; % If preview mode was disabled by user in the settingsGUI
                 % Check if requested frame interval has changed -> re-read movie if neccessary
-                if first_run || GUIreturns.testWindowChanged
+                if first_run || GUIreturns.previewIntervalChanged
                         movie = read_tiff(filename_movie, false, [globalOptions.firstFrameTesting, globalOptions.lastFrameTesting]);
                 end
                 % Check if different dark movie was given
@@ -145,12 +145,11 @@ for i=1:numel(movie_list)
                     filename_dark_movie = globalOptions.filename_dark_movie;
                 end
                 
-                % IF: this is the first run, the preview window changed or the fitting/candidate options changed locate and
-                % track particles and save fittingData. ELSE: reuse fittingData acquired in the last run without re-fitting
-                if first_run || GUIreturns.globalOptionsChanged || GUIreturns.fittingOptionsChanged || GUIreturns.candidateOptionsChanged
-                    [run_again, candidateData_test,fittingData_test] = runPreview(movie,dark_img);
+                % IF: this is the first run perform all steps. ELSE: Reuse unchanged data from the last run
+                if first_run
+                    [run_again, candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img);
                 else
-                    [run_again] = runPreview(movie,dark_img, candidateData_test, fittingData_test);
+                    [run_again, candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img, candidateData_preview, fittingData_preview, trackingData_preview, previewOptions, GUIreturns);
                 end
                 first_run = false;
             end
