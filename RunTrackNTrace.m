@@ -111,24 +111,23 @@ for i=1:numel(movie_list)
         end
         
         % Set same settings for all remaining movies if user said so
-        if GUIreturns.useSettingsForAll; globalOptions.previewMode = false; end;
+        if GUIreturns.useSettingsForAll; GUIreturns.previewMode = false; end;
         
         % If preview mode is enabled, analyze first X frames and show GUI
-        if globalOptions.previewMode
-            run_again = true;
+        if GUIreturns.previewMode
             first_run = true;
             filename_dark_movie = globalOptions.filename_dark_movie;
-            while run_again
+            while true
                 if not(first_run)
                     [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
                     if GUIreturns.userExit;
                         exitFunc();
                         return;
                     end;
-                    if GUIreturns.useSettingsForAll; globalOptions.previewMode = false; end; %dont go through other movies anymore
+                    if GUIreturns.useSettingsForAll; GUIreturns.previewMode = false; end; %dont go through other movies anymore
                 end
                 
-                if not(globalOptions.previewMode); break; end; % If preview mode was disabled by user in the settingsGUI
+                if not(GUIreturns.previewMode); break; end; % If preview mode was disabled by user in the settingsGUI
                 % Check if requested frame interval has changed -> re-read movie if neccessary
                 if first_run || GUIreturns.previewIntervalChanged
                         movie = read_tiff(filename_movie, false, [globalOptions.firstFrameTesting, globalOptions.lastFrameTesting]);
@@ -147,9 +146,9 @@ for i=1:numel(movie_list)
                 
                 % IF: this is the first run perform all steps. ELSE: Reuse unchanged data from the last run
                 if first_run
-                    [run_again, candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img);
+                    [candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img);
                 else
-                    [run_again, candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img, candidateData_preview, fittingData_preview, trackingData_preview, previewOptions, GUIreturns);
+                    [candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img, candidateData_preview, fittingData_preview, trackingData_preview, previewOptions, GUIreturns);
                 end
                 first_run = false;
             end

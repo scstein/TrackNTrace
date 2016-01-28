@@ -1,4 +1,4 @@
-function [run_again, candidateData, fittingData, trackingData, previewOptions] = runPreview(movie,darkImage, candidateData, fittingData,trackingData, previewOptions, GUIreturns)
+function [candidateData, fittingData, trackingData, previewOptions] = runPreview(movie,darkImage, candidateData, fittingData,trackingData, previewOptions, GUIreturns)
 %
 % %read first 50 frames, hopefully this is enough for testing. If a movie is
 % %smaller than that, we're screwed as read_tiff_DEMO doesn't check for movie
@@ -73,9 +73,9 @@ end
 
 %visualize all trajectories
 if globalOptions.enableTracking
-    [hGUI, run_again] = visualizeTracksGUI(movie,trackingData,5,[],[],[],[],true);
+    [hGUI] = visualizeTracksGUI(movie,trackingData,5,[],[],[],[],true);
 else
-    [hGUI, run_again] = visualizeFitDataGUI(movie,fittingData, fittingOptions.outParamDescription, 5,[],true);
+    [hGUI] = visualizeFitDataGUI(movie,fittingData, fittingOptions.outParamDescription, 5,[],true);
 end
 
 % Store options from this preview

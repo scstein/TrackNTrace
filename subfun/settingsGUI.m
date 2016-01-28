@@ -20,6 +20,7 @@ GUIreturns.candidateOptionsChanged = false;
 GUIreturns.fittingOptionsChanged = false;
 GUIreturns.trackingOptionsChanged  = false;
 GUIreturns.previewIntervalChanged = false;
+GUIreturns.previewMode = false;
 
 % Save options at startup (to check later if options changed)
 globalOptions_atStartup = globalOptions;
@@ -43,13 +44,13 @@ set(h_all.button_save, 'Callback', @callback_saveSettings);
 set(h_all.button_load, 'Callback', @callback_loadSettings);
 set(h_all.button_continue, 'Callback',@callback_continue);
 set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
+set(h_all.button_preview, 'Callback', @callback_preview);
 
 % % General options
 % edit_movieList
 % edit_darkMovie
 set(h_all.edit_firstFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrame,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.cbx_previewMode, 'Callback', @callback_updateMainGUIstate);
 set(h_all.edit_firstFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.button_movieList, 'Callback', @callback_selectMovieList);
@@ -229,14 +230,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % Update GUI based on currently set values
 % Note: This does not update the plugins!
     function callback_updateMainGUIstate(hObj, event)
-        % Enable/disable testing fields
-        if get(h_all.cbx_previewMode, 'Value');
-            set(h_all.edit_firstFrameTesting, 'Enable','on');
-            set(h_all.edit_lastFrameTesting, 'Enable','on');
-        else
-            set(h_all.edit_firstFrameTesting, 'Enable','off');
-            set(h_all.edit_lastFrameTesting, 'Enable','off');
-        end
         
         % Enable/disable photon conversion
         if get(h_all.cbx_usePhotonConv, 'Value')
@@ -253,7 +246,13 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if(GUIinputs.singleFileMode)
             set(h_all.edit_movieList,'Enable', 'off');
             set(h_all.button_movieList,'Enable', 'off');
-            %             set(h_all.button_continueForAll, 'Visible','off');
+%             set(h_all.button_continueForAll, 'Visible','off');
+        else
+            set(h_all.button_preview,'Enable', 'off');
+            set(h_all.text_firstFrameTesting,'Enable', 'off');
+            set(h_all.edit_firstFrameTesting,'Enable', 'off');
+            set(h_all.text_lastFrameTesting,'Enable', 'off');
+            set(h_all.edit_lastFrameTesting,'Enable', 'off');
         end
         
         % Enable/disable tracking panel
@@ -366,6 +365,33 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         pos = get(h_all.button_continue, 'Position');
         pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
         set(h_all.button_continue, 'Position',pos);
+        
+        set(h_all.button_preview, 'Units',units);
+        pos = get(h_all.button_preview, 'Position');
+        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        set(h_all.button_preview, 'Position',pos);
+        
+        button_preview_height = pos(4);
+        
+        set(h_all.text_firstFrameTesting, 'Units',units);
+        pos = get(h_all.text_firstFrameTesting, 'Position');
+        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        set(h_all.text_firstFrameTesting, 'Position',pos);
+        
+        set(h_all.edit_firstFrameTesting, 'Units',units);
+        pos = get(h_all.edit_firstFrameTesting, 'Position');
+        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        set(h_all.edit_firstFrameTesting, 'Position',pos);
+        
+        set(h_all.text_lastFrameTesting, 'Units',units);
+        pos = get(h_all.text_lastFrameTesting, 'Position');
+        pos(2) = panel_tracking_pos(2)-button_spacing-button_preview_height;
+        set(h_all.text_lastFrameTesting, 'Position',pos);
+        
+        set(h_all.edit_lastFrameTesting, 'Units',units);
+        pos = get(h_all.edit_lastFrameTesting, 'Position');
+        pos(2) = panel_tracking_pos(2)-button_spacing-button_preview_height;
+        set(h_all.edit_lastFrameTesting, 'Position',pos);
         
         % Rescale window based on last element
         set(h_main,'Units',units);
@@ -605,7 +631,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_darkMovie,'String', globalOptions.filename_dark_movie);
         setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
         setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
-        set(h_all.cbx_previewMode, 'Value', globalOptions.previewMode);
         setNum(h_all.edit_firstFrameTesting, globalOptions.firstFrameTesting, true);
         setNum(h_all.edit_lastFrameTesting, globalOptions.lastFrameTesting, true);
         
@@ -634,7 +659,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         globalOptions.filename_dark_movie = get(h_all.edit_darkMovie,'String');
         globalOptions.firstFrame = getNum(h_all.edit_firstFrame);
         globalOptions.lastFrame =  getNum(h_all.edit_lastFrame);
-        globalOptions.previewMode = get(h_all.cbx_previewMode, 'Value');
         globalOptions.firstFrameTesting = getNum(h_all.edit_firstFrameTesting);
         globalOptions.lastFrameTesting = getNum(h_all.edit_lastFrameTesting);
         
@@ -670,9 +694,16 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
     end
 
 
-% Cleanup function. This is neccessary to delete the timer!
+
     function callback_continue(hObj, event)
         storeOptions(); % Store the options before closing
+        delete(h_main);
+    end
+
+% Cleanup function. This is neccessary to delete the timer!
+    function callback_preview(hObj, event)
+        storeOptions(); % Store the options before closing
+        GUIreturns.previewMode = true;
         delete(h_main);
     end
 

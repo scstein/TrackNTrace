@@ -1,4 +1,4 @@
-function [h_main, run_again] = visualizeTracksGUI(movie, trajectoryData, FPS, traj_lifetime, n_colors, use_bw, traj_displayLength, show_RunAgain)
+function [h_main, run_again] = visualizeTracksGUI(movie, trajectoryData, FPS, traj_lifetime, n_colors, use_bw, traj_displayLength, is_blocking)
 % USAGE: visualizeTracksGUI(movie, trajectoryData)
 % [ Full USAGE: visualizeTracksGUI(movie, trajectoryData, FPS, traj_lifetime, n_colors, use_bw) ]
 %
@@ -18,8 +18,7 @@ function [h_main, run_again] = visualizeTracksGUI(movie, trajectoryData, FPS, tr
 %   use_bw: black/white image, otherwise colormap hot | default: false
 %   trajDisplayLength: Only the positions in the last trajDisplayLength
 %                      frames of each trajectory are shown | default: inf
-%   show_RunAgain: Display run again dialog after closing. Used by tracker
-%                  preview mode.
+%   is_blocking: Blocks MATLAB execution while visualizer is open
 %
 %  Inputs (except movie) can be left empty [] for default values.
 %
@@ -142,7 +141,7 @@ frame = 1;
 
 % In case the RunAgain dialog should be displayed, we stop scripts/functions
 % calling the GUI until the figure is closed
-if(show_RunAgain)
+if(is_blocking)
     uiwait(h_main);
     drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 end
@@ -513,8 +512,8 @@ end
             traj_displayLength = inf;
         end
         
-        if num_argin < 8 || isempty(show_RunAgain)
-            show_RunAgain = false;
+        if num_argin < 8 || isempty(is_blocking)
+            is_blocking = false;
         end
         
     end
@@ -525,34 +524,8 @@ end
             stop(h_all.timer);
         end
         delete(h_all.timer);
-        
-        % Dialog used in preview  mode for getting return values.
-        if show_RunAgain
-            d = dialog('Position',[300 300 220 100],'Name','Run again?','WindowStyle','normal');
-            
-            txt = uicontrol('Parent',d,...
-                'Style','text',...
-                'Position',[5 40 210 40],...
-                'String',sprintf('Run again to adjust settings?'));
-            
-            btn_yes = uicontrol('Parent',d,...
-                'Position',[30 10 70 25],...
-                'String','Yes',...
-                'Callback',@buttonPress);
-            
-            btn_no = uicontrol('Parent',d,...
-                'Position',[120 10 70 25],...
-                'String','No',...
-                'Callback',@buttonPress);
-            run_again = false;
-            uiwait(d);
-        end
+       
         delete(h_main);
-        
-        function buttonPress(hObj, event)
-            run_again = strcmp(get(hObj,'String'),'Yes');
-            delete(d);
-        end
     end
 
 end
