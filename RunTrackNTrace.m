@@ -37,7 +37,7 @@ end
 
 %% Load and adjust the default settings for this batch
 GUIinputs.titleText = 'Please select a list of movies to process.';
-GUIinputs.fileText  = 'Default settings for this batch';
+GUIinputs.fileText  = '<< Default settings >>';
 GUIinputs.singleFileMode = false; % false -> movie list can be edited
 
 [globalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(globalOptions_def, [],[],[], GUIinputs);
