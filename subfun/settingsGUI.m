@@ -55,6 +55,7 @@ set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.button_addMovies, 'Callback', @callback_addMovies);
 set(h_all.button_removeMovie, 'Callback', @callback_removeMovie);
 set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
+% set(h_all.listbox_movieList, 'Callback', @callback_resetValueWhenEmpty);
 
 %Photon conversion
 set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateMainGUIstate);
@@ -467,6 +468,12 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Get current text field to set starting path of uigetfile
         listbox_entries = get(h_all.listbox_movieList,'String');
         
+        % We have to do this, since repopulating a listbox does not
+        % automatically reset its value..
+        if numel(listbox_entries) == 0
+            set(h_all.listbox_movieList,'Value',1);
+        end
+        
         path = [];
         if ~isempty(listbox_entries)
             [path,~,~] = fileparts(listbox_entries{end});
@@ -494,6 +501,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
     function callback_removeMovie(hObj,event)
         selected_entry = get(h_all.listbox_movieList,'Value');
         listbox_entries = get(h_all.listbox_movieList,'String');
+        
+        % When listbox is empty, do nothing
+        if numel(listbox_entries) == 0
+           return; 
+        end
+        
+        % When last selected item is deleted, select the one before it
+        if selected_entry == numel(listbox_entries)
+            set(h_all.listbox_movieList,'Value',selected_entry-1);
+        end
+        
         listbox_entries(selected_entry) = [];
         set(h_all.listbox_movieList,'String',listbox_entries);
     end
@@ -642,13 +660,20 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % (globalOptions, candidateOptions, fittingOptions, trackingOptions)
     function setGUIBasedOnOptions()
         % % General Options
+        
+        % -- Listbox movie list --
+        % We have to reset the listbox value, since repopulating a listbox does not do it automatically..
+        if numel(get(h_all.listbox_movieList,'String')) == 0
+            set(h_all.listbox_movieList,'Value',1);
+        end
         % Convert single file name 'filepath' to cell. Usually filename_movies is always a cell, but the user can set a (char) path 'path' for the default global options.
         if (isempty(globalOptions.filename_movies)) 
             globalOptions.filename_movies = {};
         elseif (ischar(globalOptions.filename_movies))
             globalOptions.filename_movies = {globalOptions.filename_movies}; 
-        end
+        end       
         set(h_all.listbox_movieList,'String', globalOptions.filename_movies);
+        % -- ----------------- --
         
         set(h_all.edit_darkMovie,'String', globalOptions.filename_dark_movie);
         setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
