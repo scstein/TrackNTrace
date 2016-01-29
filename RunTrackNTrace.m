@@ -14,13 +14,13 @@ addRequiredPathsTNT();
 fprintf('Starting Track''N''Trace.\n')
 
 %% Load default options
-[globalOptions_def, TNToptions] = getDefaultOptions(); 
+[globalOptions_def, TNToptions] = getDefaultOptions();
 
 %% Check if parallel processing is available
 global parallelProcessingAvailable
 parallelProcessingAvailable = false;
 
-if TNToptions.enableParallelProcessing   
+if TNToptions.enableParallelProcessing
     try
         nrRunningWorkers = matlabpool('size');
         if(nrRunningWorkers == 0);
@@ -42,8 +42,8 @@ GUIinputs.TNToptions = TNToptions;
 
 [globalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(globalOptions_def, [],[],[], GUIinputs);
 if GUIreturns.userExit;
-    exitFunc()
-    return; 
+    exitFunc();
+    return;
 end;
 
 %% Adjust options for each movie and test settings if desired
@@ -108,7 +108,7 @@ for iMovie=1:numel(movie_list)
                     dark_img = CalculateDark(read_tiff(globalOptions.filename_dark_movie));
                 catch err
                     error('Error when calculating dark image from movie ''%s''.\n  Error: %s',globalOptions.filename_dark_movie,err.message);
-                end                
+                end
             end
         end
         
@@ -132,7 +132,7 @@ for iMovie=1:numel(movie_list)
                 if not(GUIreturns.previewMode); break; end; % If preview mode was disabled by user in the settingsGUI
                 % Check if requested frame interval has changed -> re-read movie if neccessary
                 if first_run || GUIreturns.previewIntervalChanged
-                        movie = read_tiff(filename_movie, false, [globalOptions.firstFrameTesting, globalOptions.lastFrameTesting]);
+                    movie = read_tiff(filename_movie, false, [globalOptions.firstFrameTesting, globalOptions.lastFrameTesting]);
                 end
                 % Check if different dark movie was given
                 if(~strcmp(filename_dark_movie, globalOptions.filename_dark_movie))
@@ -221,39 +221,40 @@ end
 clearGlobals();
 
 %% Add required folders and subfolders to path
-function addRequiredPathsTNT()
-    fullPathToThisFile = mfilename('fullpath');
-    [path,~,~] = fileparts(fullPathToThisFile);
-    addpath(genpath([path,filesep,'external']));
-    addpath(genpath([path,filesep,'helper']));
-    addpath(genpath([path,filesep,'plugins']));
-    addpath(genpath([path,filesep,'subfun']));
-    addpath(genpath([path,filesep,'analysis']));
-end
+    function addRequiredPathsTNT()
+        fullPathToThisFile = mfilename('fullpath');
+        [path,~,~] = fileparts(fullPathToThisFile);
+        addpath(genpath([path,filesep,'external']));
+        addpath(genpath([path,filesep,'helper']));
+        addpath(genpath([path,filesep,'plugins']));
+        addpath(genpath([path,filesep,'subfun']));
+        addpath(genpath([path,filesep,'analysis']));
+    end
 
 %% Cleanup function if something goes wrong
-function exitFunc()
-    warning off backtrace
-    warning(sprintf('User abort. Stopping TrackNTrace. Deleting settings files that have been saved already.'));
-    warning on backtrace
-    
-    % Remove TNTdata files
-    for iTNTfile = 1:numel(list_filenames_TNTdata)
-       if exist(list_filenames_TNTdata{iTNTfile},'file')
-           delete(list_filenames_TNTdata{iTNTfile});
-       end
+    function exitFunc()
+        % Remove TNTdata files
+        if exist('list_filenames_TNTdata','var')
+            warning off backtrace
+            warning('User abort. Stopping TrackNTrace. Deleting settings files that have been saved already.');
+            warning on backtrace
+            for iTNTfile = 1:numel(list_filenames_TNTdata)
+                if exist(list_filenames_TNTdata{iTNTfile},'file')
+                    delete(list_filenames_TNTdata{iTNTfile});
+                end
+            end
+        end
+        
+        if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
+            matlabpool('close');
+        end
+        clearGlobals();
     end
-    
-    if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
-        matlabpool('close');
-    end
-    clearGlobals();
-end
 
 % Clear all global variables
-function clearGlobals()
-    clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection parallelProcessingAvailable;
-end
+    function clearGlobals()
+        clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection parallelProcessingAvailable;
+    end
 end
 
 
