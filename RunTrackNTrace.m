@@ -158,7 +158,7 @@ for iMovie=1:numel(movie_list)
         
     end %not( GUIreturns.useSettingsForAll )
     
-    if GUIreturns.useSettingsForAll
+    if GUIreturns.useSettingsForAll || TNToptions.rememberSettingsForNextMovie
         globalOptions_def = globalOptions;
         candidateOptions_def = candidateOptions;
         fittingOptions_def = fittingOptions;
