@@ -63,10 +63,12 @@ timestamp = sprintf('%i-m%02i-d%02i-%02ih%i',time(1),time(2),time(3),time(4),tim
 
 % Iterate through all movies in the list
 posFit_list = cell(0);
-for i=1:numel(movie_list)
-    filename_movie = movie_list{i};
+list_filenames_TNTdata = cell(0);
+for iMovie=1:numel(movie_list)
+    filename_movie = movie_list{iMovie};
     [path,filename,~] = fileparts(filename_movie);
-    filename_fittingData = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
+    filename_TNTdata = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
+    list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; % Append name of datafile to list
     
     % Check if movie can be read
     if(~isempty(filename_movie))
@@ -167,19 +169,19 @@ for i=1:numel(movie_list)
     % Save options
     globalOptions.filename_movies = {filename_movie}; % Save only name of this file in its settings (important when loading options)
     
-    save(filename_fittingData,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
+    save(filename_TNTdata,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
     if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
-        save(filename_fittingData,'trackingOptions','-append');
+        save(filename_TNTdata,'trackingOptions','-append');
     end
-    posFit_list = [posFit_list;{filename_fittingData}]; %#ok<AGROW>
+    posFit_list = [posFit_list;{filename_TNTdata}]; %#ok<AGROW>
 end
 clearvars -except posFit_list
 
 %% Candidate detection and fitting for every movie
-for i=1:numel(posFit_list)
-    filename_fittingData = posFit_list{i};
+for iMovie=1:numel(posFit_list)
+    filename_TNTdata = posFit_list{iMovie};
     
-    load(filename_fittingData,'-mat');
+    load(filename_TNTdata,'-mat');
     
     % Read movie
     movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
@@ -191,28 +193,28 @@ for i=1:numel(posFit_list)
     % Save positions and movieSize, update globalOptions.lastFrame
     globalOptions.lastFrame = globalOptions.firstFrame + size(movie,3)-1; % lastFrame could have been set to 'inf', now we synchronize with the correct number
     movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
-    save(filename_fittingData,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','-append');
+    save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','-append');
 end
 clearvars -except posFit_list
 
 %% Compute trajectories for every movie
-for i=1:numel(posFit_list)
+for iMovie=1:numel(posFit_list)
     
     % Load global options to check if tracking is desired (skip movie if it is not)
-    load(posFit_list{i},'globalOptions');
+    load(posFit_list{iMovie},'globalOptions');
     if (~globalOptions.enableTracking)
         continue
     end
     
     % Load options and data needed for processing
-    load(posFit_list{i},'trackingOptions','fittingData','filename_movie');
+    load(posFit_list{iMovie},'trackingOptions','fittingData','filename_movie');
     
     % Compute trajectories
     fprintf('######\nTNT: Tracking particles in movie %s.\n',filename_movie);
     [trackingData, trackingOptions] = trackParticles(fittingData,trackingOptions); %#ok<ASGLU>
     
     %Save trajectories
-    save(posFit_list{i},'trackingData','trackingOptions','-append');
+    save(posFit_list{iMovie},'trackingData','trackingOptions','-append');
 end
 
 % Clear globals
@@ -232,8 +234,16 @@ end
 %% Cleanup function if something goes wrong
 function exitFunc()
     warning off backtrace
-    warning(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.'));
+    warning(sprintf('User abort. Stopping TrackNTrace. Deleting settings files that have been saved already.'));
     warning on backtrace
+    
+    % Remove TNTdata files
+    for iTNTfile = 1:numel(list_filenames_TNTdata)
+       if exist(list_filenames_TNTdata{iTNTfile},'file')
+           delete(list_filenames_TNTdata{iTNTfile});
+       end
+    end
+    
     if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
         matlabpool('close');
     end
