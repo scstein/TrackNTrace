@@ -190,10 +190,10 @@ for iMovie=1:numel(posFit_list)
     [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
     [fittingData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
     
-    % Save positions and movieSize, update globalOptions.lastFrame
-    globalOptions.lastFrame = globalOptions.firstFrame + size(movie,3)-1; % lastFrame could have been set to 'inf', now we synchronize with the correct number
+    % Save positions, movieSize, and index of first and last frame processed
+    firstFrame_lastFrame = [globalOptions.firstFrame,  globalOptions.firstFrame + size(movie,3)-1];  %#ok<NASGU> % Note: lastFrame could have been set to 'inf', now we synchronize with the correct number
     movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
-    save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','-append');
+    save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','firstFrame_lastFrame','-append');
 end
 clearvars -except posFit_list
 
