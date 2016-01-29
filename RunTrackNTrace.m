@@ -166,7 +166,11 @@ for i=1:numel(movie_list)
     
     % Save options
     globalOptions.filename_movies = {filename_movie}; % Save only name of this file in its settings (important when loading options)
-    save(filename_fittingData,'filename_movie','globalOptions','candidateOptions','fittingOptions','trackingOptions','dark_img');
+    
+    save(filename_fittingData,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
+    if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
+        save(filename_fittingData,'trackingOptions','-append');
+    end
     posFit_list = [posFit_list;{filename_fittingData}]; %#ok<AGROW>
 end
 clearvars -except posFit_list
@@ -193,12 +197,15 @@ clearvars -except posFit_list
 
 %% Compute trajectories for every movie
 for i=1:numel(posFit_list)
-    load(posFit_list{i},'globalOptions','trackingOptions','fittingData','filename_movie');
     
-    % If no tracking is desired for this movie, continue
+    % Load global options to check if tracking is desired (skip movie if it is not)
+    load(posFit_list{i},'globalOptions');
     if (~globalOptions.enableTracking)
         continue
     end
+    
+    % Load options and data needed for processing
+    load(posFit_list{i},'trackingOptions','fittingData','filename_movie');
     
     % Compute trajectories
     fprintf('######\nTNT: Tracking particles in movie %s.\n',filename_movie);
