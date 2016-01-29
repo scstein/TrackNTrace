@@ -1,9 +1,12 @@
-function imgdata = read_tiff(filename, convert2double, minmax_frame)
+function imgdata = read_BigTiff(filename, convert2double, minmax_frame)
 % Usage: imgdata = read_tiff(filename, convert2double, minmax_frame)
 %
 % Loads an image or image stack from a Tiff file. It possible to read only
 % a specified part of the file. File can be read in their original format
 % (instead of converting to double).
+%
+% For reading files larger then 4GB. Implementation is somewhat shaky, reads ONLY 16-bit uint format at this point
+% and will probabably not work for all Tiff files, but many imageJ files should work.
 %
 % Input:
 %   filename: Tiff file to read
@@ -39,69 +42,51 @@ if strcmp(ext, '.tif') == 0
     filename = [filename '.tif'];
 end
 
-% Check if file is larger then 3.9GB
-fileinfo = dir(filename);
-if( (fileinfo.bytes/(1024*1024*1024) ) > 3.9)
-    warning off backtrace
-    warning('Reading image file > 3.9GB. Switching to read_BigTiff (unstable).');
-    warning on backtrace
-    imgdata = read_BigTiff(filename,convert2double,minmax_frame);
-    return;
+iminfo = imfinfo(filename);
+if(numel(iminfo)>1)
+   error('Expected only one tiff directory description for files > 4GB.')  
 end
-
-try
-    warning('off','all');
-    t = Tiff(filename,'r');
-catch err
-    warning('on','all');
-    rethrow(err);
+if( ~strcmp(iminfo.Format,'tif'))
+   error('File is not a tiff file.') 
 end
-cleanupTrigger = onCleanup(@() cleanupFunc(t));
+nrFramesOfFile = floor( (iminfo.FileSize-iminfo.StripOffsets)/iminfo.StripByteCounts);
 
 
 % -- Extract header information --
-rows = t.getTag('ImageLength'); % 1
-cols = t.getTag('ImageWidth'); % 2
-% t.getTag('ImageDepth'); % what is this for?
+rows = iminfo.Height; % 1
+cols = iminfo.Width; % 2
 
-bitdepth = t.getTag('BitsPerSample');
-sampleFormat = t.getTag('SampleFormat');
-samplesPerPixel = t.getTag('SamplesPerPixel'); % TODO: For multichannel Tiff. Reading not supported here atm.
+bitdepth = iminfo.BitsPerSample;
+if(bitdepth ~= 16)
+   error('For movies>4GB only uint16 format is supported at the moment.');
+end
+
+sampleFormat = Tiff.SampleFormat.UInt; % Assume Format is 16bit uing ...  
+samplesPerPixel = iminfo.SamplesPerPixel; % TODO: For multichannel Tiff. Reading not supported here atm.
 if samplesPerPixel > 1
     warning(' Multichannel Tiff not supported! Reading first channel..');
 end
 
 
-% -- Count number of frames for pre-allocation --
-warning('on','all');
-not(t.lastDirectory); % this forces the Tiff object to read the first frames tag data and check for errors.
-warning('off','all');
-
-% If no interval was given, determine number of frames and read whole file
+% If no interval was given,read whole file
 if isempty(minmax_frame)
-        % Count number of frames in tiff file
-        while not(t.lastDirectory)
-            t.nextDirectory;
-        end
-        last_frame = t.currentDirectory;
-        minmax_frame = [1, last_frame];
+        minmax_frame = [1, nrFramesOfFile];
 % If one number was given, treat as maxframe
 elseif numel(minmax_frame)==1 
         minmax_frame = [1,minmax_frame];
-% If maxframe is 0, start at minframe and count to end of file
-elseif (numel(minmax_frame)==2) && (minmax_frame(2) == inf)
-    try
-        t.setDirectory(minmax_frame(1));
-    catch err
-        error('Minimum frame cannot be read. Movie shorter than minframe?')
+% If maxframe is inf, start at minframe and count to end of file
+elseif (numel(minmax_frame)==2) 
+    if (minmax_frame(1) > nrFramesOfFile) 
+       error('Requesting to read from frame %i in a file with %i frames total.',minmax_frame(1), nrFramesOfFile) 
     end
     
-    % Count number of frames from minframe to end of file
-    while not(t.lastDirectory)
-        t.nextDirectory;
+    if (minmax_frame(2) == inf)
+        minmax_frame(2) = nrFramesOfFile;
     end
-    last_frame = t.currentDirectory;
-    minmax_frame = [minmax_frame(1), last_frame];
+    
+    if (minmax_frame(2) > nrFramesOfFile) 
+       warning('Requesting to read until frame %i in a file with %i frames total. Reading to end of file',minmax_frame(2), nrFramesOfFile) 
+    end
 end
 % nr_frames
 nr_frames = minmax_frame(2)-minmax_frame(1)+1;
@@ -151,15 +136,26 @@ fprintf('%sRows: %i\n',spacing,rows)
 fprintf('%sColumns: %i\n',spacing,cols)
 fprintf('%sMax Frame: %i\n',spacing,nr_frames)
 fprintf('%sBitdepth: %i\n',spacing,bitdepth)
-fprintf('%sDatatype: %s\n',spacing,sampleFormatName)
+fprintf('%s!!Assumed!! datatype: %s\n',spacing,sampleFormatName)
+
+switch(iminfo.ByteOrder)
+    case 'big-endian'
+        machineformat = 'ieee-be';
+    case 'little-endian'
+        machineformat = 'ieee-le';
+    otherwise
+        error('Unknown ByteOrder:%s',iminfo.ByteOrder)
+end
 
 
 %  -- Rewind to the first frame that should be read --
-try
-   t.setDirectory(minmax_frame(1));
-catch err
-    error('Minimum frame cannot be read. Movie shorter than minframe?')
-end
+bytesPerFrame = iminfo.StripByteCounts;
+
+fID = fopen(filename,'r',machineformat);
+fseek(fID, iminfo.StripOffsets, 'bof'); % Skip offset
+fseek(fID, (minmax_frame(1)-1)*bytesPerFrame, 'cof'); % Skip to the first frame to read
+
+
 msgAccumulator = ''; % needed for one-line printing
 
 % -- read rest of the stack --
@@ -173,24 +169,9 @@ for iFrame = 1:nr_frames
         rewPrintf('\nReading Frame %i/%i ..',iFrame, nr_frames);
         lastElapsedTime = elapsedTime;
     end
-    imgdata(:,:,iFrame) = t.read();
-    
-    % Check if the last frame has been reached
-    if (t.lastDirectory && iFrame ~= nr_frames)
-       nr_frames = iFrame;
-       imgdata = imgdata(:,:,1:nr_frames); 
-       
-       % warning output
-       warning('on','all');       
-       fprintf('\n >> WARNING <<: File has less frames than specified. Read %i frames.\n',nr_frames);
-       rewPrintf('\n >> WARNING <<: File has less frames than specified. Read %i frames.\n',nr_frames); % output twice to prevent warning deleted by rewindMessages()               
-       break;
-    end
-    
-    if ~(iFrame == nr_frames)
-        t.nextDirectory;
-    end
+    imgdata(:,:,iFrame) = fread(fID, [rows,cols], '*uint16', 0, machineformat)';
 end
+fclose(fID);
 rewindMessages()
 rewPrintf('\nReading Frame %i/%i .. done\n',nr_frames, nr_frames);
 
@@ -221,5 +202,6 @@ function cleanupFunc(t)
 %     fprintf('\n')
 t.close;
 warning('on','all'); % Restore warnings
+status = fclose(fID);
 %     fprintf('\nUSER EXIT');
 end
