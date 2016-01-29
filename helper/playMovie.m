@@ -29,6 +29,7 @@ set(h_main,'handleVisibility','on'); % Make figure visible to Matlab (might not 
 set(h_main,'CloseRequestFcn',@onAppClose); % For cleanup
 set(h_main,'Toolbar','figure'); % Toolbar needed for zooming
 set(h_main, 'DoubleBuffer', 'on') % Helps against flickering
+movegui(h_main,'center');
 
 h_all = guihandles(h_main);
 axes(h_all.axes);

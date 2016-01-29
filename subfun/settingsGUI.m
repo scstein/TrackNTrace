@@ -47,13 +47,13 @@ set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
 set(h_all.button_preview, 'Callback', @callback_preview);
 
 % % General options
-% edit_movieList
 % edit_darkMovie
 set(h_all.edit_firstFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_firstFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.button_movieList, 'Callback', @callback_selectMovieList);
+set(h_all.button_addMovies, 'Callback', @callback_addMovies);
+set(h_all.button_removeMovie, 'Callback', @callback_removeMovie);
 set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
 
 %Photon conversion
@@ -98,11 +98,13 @@ else
     loadPlugins();
     warning on;
 end
+movegui(h_main,'center');
 
 % % GUI main
 setGUIBasedOnOptions();
 uiwait(h_main);
 drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
+
 
 % Load plugins from the plugins folder
 % Note: This loads the plugin data, but does not build their panels
@@ -110,7 +112,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         fullPathToThisFile = mfilename('fullpath');
         [folderPath,~,~] = fileparts(fullPathToThisFile);
         plugin_files = dir([folderPath filesep '..' filesep 'plugins' filesep 'plugin_*.m']);
-%         plugin_files = plugin_files(~cellfun(@(var) strcmp(var,'plugin_default.m'), {plugin_files(:).name}).');
+        %         plugin_files = plugin_files(~cellfun(@(var) strcmp(var,'plugin_default.m'), {plugin_files(:).name}).');
         nr_plugins = numel(plugin_files);
         
         for iPlug = 1:nr_plugins
@@ -244,9 +246,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         % In single file mode we disable choosing the movie list
         if(GUIinputs.singleFileMode)
-            set(h_all.edit_movieList,'Enable', 'off');
-            set(h_all.button_movieList,'Enable', 'off');
-%             set(h_all.button_continueForAll, 'Visible','off');
+            set(h_all.listbox_movieList,'Enable', 'off');
+            set(h_all.button_addMovies,'Enable', 'off');
+            set(h_all.button_removeMovie,'Enable', 'off');
+            %             set(h_all.button_continueForAll, 'Visible','off');
         else
             set(h_all.button_preview,'Enable', 'off');
             set(h_all.text_firstFrameTesting,'Enable', 'off');
@@ -460,27 +463,39 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
 % Opens a file chooser dialog to choose multiple input (movie) files
 % for processing. Note: filenames will be seperated by ';'
-    function callback_selectMovieList(hObj,event)
+    function callback_addMovies(hObj,event)
         % Get current text field to set starting path of uigetfile
-        movieListString = get(h_all.edit_movieList,'String');
+        listbox_entries = get(h_all.listbox_movieList,'String');
+        
         path = [];
-        if ~isempty(movieListString)
-            movieList = strsplit(movieListString,';');
-            [path,~,~] = fileparts(movieList{1});
+        if ~isempty(listbox_entries)
+            [path,~,~] = fileparts(listbox_entries{end});
         end
         [movieList, path] = uigetfile([path,filesep,'*.tif'],'MultiSelect','on');
         if( isfloat(movieList) ); return; end; % User pressed cancel.
         
-        % atach path to every entry in the list
+        % atach path to every entry in the list then add to listbox
         if iscell(movieList)
             for i=1:length(movieList)
                 movieList{i} =  [path,movieList{i}];
             end
+            % Add to listbox
+            listbox_entries = [listbox_entries; movieList.'];
         elseif ischar(movieList)
             movieList = [path,movieList];
+            % Add to listbox
+            listbox_entries = [listbox_entries; {movieList}];
         end
         
-        set(h_all.edit_movieList,'String',cell2str(movieList));
+        set(h_all.listbox_movieList,'String',listbox_entries);
+    end
+
+% Remove a movie from the movie list
+    function callback_removeMovie(hObj,event)
+        selected_entry = get(h_all.listbox_movieList,'Value');
+        listbox_entries = get(h_all.listbox_movieList,'String');
+        listbox_entries(selected_entry) = [];
+        set(h_all.listbox_movieList,'String',listbox_entries);
     end
 
 % Opens a file chooser dialog to select the dark movie
@@ -627,7 +642,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % (globalOptions, candidateOptions, fittingOptions, trackingOptions)
     function setGUIBasedOnOptions()
         % % General Options
-        set(h_all.edit_movieList,'String', cell2str(globalOptions.filename_movies));
+        % Convert single file name 'filepath' to cell. Usually filename_movies is always a cell, but the user can set a (char) path 'path' for the default global options.
+        if (isempty(globalOptions.filename_movies)) 
+            globalOptions.filename_movies = {};
+        elseif (ischar(globalOptions.filename_movies))
+            globalOptions.filename_movies = {globalOptions.filename_movies}; 
+        end
+        set(h_all.listbox_movieList,'String', globalOptions.filename_movies);
+        
         set(h_all.edit_darkMovie,'String', globalOptions.filename_dark_movie);
         setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
         setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
@@ -655,7 +677,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % options structs have changed compared to the startup values.
     function storeOptions()
         % % General Options
-        globalOptions.filename_movies = strsplit(get(h_all.edit_movieList,'String'), ';');
+        globalOptions.filename_movies = get(h_all.listbox_movieList,'String');
         globalOptions.filename_dark_movie = get(h_all.edit_darkMovie,'String');
         globalOptions.firstFrame = getNum(h_all.edit_firstFrame);
         globalOptions.lastFrame =  getNum(h_all.edit_lastFrame);
@@ -688,7 +710,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if GUIreturns.globalOptionsChanged
             globalOptions_tmp = globalOptions;
             globalOptions_tmp.enableTracking = globalOptions_atStartup.enableTracking;
-             
+            
             GUIreturns.globalOptionsChanged_ExcludingEnableTracking = ~isequaln(globalOptions_atStartup, globalOptions_tmp);
         end
     end
