@@ -14,14 +14,13 @@ addRequiredPathsTNT();
 fprintf('Starting Track''N''Trace.\n')
 
 %% Load default options
-[globalOptions_def] = getDefaultGlobalOptions(); 
+[globalOptions_def, TNToptions] = getDefaultOptions(); 
 
 %% Check if parallel processing is available
 global parallelProcessingAvailable
 parallelProcessingAvailable = false;
-closeMatlabpoolOnExit = globalOptions_def.closeMatlabpoolOnExit ;
 
-if globalOptions_def.enableParallelProcessing    
+if TNToptions.enableParallelProcessing   
     try
         nrRunningWorkers = matlabpool('size');
         if(nrRunningWorkers == 0);
@@ -39,6 +38,7 @@ end
 GUIinputs.titleText = 'Please select a list of movies to process.';
 GUIinputs.fileText  = '<< Default settings >>';
 GUIinputs.singleFileMode = false; % false -> movie list can be edited
+GUIinputs.TNToptions = TNToptions;
 
 [globalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(globalOptions_def, [],[],[], GUIinputs);
 if GUIreturns.userExit;
@@ -227,7 +227,7 @@ function exitFunc()
     warning off backtrace
     warning(sprintf('User abort. Stopping TrackNTrace.\nDelete unwanted settings files that might have been saved already.'));
     warning on backtrace
-    if parallelProcessingAvailable && closeMatlabpoolOnExit
+    if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
         matlabpool('close');
     end
     clearGlobals();

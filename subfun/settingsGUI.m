@@ -175,7 +175,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
                 error('Plugin ''%s'' not found.',candidateOptions.plugin_name) ;
             end
         else
-            selected_candidate_plugin = 1;
+            % Select the default plugin if it is found
+            default_plugin_index = strfind({candidate_plugins(:).name},GUIinputs.TNToptions.defaultCandidatePlugin);
+            default_plugin_index = find(~cellfun(@isempty,default_plugin_index));
+            if isempty(default_plugin_index)
+                warning off backtrace
+                warning('Default candidate plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultCandidatePlugin);
+                warning on backtrace
+                selected_candidate_plugin = 1;
+            else
+                selected_candidate_plugin = default_plugin_index;
+            end
         end
         
         % Fitting
@@ -192,7 +202,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
                 error('Plugin ''%s'' not found.',fittingOptions.plugin_name) ;
             end
         else
-            selected_fitting_plugin = 1;
+            % Select the default plugin if it is found
+            default_plugin_index = strfind({fitting_plugins(:).name},GUIinputs.TNToptions.defaultFittingPlugin);
+            default_plugin_index = find(~cellfun(@isempty,default_plugin_index));
+            if isempty(default_plugin_index)
+                warning off backtrace
+                warning('Default fitting plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultFittingPlugin);
+                warning on backtrace
+                selected_fitting_plugin = 1;
+            else
+                selected_fitting_plugin = default_plugin_index;
+            end
         end
         
         % Tracking
@@ -209,7 +229,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
                 error('Plugin ''%s'' not found.',trackingOptions.plugin_name) ;
             end
         else
-            selected_tracking_plugin = 1;
+            % Select the default plugin if it is found
+            default_plugin_index = strfind({tracking_plugins(:).name},GUIinputs.TNToptions.defaultTrackingPlugin);
+            default_plugin_index = find(~cellfun(@isempty,default_plugin_index));
+            if isempty(default_plugin_index)
+                warning off backtrace
+                warning('Default tracking plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultTrackingPlugin);
+                warning on backtrace
+                selected_tracking_plugin = 1;
+            else
+                selected_tracking_plugin = default_plugin_index;
+            end
         end
         
         % Set popups to correct plugin name

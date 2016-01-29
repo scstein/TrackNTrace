@@ -1,4 +1,4 @@
-function [globalOptions] = getDefaultGlobalOptions()
+function [globalOptions, TNToptions] = getDefaultOptions()
 % [globalOptions] = getDefaultGlobalOptions 
 % 
 % Set default options for TrackNTrace program and return them
@@ -8,10 +8,16 @@ function [globalOptions] = getDefaultGlobalOptions()
 %     globalOptions: struct containing general options (filename,
 %     processing modes etc.)
 
-% General Options
-globalOptions.enableParallelProcessing = true;
-globalOptions.closeMatlabpoolOnExit = false;
 
+% TNT internal options, these have nothing to do with the movie and are not
+% saved along the other options
+TNToptions.enableParallelProcessing = true;
+TNToptions.closeMatlabpoolOnExit = false;
+TNToptions.defaultCandidatePlugin = 'Cross correlation';
+TNToptions.defaultFittingPlugin = 'TNT Fitter';
+TNToptions.defaultTrackingPlugin = 'TNT NearestNeighbor';
+
+% General Options of the GUI
 globalOptions.filename_movies = ''; % This directory is chosen as startup when clicking to select movies
 globalOptions.filename_dark_movie = ''; % This directory is chosen as startup when clicking to select a movie
 globalOptions.previewMode = true; %enable/disable testMode by setting true/false.
