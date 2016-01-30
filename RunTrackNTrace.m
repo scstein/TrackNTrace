@@ -35,21 +35,18 @@ if TNToptions.enableParallelProcessing
 end
 
 %% Load and adjust the default settings for this batch
-GUIinputs.titleText = 'Please select a list of movies to process.';
-GUIinputs.fileText  = '<< Default settings >>';
-GUIinputs.singleFileMode = false; % false -> movie list can be edited
-GUIinputs.TNToptions = TNToptions;
-
-[globalOptions_def, candidateOptions_def,fittingOptions_def,trackingOptions_def, GUIreturns] = settingsGUI(globalOptions_def, [],[],[], GUIinputs);
+[movie_list, globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = startupGUI();
+if(isempty(globalOptions))
+    globalOptions = globalOptions_def;
+end;
 if GUIreturns.userExit;
     exitFunc();
     return;
 end;
 
 %% Adjust options for each movie and test settings if desired
-GUIinputs.singleFileMode = true; % No editing of movie list possible
-
-movie_list = globalOptions_def.filename_movies;
+GUIinputs.TNToptions = TNToptions;
+GUIinputs.showStartupInformation = true;
 
 % Calculate default dark image if given
 dark_img_def = [];
@@ -62,6 +59,8 @@ time = clock;
 timestamp = sprintf('%i-m%02i-d%02i-%02ih%i',time(1),time(2),time(3),time(4),time(5));
 
 % Iterate through all movies in the list
+GUIreturns.useSettingsForAll = false;
+
 posFit_list = cell(0);
 list_filenames_TNTdata = cell(0);
 for iMovie=1:numel(movie_list)
@@ -82,20 +81,16 @@ for iMovie=1:numel(movie_list)
         continue;
     end
     
-    % Set options to default for this movie
-    globalOptions = globalOptions_def;
-    candidateOptions = candidateOptions_def;
-    fittingOptions = fittingOptions_def;
-    trackingOptions = trackingOptions_def;
+    % Set dark image to default for this movie
     dark_img = dark_img_def;
     
     % Does the user want to adjust the settings per movie?
     if not(  GUIreturns.useSettingsForAll )
-        % Show filename in GUI
-        GUIinputs.fileText = filename_movie;
+        % Give file to adjust settings for to GUI
+        GUIinputs.filename_movie = filename_movie;
         
-        GUIinputs.titleText = 'Adjust movie specific options.';
         [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+        GUIinputs.showStartupInformation = false; % Only show this on first startup
         if GUIreturns.userExit;
             exitFunc(); % Cleanup
             return;
@@ -157,23 +152,23 @@ for iMovie=1:numel(movie_list)
         end
         
     end %not( GUIreturns.useSettingsForAll )
-    
-    if GUIreturns.useSettingsForAll || TNToptions.rememberSettingsForNextMovie
-        globalOptions_def = globalOptions;
-        candidateOptions_def = candidateOptions;
-        fittingOptions_def = fittingOptions;
-        trackingOptions_def = trackingOptions;
-        dark_img_def = dark_img;
-    end
-    
-    % Save options
-    globalOptions.filename_movies = {filename_movie}; % Save only name of this file in its settings (important when loading options)
-    
+        
+    % Save options    
     save(filename_TNTdata,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
     if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
         save(filename_TNTdata,'trackingOptions','-append');
     end
     posFit_list = [posFit_list;{filename_TNTdata}]; %#ok<AGROW>
+    
+    
+    if not(GUIreturns.useSettingsForAll || TNToptions.rememberSettingsForNextMovie)
+        globalOptions    = [];
+        candidateOptions = [];
+        fittingOptions   = [];
+        trackingOptions  = [];
+    else
+        dark_img_def = dark_img;
+    end
 end
 clearvars -except posFit_list
 

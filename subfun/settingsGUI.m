@@ -5,12 +5,8 @@ function [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIret
 % Date: 2015
 %
 
-% struct for communication of the outside world to the GUI
-if nargin < 5 || isempty(GUIinputs)
-    GUIinputs.titleText = '';
-    GUIinputs.fileText = '';
-    GUIinputs.singleFileMode = false;
-end
+titleText = 'Adjust options for movie:';
+filename_movie = GUIinputs.filename_movie; % The movie we edit settings for
 
 % struct for communication of the GUI to the outside world
 GUIreturns.useSettingsForAll = false;
@@ -37,9 +33,10 @@ set(h_main,'CloseRequestFcn',@onAppClose); % For cleanup
 h_all = guihandles(h_main);
 
 % Setup GUI specific elements
-set(h_all.text_title, 'String', GUIinputs.titleText);
-[~, filename, fileext] = fileparts(GUIinputs.fileText);
-set(h_all.edit_title, 'String', [filename,fileext]);
+set(h_all.text_title, 'String', titleText);
+[~, fname,extension] = fileparts(filename_movie);
+set(h_all.edit_title, 'String', [fname,extension]);
+set(h_all.edit_title,'Tooltip',filename_movie);
 set(h_all.button_save, 'Callback', @callback_saveSettings);
 set(h_all.button_load, 'Callback', @callback_loadSettings);
 set(h_all.button_continue, 'Callback',@callback_continue);
@@ -52,10 +49,7 @@ set(h_all.edit_firstFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_firstFrameTesting,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.button_addMovies, 'Callback', @callback_addMovies);
-set(h_all.button_removeMovie, 'Callback', @callback_removeMovie);
 set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
-% set(h_all.listbox_movieList, 'Callback', @callback_resetValueWhenEmpty);
 
 %Photon conversion
 set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateMainGUIstate);
@@ -90,7 +84,7 @@ selected_fitting_plugin = -1;
 selected_tracking_plugin = -1;
 
 % Load the plugins
-if ~GUIinputs.singleFileMode % Show warnings only on startup
+if GUIinputs.showStartupInformation % Show warnings only on startup
     fprintf('TNT: Loading plugins ...\n')
     loadPlugins();
     fprintf('TNT: Successfully imported %i plugins (%i candidate detection, %i fitting, %i tracking).\n',numel(candidate_plugins)+numel(fitting_plugins)+numel(tracking_plugins),numel(candidate_plugins),numel(fitting_plugins),numel(tracking_plugins));
@@ -274,20 +268,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.edit_photonSensitivity, 'Enable','off');
             set(h_all.edit_photonGain, 'Enable','off');
         end
-        
-        % In single file mode we disable choosing the movie list
-        if(GUIinputs.singleFileMode)
-            set(h_all.listbox_movieList,'Enable', 'off');
-            set(h_all.button_addMovies,'Enable', 'off');
-            set(h_all.button_removeMovie,'Enable', 'off');
-            %             set(h_all.button_continueForAll, 'Visible','off');
-        else
-            set(h_all.button_preview,'Enable', 'off');
-            set(h_all.text_firstFrameTesting,'Enable', 'off');
-            set(h_all.edit_firstFrameTesting,'Enable', 'off');
-            set(h_all.text_lastFrameTesting,'Enable', 'off');
-            set(h_all.edit_lastFrameTesting,'Enable', 'off');
-        end
+              
         
         % Enable/disable tracking panel
         if get(h_all.cbx_enableTracking, 'Value')
@@ -463,87 +444,35 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if isfloat(outfile); return; end; % User clicked cancel
         
         outfile = [path,outfile];
-        save(outfile,'globalOptions', 'candidateOptions','fittingOptions','trackingOptions');
+        save(outfile,'filename_movie','globalOptions', 'candidateOptions','fittingOptions');
+        if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
+            save(outfile,'trackingOptions','-append');
+        end
     end
 
 % Load settings from a file
-    function callback_loadSettings(hObj,event)
-        % In single file mode, the list of movies to process should not be
-        % changed, we store it and restore after loading the settings
-        if(GUIinputs.singleFileMode)
-            filename_movies = globalOptions.filename_movies;
-        end
+    function callback_loadSettings(hObj,event)   
+        % Note: we don't load the filename of the movie, as this should be
+        % unchanged when loading settings.
         
         [infile, path] = uigetfile('.mat');
         if isfloat(infile);
             return;
         end; % User clicked cancel
+        
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
+        warning off % We turn warnings off, as trackingOptions might not exist
         allOptions = load([path,infile],'globalOptions', 'candidateOptions','fittingOptions','trackingOptions');
+        warning on
         globalOptions   = allOptions.globalOptions;
-        if(GUIinputs.singleFileMode)
-            globalOptions.filename_movies = filename_movies;
-        end
         candidateOptions = allOptions.candidateOptions;
         fittingOptions   = allOptions.fittingOptions;
-        trackingOptions  = allOptions.trackingOptions;
+        if isfield(allOptions,'trackingOptions')
+            trackingOptions  = allOptions.trackingOptions;
+        end
         
         setGUIBasedOnOptions();
-    end
-
-% Opens a file chooser dialog to choose multiple input (movie) files
-% for processing. Note: filenames will be seperated by ';'
-    function callback_addMovies(hObj,event)
-        % Get current text field to set starting path of uigetfile
-        listbox_entries = get(h_all.listbox_movieList,'String');
-        
-        % We have to do this, since repopulating a listbox does not
-        % automatically reset its value..
-        if numel(listbox_entries) == 0
-            set(h_all.listbox_movieList,'Value',1);
-        end
-        
-        path = [];
-        if ~isempty(listbox_entries)
-            [path,~,~] = fileparts(listbox_entries{end});
-        end
-        [movieList, path] = uigetfile([path,filesep,'*.tif'],'MultiSelect','on');
-        if( isfloat(movieList) ); return; end; % User pressed cancel.
-        
-        % atach path to every entry in the list then add to listbox
-        if iscell(movieList)
-            for i=1:length(movieList)
-                movieList{i} =  [path,movieList{i}];
-            end
-            % Add to listbox
-            listbox_entries = [listbox_entries; movieList.'];
-        elseif ischar(movieList)
-            movieList = [path,movieList];
-            % Add to listbox
-            listbox_entries = [listbox_entries; {movieList}];
-        end
-        
-        set(h_all.listbox_movieList,'String',listbox_entries);
-    end
-
-% Remove a movie from the movie list
-    function callback_removeMovie(hObj,event)
-        selected_entry = get(h_all.listbox_movieList,'Value');
-        listbox_entries = get(h_all.listbox_movieList,'String');
-        
-        % When listbox is empty, do nothing
-        if numel(listbox_entries) == 0
-           return; 
-        end
-        
-        % When last selected item is deleted, select the one before it
-        if selected_entry == numel(listbox_entries)
-            set(h_all.listbox_movieList,'Value',selected_entry-1);
-        end
-        
-        listbox_entries(selected_entry) = [];
-        set(h_all.listbox_movieList,'String',listbox_entries);
     end
 
 % Opens a file chooser dialog to select the dark movie
@@ -628,25 +557,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-% Takes a cell array containing strings and concatenates them into one
-% string seperated by ';'. If the input is not a cell but a string, the
-% output is equal to the input string;
-    function str = cell2str(cellObj, delimiter)
-        if nargin<2
-            delimiter = ';';
-        end
-        
-        str = '';
-        if(iscell(cellObj))
-            str = cellObj{1};
-            for i=2:length(cellObj)
-                str = [str,delimiter,cellObj{i}];
-            end
-        elseif ischar(cellObj)
-            str = cellObj;
-        end
-    end
-
 % Gets the 'String' property from a uicontrol and returns the string
 % converted to a number
     function value = getNum(hObj)
@@ -668,43 +578,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
     end
 
-% Sets a popup-menu's 'value' to the choice defined by 'optionString'.
-    function setPopup(hObj,optionString)
-        choices = get(hObj,'String');
-        for idx = 1:length(choices)
-            if strcmp(choices{idx}, optionString)
-                set(hObj,'Value',idx);
-                return
-            end
-        end
-        error('invalid option ''%s'' to setPopup tag: %s',optionString,get(hObj,'Tag'));
-    end
-
-% Gets the string of a popup-menu matching the currently selected value.
-    function optionString = getPopup(hObj)
-        choices = get(hObj,'String');
-        optionString = choices{get(hObj,'Value')};
-    end
-
 % Set all UI fields based on the current value of the options structs
 % (globalOptions, candidateOptions, fittingOptions, trackingOptions)
     function setGUIBasedOnOptions()
         % % General Options
-        
-        % -- Listbox movie list --
-        % We have to reset the listbox value, since repopulating a listbox does not do it automatically..
-        if numel(get(h_all.listbox_movieList,'String')) == 0
-            set(h_all.listbox_movieList,'Value',1);
-        end
-        % Convert single file name 'filepath' to cell. Usually filename_movies is always a cell, but the user can set a (char) path 'path' for the default global options.
-        if (isempty(globalOptions.filename_movies)) 
-            globalOptions.filename_movies = {};
-        elseif (ischar(globalOptions.filename_movies))
-            globalOptions.filename_movies = {globalOptions.filename_movies}; 
-        end       
-        set(h_all.listbox_movieList,'String', globalOptions.filename_movies);
-        % -- ----------------- --
-        
         set(h_all.edit_darkMovie,'String', globalOptions.filename_dark_movie);
         setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
         setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
@@ -732,7 +609,6 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % options structs have changed compared to the startup values.
     function storeOptions()
         % % General Options
-        globalOptions.filename_movies = get(h_all.listbox_movieList,'String');
         globalOptions.filename_dark_movie = get(h_all.edit_darkMovie,'String');
         globalOptions.firstFrame = getNum(h_all.edit_firstFrame);
         globalOptions.lastFrame =  getNum(h_all.edit_lastFrame);
