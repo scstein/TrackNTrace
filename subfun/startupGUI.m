@@ -41,11 +41,15 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end; % User clicked cancel
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
+        warning off
         allOptions = load([path,infile],'globalOptions', 'candidateOptions','fittingOptions','trackingOptions','filename_movie');
+        warning on
         globalOptions   = allOptions.globalOptions;
         candidateOptions = allOptions.candidateOptions;
         fittingOptions   = allOptions.fittingOptions;
-        trackingOptions  = allOptions.trackingOptions;
+        if isfield(allOptions,'trackingOptions')
+            trackingOptions  = allOptions.trackingOptions;
+        end
         filename_movies = {allOptions.filename_movie};
         
         callback_exit();
