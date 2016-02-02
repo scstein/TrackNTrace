@@ -67,7 +67,7 @@ for iMovie=1:numel(movie_list)
     filename_movie = movie_list{iMovie};
     [path,filename,~] = fileparts(filename_movie);
     filename_TNTdata = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
-    list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; % Append name of datafile to list
+    list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; %#ok<AGROW> % Append name of datafile to list
     
     % Check if movie can be read
     if(~isempty(filename_movie))
@@ -170,7 +170,7 @@ for iMovie=1:numel(movie_list)
         dark_img_def = dark_img;
     end
 end
-clearvars -except posFit_list
+clearvars -except posFit_list parallelProcessingAvailable TNToptions
 
 %% Candidate detection and fitting for every movie
 for iMovie=1:numel(posFit_list)
@@ -190,7 +190,7 @@ for iMovie=1:numel(posFit_list)
     movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
     save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','firstFrame_lastFrame','-append');
 end
-clearvars -except posFit_list
+clearvars -except posFit_list parallelProcessingAvailable TNToptions globalOptions
 
 %% Compute trajectories for every movie
 for iMovie=1:numel(posFit_list)
@@ -212,13 +212,13 @@ for iMovie=1:numel(posFit_list)
     save(posFit_list{iMovie},'trackingData','trackingOptions','-append');
 end
 
-% Clear globals
-clearGlobals();
-
 % Deactivate parallel processing if requested
 if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
     matlabpool('close');
 end
+
+% Clear globals
+clearGlobals();
 
 %% Add required folders and subfolders to path
     function addRequiredPathsTNT()
