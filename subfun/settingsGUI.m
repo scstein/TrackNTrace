@@ -544,7 +544,13 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             maxVal=inf;
         end
         
-        value = round(str2num(get(hObj,'String')));
+        % Accept end as inf, as MATLAB users are used to end as the last element
+        if(strcmp(get(hObj,'String'), 'end'))
+            value = inf;
+        else
+            value = round(str2num(get(hObj,'String')));
+        end
+        
         if isempty(value)
             set(hObj,'ForegroundColor','r');
             set(hObj,'String','INVALID');

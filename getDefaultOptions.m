@@ -25,7 +25,7 @@ globalOptions.filename_movies = ''; % This directory is chosen as startup when c
 globalOptions.filename_dark_movie = ''; % This directory is chosen as startup when clicking to select a movie
 globalOptions.previewMode = true; %enable/disable previewMode by setting true/false.
 globalOptions.firstFrame = 1; %integer, first movie frame to consider. 
-globalOptions.lastFrame = inf; %integer, last movie frame to consider. Put inf to read to the end.
+globalOptions.lastFrame = inf; %integer, last movie frame to consider. Put inf or 'end' to read to the end.
 globalOptions.firstFrameTesting = 1; %integer, first movie frame to consider during testMode
 globalOptions.lastFrameTesting = 50; %integer, last movie frame to consider during testMode. Put inf to read to the end.
 

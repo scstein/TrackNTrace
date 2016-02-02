@@ -40,7 +40,7 @@ if(isempty(globalOptions))
     globalOptions = globalOptions_def;
 end;
 if GUIreturns.userExit;
-    exitFunc();
+    userExitFunc();
     return;
 end;
 
@@ -48,7 +48,7 @@ end;
 GUIinputs.TNToptions = TNToptions;
 GUIinputs.showStartupInformation = true;
 
-% Calculate default dark image if given
+% Calculate default dark image if given in default options
 dark_img_def = [];
 if(~isempty(globalOptions_def.filename_dark_movie))
     dark_img_def = CalculateDark(read_tiff(globalOptions_def.filename_dark_movie));
@@ -92,7 +92,7 @@ for iMovie=1:numel(movie_list)
         [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
         GUIinputs.showStartupInformation = false; % Only show this on first startup
         if GUIreturns.userExit;
-            exitFunc(); % Cleanup
+            userExitFunc(); % Cleanup
             return;
         end;
         
@@ -118,7 +118,7 @@ for iMovie=1:numel(movie_list)
                 if not(first_run)
                     [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
                     if GUIreturns.userExit;
-                        exitFunc();
+                        userExitFunc();
                         return;
                     end;
                     if GUIreturns.useSettingsForAll; GUIreturns.previewMode = false; end; %dont go through other movies anymore
@@ -215,6 +215,11 @@ end
 % Clear globals
 clearGlobals();
 
+% Deactivate parallel processing if requested
+if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
+    matlabpool('close');
+end
+
 %% Add required folders and subfolders to path
     function addRequiredPathsTNT()
         fullPathToThisFile = mfilename('fullpath');
@@ -227,12 +232,13 @@ clearGlobals();
     end
 
 %% Cleanup function if something goes wrong
-    function exitFunc()
+    function userExitFunc()
         % Remove TNTdata files
         if exist('list_filenames_TNTdata','var')
-            warning off backtrace
-            warning('User abort. Stopping TrackNTrace. Deleting settings files that have been saved already.');
-            warning on backtrace
+            fprintf('TNT: User exit.')
+%             warning off backtrace
+%             warning('User exit. Stopping TrackNTrace. Deleting settings files that have been saved already.');
+%             warning on backtrace
             for iTNTfile = 1:numel(list_filenames_TNTdata)
                 if exist(list_filenames_TNTdata{iTNTfile},'file')
                     delete(list_filenames_TNTdata{iTNTfile});
