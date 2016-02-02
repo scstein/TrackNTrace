@@ -41,8 +41,12 @@ plugin.add_param('detectionRadius',...
     'Size of local maximum detection window. Should be similar to kernelSize.');
 plugin.add_param('detectionThreshold',...
     'float',...
-    {0.5,0,1},...
+    {3,0,inf},...
     'Detection threshold. Higher means less detected candidates.');
+plugin.add_param('automaticThreshold',...
+    'bool',...
+    true,...
+    'If set to true, the standard deviation of the wavelet filtered image at wavelet level 1 is taken as the threshold. This value is calculated automatically for each image.');
 end
 
 
@@ -64,13 +68,19 @@ function [candidateData] = findCandidates_wavelet(img,options,currentFrame)
 
 % filter image up to level 2
 img_filtered = filterImageGeneral(img,options.kernel{1},options.isSeparable,'same');
-%threshold = std(img_filtered(:)); % can use this for thresholding.
+
+if options.automaticThreshold
+    padding_filtered_img = numel(options.kernel{1})/2;
+    threshold = img_filtered(ceil(padding_filtered_img):end-floor(padding_filtered_img),ceil(padding_filtered_img):end-floor(padding_filtered_img)); % can use this for thresholding.
+    options.detectionThreshold = std(threshold(:));
+end
+
 % filtered image at level 2 = filter_1(img)-filter_2(img), therefore,
 % "convolve" with 1 which is, funnily, faster.
 img_filtered = filterImageGeneral(img_filtered,{1,options.kernel{2}},options.isSeparable,'valid');
 
 % normalize
-img_filtered = (img_filtered-min(img_filtered(:)))/(max(img_filtered(:))-min(img_filtered(:)));
+% img_filtered = (img_filtered-min(img_filtered(:)))/(max(img_filtered(:))-min(img_filtered(:)));
 
 % dilate - uses Image Processing Toolbox.
 dilated_mask = imdilate(img_filtered,ones(2*options.detectionRadius+1))==img_filtered;

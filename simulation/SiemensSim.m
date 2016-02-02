@@ -68,16 +68,16 @@ for iParticle = 1:nrParticles
         nrFrames_active = 1;
         active_time = 1;
     else
-    % Get frames of activation events and the activation starting time plus
-    % duration
-    frames_activation = sort(randperm(nrFrames,nr_events(iParticle)));
-    start_time = rand(nr_events(iParticle),1);
-    active_time = exprnd(1/k_deactivate,[nr_events(iParticle),1]);
-    
-    % Determine [frame,time of activation in frame] vector
-    nrFrames_active = ceil(start_time+active_time);
-    all_frames_active = []; %[x y frame amp]
+        % Get frames of activation events and the activation starting time plus
+        % duration
+        start_time = rand(nr_events(iParticle),1);
+        active_time = exprnd(1/k_deactivate,[nr_events(iParticle),1]);
+        
+        % Determine [frame,time of activation in frame] vector
+        nrFrames_active = ceil(start_time+active_time);
     end
+    frames_activation = sort(randperm(nrFrames,nr_events(iParticle)));
+    all_frames_active = []; %[x y frame amp]
     
     for jEvent = 1:nr_events(iParticle)
         if nrFrames_active(jEvent)>1

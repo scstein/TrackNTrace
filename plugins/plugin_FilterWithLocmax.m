@@ -49,7 +49,7 @@ plugin.add_param('detectionRadius',...
     'Size of local maximum detection window. Should be similar to kernelSize.');
 plugin.add_param('detectionThreshold',...
     'float',...
-    {0.5,0,1},...
+    {0.5,0,inf},...
     'Detection threshold. Higher means less detected candidates.');
 end
 
@@ -80,7 +80,7 @@ else
     img_filtered = img_filtered(ceil(options.kernelSize/2):end-floor(options.kernelSize/2),ceil(options.kernelSize/2):end-floor(options.kernelSize/2));
 end
 % normalize
-img_filtered = (img_filtered-min(img_filtered(:)))/(max(img_filtered(:))-min(img_filtered(:)));
+% img_filtered = (img_filtered-min(img_filtered(:)))/(max(img_filtered(:))-min(img_filtered(:)));
 
 % dilate - uses Image Processing Toolbox.
 dilated_mask = imdilate(img_filtered,ones(2*options.detectionRadius+1))==img_filtered;
