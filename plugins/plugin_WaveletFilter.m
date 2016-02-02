@@ -41,12 +41,12 @@ plugin.add_param('detectionRadius',...
     'Size of local maximum detection window. Should be similar to kernelSize.');
 plugin.add_param('detectionThreshold',...
     'float',...
-    {3,0,inf},...
+    {1,0,inf},...
     'Detection threshold. Higher means less detected candidates.');
 plugin.add_param('automaticThreshold',...
     'bool',...
     true,...
-    'If set to true, the standard deviation of the wavelet filtered image at wavelet level 1 is taken as the threshold. This value is calculated automatically for each image.');
+    'If set to true, the standard deviation of the wavelet filtered image at wavelet level 1 times the detectionThreshold is taken as the absolute peak intensity threshold. In this case, setting detectionThreshold from 0.5 to 2 is recommended.');
 end
 
 
@@ -71,8 +71,11 @@ img_filtered = filterImageGeneral(img,options.kernel{1},options.isSeparable,'sam
 
 if options.automaticThreshold
     padding_filtered_img = numel(options.kernel{1})/2;
-    threshold = img_filtered(ceil(padding_filtered_img):end-floor(padding_filtered_img),ceil(padding_filtered_img):end-floor(padding_filtered_img)); % can use this for thresholding.
-    options.detectionThreshold = std(threshold(:));
+    threshold_image = img-img_filtered;
+    threshold_image = threshold_image(ceil(padding_filtered_img):end-floor(padding_filtered_img),ceil(padding_filtered_img):end-floor(padding_filtered_img)); % can use this for thresholding.
+    threshold = std(threshold_image(:));
+else
+    threshold = 1;
 end
 
 % filtered image at level 2 = filter_1(img)-filter_2(img), therefore,
@@ -84,7 +87,7 @@ img_filtered = filterImageGeneral(img_filtered,{1,options.kernel{2}},options.isS
 
 % dilate - uses Image Processing Toolbox.
 dilated_mask = imdilate(img_filtered,ones(2*options.detectionRadius+1))==img_filtered;
-dilated_mask = dilated_mask & img_filtered>options.detectionThreshold;
+dilated_mask = dilated_mask & img_filtered>(options.detectionThreshold*threshold);
 locmax_idx = find(dilated_mask);
 [rowIdx,colIdx] = ind2sub(size(img_filtered),locmax_idx);
 
