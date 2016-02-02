@@ -235,7 +235,7 @@ end
     function userExitFunc()
         % Remove TNTdata files
         if exist('list_filenames_TNTdata','var')
-            fprintf('TNT: User exit.')
+            fprintf('TNT: User exit.\n')
 %             warning off backtrace
 %             warning('User exit. Stopping TrackNTrace. Deleting settings files that have been saved already.');
 %             warning on backtrace
