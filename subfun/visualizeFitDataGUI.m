@@ -52,6 +52,9 @@ movegui(h_main,'center');
 h_all = guihandles(h_main); % Get handles of all GUI objects
 axes(h_all.axes); % Select axis for drawing plots
 
+dcm_obj = datacursormode(h_main);
+set(dcm_obj,'UpdateFcn',{@customDatatipFunction}); % 
+
 % Text on top
 set(h_all.toptext,'String',sprintf('frame = 1/%i',size(movie,3)));
 
@@ -80,7 +83,6 @@ setNum(h_all.edit_distributionRange,100);
 set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
 
 % Popupmenu
-% !!!!!
 set(h_all.popup_distribution, 'String', paramDescription);
 
 % Timer -> this controls playing the movie
@@ -128,6 +130,27 @@ end
 
 
 % --- Nested Functions ---
+
+% Function for datacursor
+    function txt = customDatatipFunction(~,event_obj)
+        % Customizes text of data tips
+        pos = get(event_obj,'Position');
+%         T = get(event_obj,'Target'); % The target object (line/image) of the cursor
+        I = get(event_obj, 'DataIndex');
+        
+        if(numel(I) == 1) % Plotted position is selected
+            % Plot all parameters available for that spot in the datacursor window
+            txt = {};
+            for iPar=1:numel(paramDescription)
+                txt = [txt, {[paramDescription{iPar},': ', num2str(fitData{frame}(I,iPar))]}];
+            end
+            
+        elseif (numel(I) == 2) % Image is selected
+            txt = {['X: ',num2str(pos(1))],...
+            ['Y: ',num2str(pos(2))],...
+            ['Value: ', num2str(movie(I(2),I(1),frame))]};
+        end
+    end
 
 % Get numeric value of edit field
     function value = getNum(hObj)
