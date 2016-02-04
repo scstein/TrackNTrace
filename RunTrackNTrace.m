@@ -189,11 +189,14 @@ clearvars -except posFit_list parallelProcessingAvailable TNToptions
 %% Candidate detection and fitting for every movie
 for iMovie=1:numel(posFit_list)
     filename_TNTdata = posFit_list{iMovie};
-    
     load(filename_TNTdata,'-mat');
     
     % Read movie
-    movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
+    if iMovie==1 || ~strcmp(filename_movie,filename_movie_last_loop)
+        movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
+    end
+    filename_movie_last_loop = filename_movie;
+    
     % Compute the positions
     fprintf('######\nTNT: Locating particles in movie %s.\n',filename_movie);
     [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
