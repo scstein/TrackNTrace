@@ -7,7 +7,8 @@ end
 
 nrFrames = numel(fitData);
 minTrackLength = 2;
-linkingDistance = 2;
+linkingDistance = options.linkingDistance;
+snr_min = options.thresholdSNR;
 
 nrTruePositive = 0;
 nrFalsePositive = 0;
@@ -15,20 +16,41 @@ nrFalseNegative = 0;
 RMSE = zeros(nrFrames,1);
 emptyFrames = [];
 
+
+if ~isempty(snr_min)
+    fitData_truth = cellfun(@(var) var(var(:,4)./sqrt(var(:,5))>snr_min,:),fitData_truth,'UniformOutput',false);
+    fitData = cellfun(@(var) var(var(:,4)./sqrt(var(:,5))>snr_min,:),fitData,'UniformOutput',false);
+end
+    
+
+
+
 for iFrame = 1:nrFrames
     if ~isempty(fitData{iFrame}) && ~isempty(fitData_truth{iFrame})
-        [pos,id_true,id_loc] = preparePosArray(fitData{iFrame},fitData_truth{iFrame});
-        track = nn_tracker_cpp(pos,minTrackLength,linkingDistance,[],[],minTrackLength).';
-        id_track = [track(track(:,5)<0,5), track(track(:,5)>0,5)];
+%         [pos,id_true,id_loc] = preparePosArray(fitData{iFrame},fitData_truth{iFrame});
+        pos = preparePosArray(fitData{iFrame},fitData_truth{iFrame});
+%         nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,options.maxGapRadius,options.maxFrameGap,options.minTrajLength,options.verbose).';
+        track = mx_nn_tracker(pos,minTrackLength,linkingDistance,[],[],minTrackLength,false).';
+        if isempty(track)
+            nrFalsePositive = nrFalsePositive+size(fitData{iFrame},1);
+            nrFalseNegative = nrFalseNegative+size(fitData_truth{iFrame},1);
+            emptyFrames = [emptyFrames;iFrame];
+            continue
+        end
+        nrIds = max(track(:,1));
+%         id_track = [track(track(:,6)<0,6), track(track(:,6)>0,6)];
         
-        nrTruePositive = nrTruePositive+max(track(:,1)); %particles present in both frames are true localizations
-        nrFalsePositive = nrFalsePositive+sum(~ismember(id_loc,id_track(:,2))); %particles present in loc frame but not in tracks are false positives
-        nrFalseNegative = nrFalseNegative+sum(~ismember(id_true,id_track(:,1))); %particles present in true frame but not in tracks are false negatives
+%         nrTruePositive = nrTruePositive+max(track(:,1)); %particles present in both frames are true localizations
+        nrTruePositive = nrTruePositive+nrIds;
+        nrFalsePositive = nrFalsePositive+size(fitData{iFrame},1)-nrIds;
+        nrFalseNegative = nrFalseNegative+size(fitData_truth{iFrame},1)-nrIds;
+%         nrFalsePositive = nrFalsePositive+sum(~ismember(id_loc,id_track(:,2))); %particles present in loc frame but not in tracks are false positives
+%         nrFalseNegative = nrFalseNegative+sum(~ismember(id_true,id_track(:,1))); %particles present in true frame but not in tracks are false negatives
         
         RMSE(iFrame) = 1/max(track(:,1))*sum(sum((track(2:2:end,3:4)-track(1:2:end-1,3:4)).^2,2),1); %1/N*sum( (x-x_true)^2+(y-ytrue)^2)
     else
         nrFalsePositive = nrFalsePositive+size(fitData{iFrame},1);
-        nrFalseNegative = nrFalseNegative+size(fitData{iFrame},1);
+        nrFalseNegative = nrFalseNegative+size(fitData_truth{iFrame},1);
         emptyFrames = [emptyFrames;iFrame];
     end
 end
@@ -63,6 +85,8 @@ pos_loc2 = [ones(1,size(frame2,1)); frame2(:,1:2).'; -(1:size(frame2,1))];
 pos = [pos_loc2,pos_loc1]; %track from ground truth to localized data. in general, localization will be erroneous and contain false negatives
 id_true = pos_loc2(end,:).';
 id_loc = pos_loc1(end,:).';
+
+pos = [pos(1:3,:);zeros(1,size(pos,2));pos(end,:)]; %insert z=0 as nntracker tracks in third dimension by default
 
 end
 

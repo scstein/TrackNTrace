@@ -34,6 +34,7 @@ posRow = posRow+rand(nrPos,1)-0.5; posCol = posCol+rand(nrPos,1)-0.5;
 [fitData_truth] = createStates([posCol,posRow],optionsSim,optionsCamera,optionsPhoton);
 
 movie = createMovie(fitData_truth,optionsSim,optionsCamera,optionsPhoton);
+% movie = [];
 
 end
 

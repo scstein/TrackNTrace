@@ -56,7 +56,7 @@ end
 
 % Create timestamp for output files
 time = clock;
-timestamp = sprintf('%i-m%02i-d%02i-%02ih%i',time(1),time(2),time(3),time(4),time(5));
+timestamp = sprintf('%i-m%02i-d%02i-%02ih%02i',time (1),time(2),time(3),time(4),time(5));
 
 % Iterate through all movies in the list
 GUIreturns.useSettingsForAll = false;
@@ -66,7 +66,21 @@ list_filenames_TNTdata = cell(0);
 for iMovie=1:numel(movie_list)
     filename_movie = movie_list{iMovie};
     [path,filename,~] = fileparts(filename_movie);
-    filename_TNTdata = [path,filesep,filename,'_',timestamp,'_TNT.mat'];
+    filename_TNTdata = [path,filesep,filename,'_',timestamp];
+    % prevent overriding filenames, e.g. when one movie is chosen multiple
+    % times and quickly analyzed
+    filename_overriden = true;
+    iFile = 0;
+    while(filename_overriden)
+        if ~exist([filename_TNTdata,'_',int2str(iFile),'_TNT.mat'],'file')
+            filename_TNTdata = [filename_TNTdata,'_',int2str(iFile),'_TNT.mat'];
+            filename_overriden = false;
+        else
+            iFile = iFile+1;
+        end
+    end
+    
+    
     list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; %#ok<AGROW> % Append name of datafile to list
     
     % Check if movie can be read
