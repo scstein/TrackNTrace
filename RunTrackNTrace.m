@@ -24,7 +24,7 @@ if TNToptions.enableParallelProcessing
     try
         nrRunningWorkers = matlabpool('size');
         if(nrRunningWorkers == 0);
-            matlabpool('open');
+            matlabpool('open','local');
         end
         parallelProcessingAvailable = true;
         fprintf('TNT: Parallel processing available (%i workers).\n', matlabpool('size'))
