@@ -34,19 +34,20 @@ if nargin<1 || isempty(movie)
     return
 end
 
+% -- Shared variables --
 % This variablea are computed on demand if the user wants to plot
 % distributions of parameters
 allFramesCandidateData = [];
 allFramesFitData = [];
 
-% Shared variables
 use_bw = false;
-mode = 'none';
+mode = 'none'; % 'candidate'/'fitting'/'tracking'
 traj_lifetime = 0;
 n_colors = 20;
 traj_displayLength = inf;
 
-% Prepare tracking data
+
+%  -- Prepare tracking data --
 if isempty(trackingData)
     id_tracks = []; % Note: (in case track IDs go from 1 to N without missing numbers, the track index is identical to the tracks ID.
     n_tracks = 0;
@@ -62,7 +63,7 @@ for iTrack = 1:n_tracks
     cell_traj{iTrack} = trackingData( trackingData(:,1)== id_tracks(cnt) , 2:end);
     cnt = cnt+1;
 end
-
+% ---------------------------
 
 
 % -- Preparing the GUI --
@@ -76,8 +77,10 @@ movegui(h_main,'center');
 h_all = guihandles(h_main); % Get handles of all GUI objects
 axes(h_all.axes); % Select axis for drawing plots
 
+% -- Datacursor --
 dcm_obj = datacursormode(h_main);
 defaultDatatipFunction = get(dcm_obj,'UpdateFcn');
+set(dcm_obj,'Enable','on');
 
 parse_inputs_and_setup(nargin);
 
@@ -122,7 +125,7 @@ set(h_all.edit_lifetime,'String',sprintf('%i',traj_lifetime), 'Callback', @lifet
 set(h_all.edit_colors,'String',sprintf('%i',n_colors), 'Callback', @colorCallback);
 set(h_all.edit_trajDisplayLength,'String',sprintf('%i', traj_displayLength), 'Callback', @dispLengthCallback);
 
-% Timer -> this controls playing the movie
+% -- Timer -> this controls playing the movie --
 h_all.timer = timer(...
     'ExecutionMode', 'fixedDelay', ...    % Run timer repeatedly
     'Period', round(1/FPS*1000)/1000, ... % Initial period is 1 sec. Limited to millisecond precision
@@ -162,15 +165,15 @@ caxis(zl);
 % did not occur before are created on demand.
 setUnitinializedTrackHandles();
 
-% Variables for playback
+% -- Variables for playback --
 timePerFrame = round(1/FPS*1000)/1000; % limit to millisecond precision
 elapsed_time = 0;
 frame = 1;
 
-% Change into the right mode (candidate/fitting/tracking)
+% -- Change into the right mode (candidate/fitting/tracking) --
 callback_changeMode();
 
-% In case the RunAgain dialog should be displayed, we stop scripts/functions
+% For is_blocking==true we stop scripts/functions
 % calling the GUI until the figure is closed
 if(is_blocking)
     uiwait(h_main);
@@ -267,10 +270,12 @@ end
         all_uiObjects = get(h_main,'Children');
         
         for iObj = 1:numel(all_uiObjects)
-            set(all_uiObjects(iObj),'Units',units);
-            pos = get(all_uiObjects(iObj),'Position');
-            pos(2) = pos(2) - diff_height;
-            set(all_uiObjects(iObj),'Position',pos);
+            try
+                set(all_uiObjects(iObj),'Units',units);
+                pos = get(all_uiObjects(iObj),'Position');
+                pos(2) = pos(2) - diff_height;
+                set(all_uiObjects(iObj),'Position',pos);
+            end
         end
         
         win_pos(4) = win_pos(4)-diff_height;
@@ -280,7 +285,9 @@ end
         % (cough..)
         set(h_main,'Units','normalized');
         for iObj = 1:numel(all_uiObjects)
-            set(all_uiObjects(iObj),'Units','normalized');
+            try
+                set(all_uiObjects(iObj),'Units','normalized');
+            end
         end
     end
 
