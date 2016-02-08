@@ -42,23 +42,24 @@ allFramesFitData = [];
 % Shared variables
 use_bw = false;
 mode = 'none';
-traj_lifetime = 0;         
-n_colors = 20;      
+traj_lifetime = 0;
+n_colors = 20;
 traj_displayLength = inf;
 
 % Prepare tracking data
 if isempty(trackingData)
-    id_tracks = [];
+    id_tracks = []; % Note: (in case track IDs go from 1 to N without missing numbers, the track index is identical to the tracks ID.
     n_tracks = 0;
 else
-    id_tracks = unique(trackingData(:,1));
+    id_tracks = unique(trackingData(:,1)); % Note: (in case track IDs go from 1 to N without missing numbers, the track index is identical to the tracks ID.
     n_tracks = numel(id_tracks);
 end
 
+% Put data for each track into its own cell. This is much more efficient comfortable for plotting.
 cell_traj = cell(n_tracks ,1);
 cnt = 1;
 for iTrack = 1:n_tracks
-    cell_traj{iTrack} = trackingData( trackingData(:,1)== id_tracks(cnt) , 2:4);
+    cell_traj{iTrack} = trackingData( trackingData(:,1)== id_tracks(cnt) , 2:end);
     cnt = cnt+1;
 end
 
@@ -179,16 +180,22 @@ end
 
 % --- Nested Functions ---
 
+    % Change the chosen mode 'candidate','fitting','tracking' and display
+    % its relevant content. 
+    % If "modus" input is given, the mode is set to "modus". Its
+    % implemented this way to use one callback for all buttons selecting the modes.
     function callback_changeMode(hObj,event,modus)
         if nargin>2
-           mode = modus;        
+            mode = modus;
         end
+        DEFAULT_COLOR = [0.941,0.941,0.941]; % Default color of buttons.
+        SELECTED_COLOR = [0.65, 0.9, 0]; % Color of selected button.
         
-        %Reset button colors
-        set(h_all.button_candidateMode,'BackgroundColor', [0.941,0.941,0.941]);
-        set(h_all.button_fittingMode,'BackgroundColor', [0.941,0.941,0.941]);
-        set(h_all.button_trackingMode,'BackgroundColor', [0.941,0.941,0.941]);
-        
+        %Reset button colors       
+        set(h_all.button_candidateMode,'BackgroundColor', DEFAULT_COLOR);
+        set(h_all.button_fittingMode,'BackgroundColor', DEFAULT_COLOR);
+        set(h_all.button_trackingMode,'BackgroundColor', DEFAULT_COLOR);
+                       
         % Reset handles
         if dothandle_fit ~= -1
             set(dothandle_fit,'xdata',[],'ydata',[]);
@@ -202,48 +209,110 @@ end
             end
         end
         
-        selected_button_color = [0.65, 0.9, 0];
-        
+        % Mode specific changes (setting datatip function, highlight
+        % button.
         switch mode
             case 'candidate'
                 set(dcm_obj,'UpdateFcn',defaultDatatipFunction);
-                set(h_all.button_candidateMode,'BackgroundColor', selected_button_color);
+                set(h_all.button_candidateMode,'BackgroundColor', SELECTED_COLOR);
                 set(h_all.popup_distribution, 'String', candidateParams);
             case 'fitting'
-                set(dcm_obj,'UpdateFcn',{@customDatatipFunction});
-                set(h_all.button_fittingMode,'BackgroundColor', selected_button_color);
+                set(dcm_obj,'UpdateFcn',{@modeSpecificDatatipFunction});
+                set(h_all.button_fittingMode,'BackgroundColor', SELECTED_COLOR);
                 set(h_all.popup_distribution, 'String', fitParams);
             case 'tracking'
-                set(dcm_obj,'UpdateFcn',defaultDatatipFunction);
-                set(h_all.button_trackingMode,'BackgroundColor', selected_button_color);
+                set(dcm_obj,'UpdateFcn',{@modeSpecificDatatipFunction});
+                set(h_all.button_trackingMode,'BackgroundColor', SELECTED_COLOR);
                 set(h_all.popup_distribution, 'String', trackingParams);
             otherwise
                 error('Unkown mode ''%s''!', mode);
         end
         
-        updateFrameDisplay();        
+        % Update size of GUI, show mode specific panels
+        updateGUIforMode();
+        
+        % Replot
+        updateFrameDisplay();
+    end
+
+
+    % Update size of GUI, show mode specific panels
+    function updateGUIforMode()
+        units = 'characters';
+        BOTTOM_SPACING = 0.5;
+        
+        % Set all mode specific panels invisible
+        set(h_all.panel_tracking,'Visible','off');
+        
+        % Rescale window based on last element
+        switch mode
+            case 'candidate'
+                set(h_all.panel_histogram,'Units',units);
+                pos = get(h_all.panel_histogram,'Position');
+            case 'fitting'
+                set(h_all.panel_histogram,'Units',units);
+                pos = get(h_all.panel_histogram,'Position');
+            case 'tracking'
+                set(h_all.panel_tracking,'Units',units);
+                pos = get(h_all.panel_tracking,'Position');
+                set(h_all.panel_tracking,'Visible','on');
+        end
+        
+        set(h_main,'Units',units);
+        win_pos = get(h_main,'Position');
+        diff_height = pos(2)-BOTTOM_SPACING;
+        
+        % To resize the figure properly, we first need to move all objects
+        % inside.. (Matlab ..)
+        all_uiObjects = get(h_main,'Children');
+        
+        for iObj = 1:numel(all_uiObjects)
+            set(all_uiObjects(iObj),'Units',units);
+            pos = get(all_uiObjects(iObj),'Position');
+            pos(2) = pos(2) - diff_height;
+            set(all_uiObjects(iObj),'Position',pos);
+        end
+        
+        win_pos(4) = win_pos(4)-diff_height;
+        set(h_main,'Position', win_pos);
+        
+        % Reset units back to normalized, so figure resizes "properly"
+        % (cough..)
+        set(h_main,'Units','normalized');
+        for iObj = 1:numel(all_uiObjects)
+            set(all_uiObjects(iObj),'Units','normalized');
+        end
     end
 
 % Function for datacursor
-    function txt = customDatatipFunction(~,event_obj)
+    function txt = modeSpecificDatatipFunction(~,event_obj)
         % Customizes text of data tips
         pos = get(event_obj,'Position');
-        %         T = get(event_obj,'Target'); % The target object (line/image) of the cursor
+        graphObjHandle = get(event_obj,'Target'); % The target object (line/image) of the cursor
         I = get(event_obj, 'DataIndex');
         
         if(numel(I) == 1) % Plotted position is selected
             txt = {};
             switch mode
                 case 'candidate'
-                % Plot all parameters available for that spot in the datacursor window            
-                for iPar=1:numel(candidateParams)
-                    txt = [txt, {[candidateParams{iPar},': ', num2str(candidateData{frame}(I,iPar))]}];
-                end
+                    % Plot all parameters available for that spot in the datacursor window
+                    for iPar=1:numel(candidateParams)
+                        txt = [txt, {[candidateParams{iPar},': ', num2str(candidateData{frame}(I,iPar))]}];
+                    end
                 case 'fitting'
-                % Plot all parameters available for that spot in the datacursor window            
-                for iPar=1:numel(fitParams)
-                    txt = [txt, {[fitParams{iPar},': ', num2str(fitData{frame}(I,iPar))]}];
-                end
+                    % Plot all parameters available for that spot in the datacursor window
+                    for iPar=1:numel(fitParams)
+                        txt = [txt, {[fitParams{iPar},': ', num2str(fitData{frame}(I,iPar))]}];
+                    end
+                case 'tracking'
+                    TrackNr = find(linehandles==graphObjHandle); % Find lineobject for the selected point
+                    PointData = cell_traj{TrackNr}(I,:); % Data of the selected point
+                    TrackID = sprintf('%i',id_tracks(TrackNr)); % Get track ID from its index (in case TracIDs go from 1 to N without missing numbers, TrackNr==TrackID)
+                    % Plot all parameters available for that spot in the datacursor window
+                    txt = [txt, {['TrackID: ', TrackID]}];
+                    for iPar=2:numel(trackingParams)
+                        txt = [txt, {[trackingParams{iPar},': ', num2str(PointData(iPar-1))]}];
+                    end
                 otherwise
                     error('Unsupported mode ''%s'' for datatip function.',mode)
             end
@@ -539,31 +608,31 @@ end
     function distributionCallback(hObj, eventdata)
         selected_parameter = get(h_all.popup_distribution,'Value');
         choices = get(h_all.popup_distribution,'String');
-        selected_string = choices{selected_parameter};        
+        selected_string = choices{selected_parameter};
         
         % distribution to plot, must be synchronized with Popup-Menu (h_all.popup_distribution)
         dataRange = getNum(h_all.edit_distributionRange); % Range of data to histogram
         figure;
-        ylabel('frequency'); 
+        ylabel('frequency');
         switch mode
             case 'candidate'
                 if(isempty(allFramesCandidateData)) % Concatenate all frames
                     allFramesCandidateData = vertcat(candidateData{:});
                 end
-                rangedHist(allFramesCandidateData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);                
-                xlabel(fitParams{selected_parameter});               
+                rangedHist(allFramesCandidateData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
+                xlabel(fitParams{selected_parameter});
             case 'fitting'
                 if(isempty(allFramesFitData)) % Concatenate all frames
                     allFramesFitData = vertcat(fitData{:});
                 end
-                rangedHist(allFramesFitData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);                
+                rangedHist(allFramesFitData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
                 xlabel(fitParams{selected_parameter});
             case 'tracking'
-                rangedHist(trackingData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);                
+                rangedHist(trackingData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
                 xlabel(trackingParams{selected_parameter});
             otherwise
                 error('Unkown display mode ''%s''!',mode);
-        end        
+        end
     end
 
 % Switch black-white and hot display mode
@@ -591,8 +660,8 @@ end
             bg = {'k'}; % background color
         else
             bg = {'r'};
-        end        
- 
+        end
+        
         marker_color = distinguishable_colors(1, bg);
         if dothandle_cand ~= -1
             set(dothandle_cand,'Color',marker_color);
@@ -679,10 +748,10 @@ end
     end
 
 % Parse input variables
-    function parse_inputs_and_setup(num_argin)       
+    function parse_inputs_and_setup(num_argin)
         % Is candidate data available?
         if ~isempty(candidateData)
-            candidateParams = checkParameterDescription(candidateData, candidateParams);            
+            candidateParams = checkParameterDescription(candidateData, candidateParams);
             mode = 'candidate';
         else
             set(h_all.button_candidateMode,'Enable','off');
@@ -690,7 +759,7 @@ end
         
         % Is fitting data available?
         if ~isempty(fitData)
-            fitParams = checkParameterDescription(fitData, fitParams);            
+            fitParams = checkParameterDescription(fitData, fitParams);
             mode = 'fitting';
         else
             set(h_all.button_fittingMode,'Enable','off');
@@ -698,7 +767,7 @@ end
         
         % Is tracking data available?
         if ~isempty(trackingData)
-            trackingParams = checkParameterDescription(trackingData, trackingParams);            
+            trackingParams = checkParameterDescription(trackingData, trackingParams);
             mode = 'tracking';
         else
             set(h_all.button_trackingMode,'Enable','off');
@@ -759,7 +828,7 @@ end
 
 
 %%  Tracking only functions
-function lifetimeCallback(hObj, eventdata)
+    function lifetimeCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
             stop(h_all.timer);
@@ -778,7 +847,7 @@ function lifetimeCallback(hObj, eventdata)
         end
     end
 
-    % Update the displayed length of trajectories
+% Update the displayed length of trajectories
     function dispLengthCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -798,7 +867,7 @@ function lifetimeCallback(hObj, eventdata)
         end
     end
 
-    % The user entered a different number of colors -> update color pool
+% The user entered a different number of colors -> update color pool
     function colorCallback(hObj, eventdata)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
         if isTimerOn
@@ -820,7 +889,7 @@ function lifetimeCallback(hObj, eventdata)
         end
     end
 
-    % Creates a line handle for every track that was not plotted before
+% Creates a line handle for every track that was not plotted before
     function setUnitinializedTrackHandles()
         hold on;
         for iTr = 1:n_tracks
