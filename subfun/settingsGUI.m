@@ -425,6 +425,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         win_pos(4) = win_pos(4)-diff_height;
+        win_pos(2) = win_pos(2)+diff_height; % Keeps the top position constant
         set(h_main,'Position', win_pos);
     end
 

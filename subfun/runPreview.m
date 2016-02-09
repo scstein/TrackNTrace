@@ -74,10 +74,10 @@ end
 %visualize all trajectories
 if globalOptions.enableTracking
 %     [hGUI] = visualizeTracksGUI(movie,trackingData,5,[],[],[],[],true);
-    [hGUI] = visualizer(movie, candidateData, candidateOptions.outParamDescription, fittingData, fittingOptions.outParamDescription, trackingData, trackingOptions.outParamDescription, 5, true);
+    [hGUI] = TNTvisualizer(movie, candidateData, candidateOptions.outParamDescription, fittingData, fittingOptions.outParamDescription, trackingData, trackingOptions.outParamDescription, 5, true);
 else
 %     [hGUI] = visualizeFitDataGUI(movie,fittingData, fittingOptions.outParamDescription, 5,[],true);
-    [hGUI] = visualizer(movie, candidateData, candidateOptions.outParamDescription, fittingData, fittingOptions.outParamDescription, [], [], 5, true);
+    [hGUI] = TNTvisualizer(movie, candidateData, candidateOptions.outParamDescription, fittingData, fittingOptions.outParamDescription, [], [], 5, true);
 end
 
 % Store options from this preview

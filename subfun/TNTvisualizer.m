@@ -1,4 +1,4 @@
-function [h_main] = visualizer(movie, candidateData, candidateParams, fitData, fitParams, trackingData, trackingParams, FPS, is_blocking)
+function [h_main] = TNTvisualizer(movie, candidateData, candidateParams, fitData, fitParams, trackingData, trackingParams, FPS, is_blocking)
 % USAGE: visualizeFitDataGUI(movie, trackingData)
 % [ Full USAGE: visualizeFitDataGUI(movie, fitData, FPS, use_bw, blockUI) ]
 %
@@ -41,14 +41,14 @@ allFramesCandidateData = [];
 allFramesFitData = [];
 
 use_bw = false;
-mode = 'none'; % 'candidate'/'fitting'/'tracking'
+mode = 'movie'; % 'movie' 'candidate'/'fitting'/'tracking'
 traj_lifetime = 0;
 n_colors = 20;
 traj_displayLength = inf;
 
 
 %  -- Prepare tracking data --
-if isempty(trackingData)
+if nargin<6 ||isempty(trackingData)
     id_tracks = []; % Note: (in case track IDs go from 1 to N without missing numbers, the track index is identical to the tracks ID.
     n_tracks = 0;
 else
@@ -67,7 +67,7 @@ end
 
 
 % -- Preparing the GUI --
-h_main = openfig('visualizer.fig');
+h_main = openfig('TNTvisualizer_Layout.fig');
 set(h_main,'handleVisibility','on'); % Make figure visible to Matlab (might not be the case)
 set(h_main,'CloseRequestFcn',@onAppClose); % Executed on closing for cleanup
 set(h_main,'Toolbar','figure');   % Add toolbar needed for zooming
@@ -90,6 +90,7 @@ parse_inputs_and_setup(nargin);
 set(h_all.toptext,'String',sprintf('Current frame: 1/%i',size(movie,3)));
 
 % Buttons
+set(h_all.button_movieMode,'Callback', {@callback_changeMode,'movie'});
 set(h_all.button_candidateMode,'Callback', {@callback_changeMode,'candidate'});
 set(h_all.button_fittingMode,'Callback', {@callback_changeMode,'fitting'});
 set(h_all.button_trackingMode,'Callback', {@callback_changeMode,'tracking'});
@@ -114,7 +115,7 @@ setNum(h_all.edit_distributionRange,100);
 set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
 
 % Popupmenu
-set(h_all.popup_distribution, 'String', fitParams);
+set(h_all.popup_distribution, 'String', 'No data');
 
 %  -- Candidate UI elements --
 
@@ -195,6 +196,7 @@ end
         SELECTED_COLOR = [0.65, 0.9, 0]; % Color of selected button.
         
         %Reset button colors       
+        set(h_all.button_movieMode,'BackgroundColor', DEFAULT_COLOR);
         set(h_all.button_candidateMode,'BackgroundColor', DEFAULT_COLOR);
         set(h_all.button_fittingMode,'BackgroundColor', DEFAULT_COLOR);
         set(h_all.button_trackingMode,'BackgroundColor', DEFAULT_COLOR);
@@ -215,8 +217,12 @@ end
         % Mode specific changes (setting datatip function, highlight
         % button.
         switch mode
-            case 'candidate'
+            case 'movie'
                 set(dcm_obj,'UpdateFcn',defaultDatatipFunction);
+                set(h_all.button_movieMode,'BackgroundColor', SELECTED_COLOR);
+                set(h_all.popup_distribution, 'String', 'No data');
+            case 'candidate'
+                set(dcm_obj,'UpdateFcn',{@modeSpecificDatatipFunction});
                 set(h_all.button_candidateMode,'BackgroundColor', SELECTED_COLOR);
                 set(h_all.popup_distribution, 'String', candidateParams);
             case 'fitting'
@@ -246,16 +252,23 @@ end
         
         % Set all mode specific panels invisible
         set(h_all.panel_tracking,'Visible','off');
+        set(h_all.panel_histogram,'Visible','off');
         
         % Rescale window based on last element
         switch mode
+            case 'movie'
+                set(h_all.panel_player,'Units',units);
+                pos = get(h_all.panel_player,'Position');
             case 'candidate'
+                set(h_all.panel_histogram,'Visible','on');
                 set(h_all.panel_histogram,'Units',units);
                 pos = get(h_all.panel_histogram,'Position');
             case 'fitting'
+                set(h_all.panel_histogram,'Visible','on');
                 set(h_all.panel_histogram,'Units',units);
                 pos = get(h_all.panel_histogram,'Position');
             case 'tracking'
+                set(h_all.panel_histogram,'Visible','on');
                 set(h_all.panel_tracking,'Units',units);
                 pos = get(h_all.panel_tracking,'Position');
                 set(h_all.panel_tracking,'Visible','on');
@@ -279,6 +292,7 @@ end
         end
         
         win_pos(4) = win_pos(4)-diff_height;
+        win_pos(2) = win_pos(2)+diff_height;
         set(h_main,'Position', win_pos);
         
         % Reset units back to normalized, so figure resizes "properly"
@@ -496,6 +510,7 @@ end
         end
         
         switch mode
+            case 'movie'
             case 'candidate'
                 if(isempty(candidateData{iF}));
                     if dothandle_cand ~= -1
@@ -757,35 +772,46 @@ end
 % Parse input variables
     function parse_inputs_and_setup(num_argin)
         % Is candidate data available?
-        if ~isempty(candidateData)
-            candidateParams = checkParameterDescription(candidateData, candidateParams);
-            mode = 'candidate';
-        else
+        if num_argin<2 || isempty(candidateData)
             set(h_all.button_candidateMode,'Enable','off');
+        else
+            candidateParams = checkParameterDescription(candidateData, candidateParams);
+            mode = 'candidate';            
         end
+        
+        if num_argin<3 || isempty(candidateParams)
+            candidateParams = {};
+        end        
         
         % Is fitting data available?
-        if ~isempty(fitData)
-            fitParams = checkParameterDescription(fitData, fitParams);
-            mode = 'fitting';
-        else
+        if num_argin<4 || isempty(fitData)
             set(h_all.button_fittingMode,'Enable','off');
+        else
+            fitParams = checkParameterDescription(fitData, fitParams);
+            mode = 'fitting';            
         end
+        
+        if num_argin<5 || isempty(fitParams)
+            fitParams = {};
+        end        
         
         % Is tracking data available?
-        if ~isempty(trackingData)
-            trackingParams = checkParameterDescription(trackingData, trackingParams);
-            mode = 'tracking';
-        else
+        if num_argin<6 || isempty(trackingData)
             set(h_all.button_trackingMode,'Enable','off');
+        else
+            trackingParams = checkParameterDescription(trackingData, trackingParams);
+            mode = 'tracking';            
         end
         
-        % input parsing
-        if isempty(FPS)
+        if num_argin<7 || isempty(trackingParams)
+            trackingParams ={};
+        end
+
+        if num_argin<8 || isempty(FPS) 
             FPS = 30;
         end
         
-        if isempty(is_blocking)
+        if num_argin<9 || isempty(is_blocking)
             is_blocking = false;
         end
         
