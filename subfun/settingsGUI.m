@@ -308,7 +308,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % Used to resize the GUI after selecting a different plugin
     function updatePanelPositions()
         above_panel_spacing = 0.5;
-        topic_spacing = 2.5;
+        topic_spacing = 3;
         units = 'characters';
         
         set(h_all.panel_candidate,'Units',units);
