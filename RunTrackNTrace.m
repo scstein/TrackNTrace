@@ -61,9 +61,15 @@ timestamp = sprintf('%i-m%02i-d%02i-%02ih%02i',time (1),time(2),time(3),time(4),
 % Iterate through all movies in the list
 GUIreturns.useSettingsForAll = false;
 
-posFit_list = cell(0);
 list_filenames_TNTdata = cell(0);
 for iMovie=1:numel(movie_list)
+    % Is this movie the last one to analyze?
+    if(iMovie == numel(movie_list))
+       GUIinputs.lastMovieInList = true;
+    else
+       GUIinputs.lastMovieInList = false;
+    end
+    
     filename_movie = movie_list{iMovie};
     [path,filename,~] = fileparts(filename_movie);
     filename_TNTdata = [path,filesep,filename,'_',timestamp];
@@ -79,7 +85,6 @@ for iMovie=1:numel(movie_list)
             iFile = iFile+1;
         end
     end
-    
     
     list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; %#ok<AGROW> % Append name of datafile to list
     
@@ -171,9 +176,7 @@ for iMovie=1:numel(movie_list)
     save(filename_TNTdata,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
     if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
         save(filename_TNTdata,'trackingOptions','-append');
-    end
-    posFit_list = [posFit_list;{filename_TNTdata}]; %#ok<AGROW>
-    
+    end    
     
     if not(GUIreturns.useSettingsForAll || TNToptions.rememberSettingsForNextMovie)
         globalOptions    = [];
@@ -184,11 +187,11 @@ for iMovie=1:numel(movie_list)
         dark_img_def = dark_img;
     end
 end
-clearvars -except posFit_list parallelProcessingAvailable TNToptions
+clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions
 
 %% Candidate detection and fitting for every movie
-for iMovie=1:numel(posFit_list)
-    filename_TNTdata = posFit_list{iMovie};
+for iMovie=1:numel(list_filenames_TNTdata)
+    filename_TNTdata = list_filenames_TNTdata{iMovie};
     load(filename_TNTdata,'-mat');
     
     % Read movie
@@ -207,26 +210,26 @@ for iMovie=1:numel(posFit_list)
     movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
     save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','firstFrame_lastFrame','-append');
 end
-clearvars -except posFit_list parallelProcessingAvailable TNToptions globalOptions
+clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions globalOptions
 
 %% Compute trajectories for every movie
-for iMovie=1:numel(posFit_list)
+for iMovie=1:numel(list_filenames_TNTdata)
     
     % Load global options to check if tracking is desired (skip movie if it is not)
-    load(posFit_list{iMovie},'globalOptions');
+    load(list_filenames_TNTdata{iMovie},'globalOptions');
     if (~globalOptions.enableTracking)
         continue
     end
     
     % Load options and data needed for processing
-    load(posFit_list{iMovie},'trackingOptions','fittingData','filename_movie');
+    load(list_filenames_TNTdata{iMovie},'trackingOptions','fittingData','filename_movie');
     
     % Compute trajectories
     fprintf('######\nTNT: Tracking particles in movie %s.\n',filename_movie);
     [trackingData, trackingOptions] = trackParticles(fittingData,trackingOptions); %#ok<ASGLU>
     
     %Save trajectories
-    save(posFit_list{iMovie},'trackingData','trackingOptions','-append');
+    save(list_filenames_TNTdata{iMovie},'trackingData','trackingOptions','-append');
 end
 
 % Deactivate parallel processing if requested

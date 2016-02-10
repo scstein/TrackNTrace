@@ -39,9 +39,19 @@ set(h_all.edit_title, 'String', [fname,extension]);
 set(h_all.edit_title,'Tooltip',filename_movie);
 set(h_all.button_save, 'Callback', @callback_saveSettings);
 set(h_all.button_load, 'Callback', @callback_loadSettings);
-set(h_all.button_continue, 'Callback',@callback_continue);
 set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
 set(h_all.button_preview, 'Callback', @callback_preview);
+
+set(h_all.button_continue, 'Callback',@callback_continue);
+if(GUIinputs.lastMovieInList)
+    set(h_all.button_continue, 'String','<html> <center> START <br> processing </center></html>');
+    set(h_all.button_continue, 'ForegroundColor',[16,33,130]/255);
+    set(h_all.button_continue, 'Tooltip','Start processing all movies.');
+else
+    set(h_all.button_continue, 'String','Next movie');
+    set(h_all.button_continue, 'ForegroundColor',[0,0,0]);
+    set(h_all.button_continue, 'Tooltip','Go to next movie in list to adjust its settings.');
+end
 
 % % General options
 % edit_darkMovie
@@ -307,9 +317,13 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
 % Used to resize the GUI after selecting a different plugin
     function updatePanelPositions()
-        above_panel_spacing = 0.5;
-        topic_spacing = 3;
+        % -- Spacings --
         units = 'characters';
+        TOPIC_SPACING = 3; % Spacing between topic panels (candidate/tracking etc)
+        ABOVE_PANEL_SPACING = 0.5; % Spacing topic panel and the UI elements above the panel (Fitting Method etc.)
+        BUTTON_SPACING = 2; % Spacing between last panels and buttons at the bottom
+        BOTTOM_SPACING = 0.75; % Spacing between buttons at the bottom and bottom of the GUI window        
+        % -- -------- --
         
         set(h_all.panel_candidate,'Units',units);
         panel_candidate_pos = get(h_all.panel_candidate,'Position');
@@ -317,101 +331,101 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Relative to candidate detection panel
         set(h_all.label_fittingMethod, 'Units',units);
         label_fittingMethod_pos = get(h_all.label_fittingMethod, 'Position');
-        label_fittingMethod_pos(2) = panel_candidate_pos(2)-topic_spacing-label_fittingMethod_pos(4)/2;
+        label_fittingMethod_pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-label_fittingMethod_pos(4)/2;
         set(h_all.label_fittingMethod, 'Position',label_fittingMethod_pos);
         
         set(h_all.popup_fittingMethod, 'Units',units);
         pos = get(h_all.popup_fittingMethod, 'Position');
-        pos(2) = panel_candidate_pos(2)-topic_spacing-pos(4)/2;
+        pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.popup_fittingMethod, 'Position',pos);
         
         set(h_all.button_fittingHelp, 'Units',units);
         pos = get(h_all.button_fittingHelp, 'Position');
-        pos(2) = panel_candidate_pos(2)-topic_spacing-pos(4)/2;
+        pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2 + 0.1; % Note the 0.1 is empirical and fits better
         set(h_all.button_fittingHelp, 'Position',pos);
         
         % Relative to label_fitting_Method
         set(h_all.panel_fitting, 'Units',units);
         panel_fitting_pos = get(h_all.panel_fitting, 'Position');
-        panel_fitting_pos(2) = label_fittingMethod_pos(2)-above_panel_spacing-panel_fitting_pos(4);
+        panel_fitting_pos(2) = label_fittingMethod_pos(2)-ABOVE_PANEL_SPACING-panel_fitting_pos(4);
         set(h_all.panel_fitting, 'Position',panel_fitting_pos);
         
         % Relative to fitting panel
         set(h_all.label_enableTracking, 'Units',units);
         label_enableTracking_pos = get(h_all.label_enableTracking, 'Position');
-        label_enableTracking_pos(2) = panel_fitting_pos(2)-topic_spacing-label_enableTracking_pos(4)/2;
+        label_enableTracking_pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-label_enableTracking_pos(4)/2;
         set(h_all.label_enableTracking, 'Position',label_enableTracking_pos);
         
         set(h_all.cbx_enableTracking, 'Units',units);
         pos = get(h_all.cbx_enableTracking, 'Position');
-        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.cbx_enableTracking, 'Position',pos);
         
         set(h_all.label_trackingMethod, 'Units',units);
         pos = get(h_all.label_trackingMethod, 'Position');
-        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.label_trackingMethod, 'Position',pos);
         
         set(h_all.popup_trackingMethod, 'Units',units);
         pos = get(h_all.popup_trackingMethod, 'Position');
-        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.popup_trackingMethod, 'Position',pos);
         
         set(h_all.button_trackingHelp, 'Units',units);
         pos = get(h_all.button_trackingHelp, 'Position');
-        pos(2) = panel_fitting_pos(2)-topic_spacing-pos(4)/2;
+        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2 + 0.1; % Note the 0.1 is empirical and fits better
         set(h_all.button_trackingHelp, 'Position',pos);
         
         % Relative to label tracking
         set(h_all.panel_tracking, 'Units',units);
         panel_tracking_pos = get(h_all.panel_tracking, 'Position');
-        panel_tracking_pos(2) = label_enableTracking_pos(2)-above_panel_spacing-panel_tracking_pos(4);
+        panel_tracking_pos(2) = label_enableTracking_pos(2)-ABOVE_PANEL_SPACING-panel_tracking_pos(4);
         set(h_all.panel_tracking, 'Position',panel_tracking_pos);
         
-        % Relative to tracking panel
-        button_spacing = 1;
-        
+        % Relative to tracking panel        
         set(h_all.button_continueForAll, 'Units',units);
         pos = get(h_all.button_continueForAll, 'Position');
-        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.button_continueForAll, 'Position',pos);
         
         set(h_all.button_continue, 'Units',units);
         pos = get(h_all.button_continue, 'Position');
-        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.button_continue, 'Position',pos);
         
         set(h_all.button_preview, 'Units',units);
         pos = get(h_all.button_preview, 'Position');
-        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.button_preview, 'Position',pos);
         
         button_preview_height = pos(4);
         
+        
         set(h_all.text_firstFrameTesting, 'Units',units);
         pos = get(h_all.text_firstFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.text_firstFrameTesting, 'Position',pos);
         
         set(h_all.edit_firstFrameTesting, 'Units',units);
         pos = get(h_all.edit_firstFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-button_spacing-pos(4);
+        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.edit_firstFrameTesting, 'Position',pos);
         
         set(h_all.text_lastFrameTesting, 'Units',units);
         pos = get(h_all.text_lastFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-button_spacing-button_preview_height;
+        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-button_preview_height;
         set(h_all.text_lastFrameTesting, 'Position',pos);
         
         set(h_all.edit_lastFrameTesting, 'Units',units);
         pos = get(h_all.edit_lastFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-button_spacing-button_preview_height;
+        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-button_preview_height;
         set(h_all.edit_lastFrameTesting, 'Position',pos);
         
         % Rescale window based on last element
         set(h_main,'Units',units);
         win_pos = get(h_main,'Position');
-        diff_height = pos(2)-button_spacing;
+        win_top_pos = win_pos(2)+win_pos(4);
+        diff_height = pos(2)-BOTTOM_SPACING;
         
         % To resize the figure properly, we first need to move all objects
         % inside.. (Matlab ..)
@@ -425,7 +439,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         win_pos(4) = win_pos(4)-diff_height;
-        win_pos(2) = win_pos(2)+diff_height; % Keeps the top position constant
+        win_pos(2) = win_top_pos-win_pos(4); % Keeps the top position constant
         set(h_main,'Position', win_pos);
     end
 
@@ -456,7 +470,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Note: we don't load the filename of the movie, as this should be
         % unchanged when loading settings.
         
-        [infile, path] = uigetfile('.mat');
+        [infile, path] = uigetfile({'*.mat','TNT settings'});
         if isfloat(infile);
             return;
         end; % User clicked cancel

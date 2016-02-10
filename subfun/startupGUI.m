@@ -35,7 +35,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
 % Load settings from a file
     function callback_loadSettings(hObj,event)        
-        [infile, path] = uigetfile('.mat');
+        [infile, path] = uigetfile({'*.mat','TNT settings'});
         if isfloat(infile);
             return;
         end; % User clicked cancel
