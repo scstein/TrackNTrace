@@ -81,6 +81,14 @@ function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile,
 % Add all paths required to run TNT
 addRequiredPathsTNT();
 
+% Check MATLAB version
+MATLABversion = strsplit(version,'.');
+if(str2double(MATLABversion(1))>=8 && str2double(MATLABversion(2))>=6) % Use 'drawback nocallbacks' for MATLAB 2015b (8.6.x) and later
+    MATLAB_2015b_or_newer = true; 
+else
+    MATLAB_2015b_or_newer = false; 
+end
+
 % Show filechooser dialog to choose movie / TNT file if started without input arguments.
 if nargin==0
    [filename, path] = uigetfile({'*.mat;*.tif','Visualizer files'},'Select movie or TNT file to visualize.');
@@ -513,20 +521,8 @@ end
         % brings into focus. It can be that the images are not plotted to
         % the GUI then but to the selected figure window
         set(0,'CurrentFigure',h_main);
-        
-        xl = xlim;
-        yl = ylim;
-        
+
         plotFrame(frame);
-        
-        % save the axis limits in case the user zoomed
-        xlim(xl);
-        ylim(yl);
-        caxis(zl);
-        
-        % Deactivate axes labels
-        set(h_all.axes,'YTickLabel',[]);
-        set(h_all.axes,'XTickLabel',[]);
         
         % Adjust contrast continously if shift key is pressed
         modifiers = get(gcf,'currentModifier');
@@ -535,7 +531,12 @@ end
             autocontrastCallback([],[]);
         end
         
-        drawnow; % Important! Or Matlab will skip drawing entirely for high FPS
+        % Important! Or Matlab will skip drawing entirely for high FPS
+        if(MATLAB_2015b_or_newer)
+            drawnow nocallbacks; 
+        else
+            drawnow expose update; 
+        end
     end
 
     % Plots contents of the frame with the input index iF
