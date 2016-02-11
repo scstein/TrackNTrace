@@ -521,6 +521,10 @@ end
         % brings into focus. It can be that the images are not plotted to
         % the GUI then but to the selected figure window
         set(0,'CurrentFigure',h_main);
+        
+        % Delete active datatip
+        % WARNING this also deletes other hggroup objects associated with the figure which are also invisible and draggable.
+        delete(findall(h_main,'Type','hggroup','HandleVisibility','off','Draggable','on'));
 
         plotFrame(frame);
         
