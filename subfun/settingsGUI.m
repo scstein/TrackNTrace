@@ -303,9 +303,13 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Enable/disable tracking panel
         if get(h_all.cbx_enableTracking, 'Value')
             set(h_all.popup_trackingMethod,'Enable','on');
+            set(h_all.label_trackingMethod,'Enable','on');
+            set(h_all.button_trackingHelp,'Enable','on');
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
         else
             set(h_all.popup_trackingMethod,'Enable','off');
+            set(h_all.label_trackingMethod,'Enable','off');
+            set(h_all.button_trackingHelp,'Enable','off');
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
         end
     end

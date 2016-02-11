@@ -36,6 +36,6 @@ globalOptions.photonSensitivity = 4; %double, electrons per image count, depends
 globalOptions.photonGain = 100; %integer, EMCCD gain of camera
 
 % Options for tracking particle positions
-globalOptions.enableTracking = true;
+globalOptions.enableTracking = false;
 
 end
