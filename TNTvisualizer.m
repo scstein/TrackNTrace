@@ -78,6 +78,9 @@ function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile,
 % Date: 2016
 %
 
+% Add all paths required to run TNT
+addRequiredPathsTNT();
+
 % Show filechooser dialog to choose movie / TNT file if started without input arguments.
 if nargin==0
    [filename, path] = uigetfile({'*.mat;*.tif','Visualizer files'},'Select movie or TNT file to visualize.');
@@ -1122,6 +1125,16 @@ end
 
 
 %% --- General functions ---
+
+function addRequiredPathsTNT()
+    fullPathToThisFile = mfilename('fullpath');
+    [path,~,~] = fileparts(fullPathToThisFile);
+    addpath(genpath([path,filesep,'external']));
+    addpath(genpath([path,filesep,'helper']));
+    addpath(genpath([path,filesep,'plugins']));
+    addpath(genpath([path,filesep,'subfun']));
+    addpath(genpath([path,filesep,'analysis']));
+end
 
 % Function that cuts data from upper and lower tails of the distribution
 % keeping at least 'percentOfData' percent of all values.
