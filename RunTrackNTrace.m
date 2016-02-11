@@ -47,6 +47,8 @@ end;
 %% Adjust options for each movie and test settings if desired
 GUIinputs.TNToptions = TNToptions;
 GUIinputs.showStartupInformation = true;
+GUIinputs.outputFolderSameAsMovie = true;
+GUIinputs.outputFolder = '';
 
 % Calculate default dark image if given in default options
 dark_img_def = [];
@@ -71,22 +73,7 @@ for iMovie=1:numel(movie_list)
     end
     
     filename_movie = movie_list{iMovie};
-    [path,filename,~] = fileparts(filename_movie);
-    filename_TNTdata = [path,filesep,filename,'_',timestamp];
-    % prevent overriding filenames, e.g. when one movie is chosen multiple
-    % times and quickly analyzed
-    filename_overriden = true;
-    iFile = 0;
-    while(filename_overriden)
-        if ~exist([filename_TNTdata,'_',int2str(iFile),'_TNT.mat'],'file')
-            filename_TNTdata = [filename_TNTdata,'_',int2str(iFile),'_TNT.mat'];
-            filename_overriden = false;
-        else
-            iFile = iFile+1;
-        end
-    end
-    
-    list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; %#ok<AGROW> % Append name of datafile to list
+    [pathToMovie,filename,~] = fileparts(filename_movie);
     
     % Check if movie can be read
     if(~isempty(filename_movie))
@@ -109,6 +96,10 @@ for iMovie=1:numel(movie_list)
         GUIinputs.filename_movie = filename_movie;
         
         [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+        % Save output folder settings
+        GUIinputs.outputFolderSameAsMovie = GUIreturns.outputFolderSameAsMovie;
+        GUIinputs.outputFolder = GUIreturns.outputFolder;
+        
         GUIinputs.showStartupInformation = false; % Only show this on first startup
         if GUIreturns.userExit;
             userExitFunc(); % Cleanup
@@ -136,6 +127,10 @@ for iMovie=1:numel(movie_list)
             while true
                 if not(first_run)
                     [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+                    % Save output folder settings
+                    GUIinputs.outputFolderSameAsMovie = GUIreturns.outputFolderSameAsMovie;
+                    GUIinputs.outputFolder = GUIreturns.outputFolder;
+                    
                     if GUIreturns.userExit;
                         userExitFunc();
                         return;
@@ -172,7 +167,33 @@ for iMovie=1:numel(movie_list)
         
     end %not( GUIreturns.useSettingsForAll )
         
-    % Save options    
+    
+    % --  Save options   --
+    
+    % Build filename for TNT file
+    if GUIreturns.outputFolderSameAsMovie
+        TNToutputPath = [pathToMovie,filesep];
+    else
+        if isempty(GUIreturns.outputFolder)
+            TNToutputPath = [];
+        else            
+            TNToutputPath = [GUIreturns.outputFolder,filesep];
+        end
+    end
+    
+    filename_TNTdata = [TNToutputPath,filename,'_',timestamp,'_TNT.mat'];
+    % prevent overriding filenames, e.g. when one movie is chosen multiple times
+    fileID = 1;
+    while(true)
+       if exist(filename_TNTdata,'file') % Test if output file already exists
+           filename_TNTdata = [TNToutputPath,filename,'_',timestamp,'_',int2str(fileID),'_TNT.mat'];
+           fileID = fileID+1;
+       else
+           break;
+       end
+    end
+    list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; %#ok<AGROW> % Append name of datafile to list
+    
     save(filename_TNTdata,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
     if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
         save(filename_TNTdata,'trackingOptions','-append');

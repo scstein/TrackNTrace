@@ -17,6 +17,8 @@ GUIreturns.fittingOptionsChanged = false;
 GUIreturns.trackingOptionsChanged  = false;
 GUIreturns.previewIntervalChanged = false;
 GUIreturns.previewMode = false;
+GUIreturns.outputFolderSameAsMovie = false;
+GUIreturns.outputFolder = [];
 
 % Save options at startup (to check later if options changed)
 globalOptions_atStartup = globalOptions;
@@ -32,35 +34,27 @@ set(h_main,'CloseRequestFcn',@onAppClose); % For cleanup
 
 h_all = guihandles(h_main);
 
-% Setup GUI specific elements
+% Setup GUI specific elements at top of GUI
 set(h_all.text_title, 'String', titleText);
 [~, fname,extension] = fileparts(filename_movie);
 set(h_all.edit_title, 'String', [fname,extension]);
 set(h_all.edit_title,'Tooltip',filename_movie);
 set(h_all.button_save, 'Callback', @callback_saveSettings);
 set(h_all.button_load, 'Callback', @callback_loadSettings);
-set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
-set(h_all.button_preview, 'Callback', @callback_preview);
 
-set(h_all.button_continue, 'Callback',@callback_continue);
-if(GUIinputs.lastMovieInList)
-    set(h_all.button_continue, 'String','<html> <center> START <br> processing </center></html>');
-    set(h_all.button_continue, 'ForegroundColor',[16,33,130]/255);
-    set(h_all.button_continue, 'Tooltip','Start processing all movies.');
-else
-    set(h_all.button_continue, 'String','Next movie');
-    set(h_all.button_continue, 'ForegroundColor',[0,0,0]);
-    set(h_all.button_continue, 'Tooltip','Go to next movie in list to adjust its settings.');
-end
 
 % % General options
+set(h_all.cbx_outputFolder, 'Callback', @callback_updateMainGUIstate);
+set(h_all.cbx_outputFolder, 'Value', GUIinputs.outputFolderSameAsMovie);
+set(h_all.button_outputFolder, 'Callback', @callback_selectOutputFolder);
+set(h_all.edit_outputFolder, 'String', GUIinputs.outputFolder);
+set(h_all.edit_outputFolder, 'Tooltip', GUIinputs.outputFolder);
+
+set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
 % edit_darkMovie
+
 set(h_all.edit_firstFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrame,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.edit_firstFrameTesting,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
-set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
-
 %Photon conversion
 set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateMainGUIstate);
 set(h_all.edit_photonBias, 'Callback', {@callback_IntEdit,0,inf});
@@ -82,6 +76,24 @@ set(h_all.popup_trackingMethod, 'Callback', @callback_updatePlugins);
 set(h_all.button_candidateHelp, 'Callback', @callback_helpButtons);
 set(h_all.button_fittingHelp, 'Callback', @callback_helpButtons);
 set(h_all.button_trackingHelp, 'Callback', @callback_helpButtons);
+
+% % Elements at bottom of GUI
+set(h_all.button_preview, 'Callback', @callback_preview);
+set(h_all.edit_firstFrameTesting,'Callback',{@callback_IntEdit,1,inf});
+set(h_all.edit_lastFrameTesting,'Callback',{@callback_IntEdit,1,inf});
+set(h_all.button_continueForAll, 'Callback', @callback_continueForAll);
+
+set(h_all.button_continue, 'Callback',@callback_continue);
+if(GUIinputs.lastMovieInList)
+    set(h_all.button_continue, 'String','<html> <center> START <br> processing </center></html>');
+    set(h_all.button_continue, 'ForegroundColor',[16,33,130]/255);
+    set(h_all.button_continue, 'Tooltip','Start processing all movies.');
+else
+    set(h_all.button_continue, 'String','Next movie');
+    set(h_all.button_continue, 'ForegroundColor',[0,0,0]);
+    set(h_all.button_continue, 'Tooltip','Go to next movie in list to adjust its settings.');
+end
+
 
 % % Container for plugins
 candidate_plugins = [];
@@ -266,7 +278,15 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
 % Update GUI based on currently set values
 % Note: This does not update the plugins!
-    function callback_updateMainGUIstate(hObj, event)
+    function callback_updateMainGUIstate(hObj, event)        
+        % Enable/disable output folder
+        if get(h_all.cbx_outputFolder, 'Value')
+            set(h_all.edit_outputFolder, 'Enable', 'off');
+            set(h_all.button_outputFolder, 'Enable', 'off');
+        else 
+            set(h_all.edit_outputFolder, 'Enable', 'on');
+            set(h_all.button_outputFolder, 'Enable', 'on');
+        end
         
         % Enable/disable photon conversion
         if get(h_all.cbx_usePhotonConv, 'Value')
@@ -490,8 +510,22 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         setGUIBasedOnOptions();
     end
 
+% Opens a file chooser dialog to select the output folder
+    function callback_selectOutputFolder(~, ~)
+        outputFolderPath = get(h_all.edit_darkMovie,'String');
+        path = [];
+        if ~isempty(outputFolderPath)
+            [path,~,~] = fileparts(outputFolderPath);
+        end
+        [path] = uigetdir(path);
+        if( isfloat(path)); return; end; % User pressed cancel.
+        
+        set(h_all.edit_outputFolder,'String',path);
+        set(h_all.edit_outputFolder,'Tooltip',path);
+    end
+
 % Opens a file chooser dialog to select the dark movie
-    function callback_selectDarkMovie(hObj, event)
+    function callback_selectDarkMovie(~, ~)
         darkMoviePath = get(h_all.edit_darkMovie,'String');
         path = [];
         if ~isempty(darkMoviePath)
@@ -501,6 +535,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if( isfloat(darkMovie)); return; end; % User pressed cancel.
         
         set(h_all.edit_darkMovie,'String',[path,darkMovie]);
+        set(h_all.edit_darkMovie,'Tooltip',[path,darkMovie]);
     end
 
 % Shows a message dialog with the info of the currently selected plugin
@@ -604,6 +639,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
     function setGUIBasedOnOptions()
         % % General Options
         set(h_all.edit_darkMovie,'String', globalOptions.filename_dark_movie);
+        set(h_all.edit_darkMovie,'Tooltip',globalOptions.filename_dark_movie);
         setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
         setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
         setNum(h_all.edit_firstFrameTesting, globalOptions.firstFrameTesting, true);
@@ -665,6 +701,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             
             GUIreturns.globalOptionsChanged_ExcludingEnableTracking = ~isequaln(globalOptions_atStartup, globalOptions_tmp);
         end
+        
+        % Save output folder
+        GUIreturns.outputFolder = get(h_all.edit_outputFolder,'String');
+        GUIreturns.outputFolderSameAsMovie = logical(get(h_all.cbx_outputFolder,'Value'));        
     end
 
 
