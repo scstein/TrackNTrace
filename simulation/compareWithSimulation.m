@@ -8,49 +8,35 @@ end
 nrFrames = numel(fitData);
 minTrackLength = 2;
 linkingDistance = options.linkingDistance;
-snr_min = options.thresholdSNR;
 
 nrTruePositive = 0;
-nrFalsePositive = 0;
-nrFalseNegative = 0;
+nrFalsePositive = zeros(nrFrames,1);
+nrFalseNegative = zeros(nrFrames,1);
 RMSE = zeros(nrFrames,1);
 emptyFrames = [];
 
 
-if ~isempty(snr_min)
-    fitData_truth = cellfun(@(var) var(var(:,4)./sqrt(var(:,5))>snr_min,:),fitData_truth,'UniformOutput',false);
-    fitData = cellfun(@(var) var(var(:,4)./sqrt(var(:,5))>snr_min,:),fitData,'UniformOutput',false);
-end
-    
-
-
-
 for iFrame = 1:nrFrames
     if ~isempty(fitData{iFrame}) && ~isempty(fitData_truth{iFrame})
-%         [pos,id_true,id_loc] = preparePosArray(fitData{iFrame},fitData_truth{iFrame});
         pos = preparePosArray(fitData{iFrame},fitData_truth{iFrame});
-%         nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,options.maxGapRadius,options.maxFrameGap,options.minTrajLength,options.verbose).';
         track = mx_nn_tracker(pos,minTrackLength,linkingDistance,[],[],minTrackLength,false).';
         if isempty(track)
-            nrFalsePositive = nrFalsePositive+size(fitData{iFrame},1);
-            nrFalseNegative = nrFalseNegative+size(fitData_truth{iFrame},1);
+            nrFalsePositive(iFrame) = size(fitData{iFrame},1);
+            nrFalseNegative(iFrame) = size(fitData_truth{iFrame},1);
             emptyFrames = [emptyFrames;iFrame];
             continue
         end
         nrIds = max(track(:,1));
-%         id_track = [track(track(:,6)<0,6), track(track(:,6)>0,6)];
         
-%         nrTruePositive = nrTruePositive+max(track(:,1)); %particles present in both frames are true localizations
         nrTruePositive = nrTruePositive+nrIds;
-        nrFalsePositive = nrFalsePositive+size(fitData{iFrame},1)-nrIds;
-        nrFalseNegative = nrFalseNegative+size(fitData_truth{iFrame},1)-nrIds;
-%         nrFalsePositive = nrFalsePositive+sum(~ismember(id_loc,id_track(:,2))); %particles present in loc frame but not in tracks are false positives
-%         nrFalseNegative = nrFalseNegative+sum(~ismember(id_true,id_track(:,1))); %particles present in true frame but not in tracks are false negatives
         
+        nrFalsePositive(iFrame) = size(fitData{iFrame},1)-nrIds;
+        nrFalseNegative(iFrame) = size(fitData_truth{iFrame},1)-nrIds;
+
         RMSE(iFrame) = 1/max(track(:,1))*sum(sum((track(2:2:end,3:4)-track(1:2:end-1,3:4)).^2,2),1); %1/N*sum( (x-x_true)^2+(y-ytrue)^2)
     else
-        nrFalsePositive = nrFalsePositive+size(fitData{iFrame},1);
-        nrFalseNegative = nrFalseNegative+size(fitData_truth{iFrame},1);
+        nrFalsePositive(iFrame) = size(fitData{iFrame},1);
+        nrFalseNegative(iFrame) = size(fitData_truth{iFrame},1);
         emptyFrames = [emptyFrames;iFrame];
     end
 end
@@ -59,9 +45,11 @@ RMSE(emptyFrames) = [];
 
 resultStatistics.accuracy = [sqrt(mean(RMSE)), 0.5*std(RMSE)*1/sqrt(mean(RMSE))]*options.pixelSize; %value, standard deviation
 resultStatistics.truePositive = nrTruePositive;
-resultStatistics.falsePositive = nrFalsePositive;
-resultStatistics.falseNegative = nrFalseNegative;
-resultStatistics.JAC = nrTruePositive/(nrTruePositive+nrFalsePositive+nrFalseNegative);
+resultStatistics.falsePositive = [sum(nrFalsePositive),std(nrFalsePositive)*nrFrames];
+resultStatistics.falseNegative = [sum(nrFalseNegative),std(nrFalseNegative)*nrFrames];
+JAC = nrTruePositive/(nrTruePositive+sum(nrFalsePositive)+sum(nrFalseNegative));
+JAC = [JAC,JAC/(nrTruePositive+sum(nrFalsePositive)+sum(nrFalseNegative))*sqrt(resultStatistics.falsePositive(2)^2+resultStatistics.falseNegative(2)^2)];
+resultStatistics.JAC = JAC;
 
 resolutionFRC = [];
 if options.calcFRC
@@ -70,8 +58,11 @@ if options.calcFRC
     significantP = find(frc<0.1,1,'first')/numel(frc); %smooth relevant part of curve...
     frcSmooth = smooth(frc,significantP/10,'rloess'); %in about 10 windows, robust lsq regression
     resolutionFRC = 1/q(find(frcSmooth<1/7,1,'first'));
+    FRC_error = [1/q(find(frc<1/7,1,'first')), 1/q(find(frc<1/7,1,'last'))];
+    FRC_error = abs(diff(FRC_error));
+    
 end
-resultStatistics.resolutionFRC = resolutionFRC;
+resultStatistics.resolutionFRC = [resolutionFRC,FRC_error/2];
 
 end
 
@@ -93,6 +84,7 @@ end
 
 
 function [q,frc_curve] = calcFRCCurve(fitData1, fitData2, options, randomize)
+persistent idx_radial_search
 
 px_size = options.pixelSize;
 p = options.zoomFactor;
@@ -102,7 +94,8 @@ im_w = options.imageWidth; %we can only really use one width, so user can put in
 % get localization tables
 if randomize || isempty(fitData2)
     % draw random samples from fitData
-    fitData = [vertcat(fitData1{:});vertcat(fitData2{:})];
+%     fitData = [vertcat(fitData1{:});vertcat(fitData2{:})];
+    fitData = vertcat(fitData1{:});  
     fitData = fitData(:,1:2);
 %     rand_bool = logical(randi([0,1],1,size(fitData,1))).';
     rand_bool = randperm(size(fitData,1),size(fitData,1));
@@ -112,6 +105,9 @@ if randomize || isempty(fitData2)
 else
     loc1 = vertcat(fitData1{:}); loc1 = loc1(:,1:2);
     loc2 = vertcat(fitData2{:}); loc2 = loc2(:,1:2);
+    
+    loc1 = loc1(loc1(:,1)>=3*256/8&loc1(:,1)<5*256/8&loc1(:,2)>=3*256/8&loc1(:,2)<5*256/8,:)-3*256/8;
+    loc2 = loc2(loc2(:,1)>=3*256/8&loc2(:,1)<5*256/8&loc2(:,2)>=3*256/8&loc2(:,2)<5*256/8,:)-3*256/8;
 end
 
 
@@ -140,22 +136,24 @@ end
 q_radius = sqrt(x.^2+y.^2);
 [q_radius,idx_img_sorted] = sort(q_radius(:)); %[q_radius,img(idx_img_sorted)] would consist of pairs [R,img(R)] which have to be summed 
 
-q_search = (1:1:sqrt(2)*nrQ).';
-if q_search(end)>=q_radius(end)
-    %no values outside of image
-    q_search = q_search(1:end-1);
-end
+if isempty(idx_radial_search)
+    q_search = (1:1:sqrt(2)*nrQ).';
+    if q_search(end)>=q_radius(end)
+        %no values outside of image
+        q_search = q_search(1:end-1);
+    end
 
-idx_radial_search = zeros(numel(q_search),1);
-% we will now find the index of Q corresponding to the index of
-% cumsum(img(idx_img)) where the cumulative sum value corresponds to the
-% sum over all pixels inside the search circle of radius q_search
-for iQ=1:numel(q_search)
-    idx_radial_search(iQ) = find(q_radius>=q_search(iQ),1,'first')-1; %where is the last index of q_radius<q_search(iQ)?
-end
-if idx_radial_search(end)<size(q_radius,1)
-    % include very last value
-    idx_radial_search = [idx_radial_search;size(q_radius,1)];
+    idx_radial_search = zeros(numel(q_search),1);
+    % we will now find the index of Q corresponding to the index of
+    % cumsum(img(idx_img)) where the cumulative sum value corresponds to the
+    % sum over all pixels inside the search circle of radius q_search
+    for iQ=1:numel(q_search)
+        idx_radial_search(iQ) = find(q_radius>=q_search(iQ),1,'first')-1; %where is the last index of q_radius<q_search(iQ)?
+    end
+    if idx_radial_search(end)<size(q_radius,1)
+        % include very last value
+        idx_radial_search = [idx_radial_search;size(q_radius,1)];
+    end
 end
 
 

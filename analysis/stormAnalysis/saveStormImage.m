@@ -9,7 +9,7 @@ function [storm_img] = saveStormImage( posData, filename, movieSize, minval, max
 % Optional input: (use '[]' to leave unspecified)
 %    minval: Value shown as black in the image.
 %    maxval: Value shown as white in the image.
-%    mag: Magnification of original pixels. 
+%    mag: Magnification of original pixels.
 %         With mag=2 the generated pixels are half the size of the original
 %         ones. | default: 8 (like RapidStorm)
 %
@@ -24,12 +24,14 @@ end
 if(iscell(posData)) % This is fitData not trajectoryData
     positions = vertcat(posData{:});
     positions = positions(:,1:2);
+else
+    positions = posData(:,3:4);
 end
 
 % Visualize the data
 % Set the histogram centers. NOTE: Our coordinates are integer at pixel
 % centers, i.e. the most upper left pixels center is at (1,1). If you
-% magnify by factor 2 (split 1 pixel into 4) the new center coordinates are 
+% magnify by factor 2 (split 1 pixel into 4) the new center coordinates are
 % at 0.75,1.25,1.75,2,25 (first two pixels) and so on.. Think about it!
 centers = {0.5+1/(2*mag):1/mag:movieSize(1)+0.5, 0.5+1/(2*mag):1/mag:movieSize(2)+0.5};
 storm_img = hist3(positions, centers);
@@ -51,11 +53,13 @@ colorbar
 axis off
 
 % % Saving to disk
-[~, name, ~] = fileparts(filename);
-outname = [name '_storm.png'];
-fprintf('Saving image %s ..\n', outname);
-% save_tiff(outname, storm_img, 'uint',16);
-% save_img_col(outname, storm_img, minval, maxval);
+if ~isempty(filename)
+    [~, name, ~] = fileparts(filename);
+    outname = [name '_storm.png'];
+    fprintf('Saving image %s ..\n', outname);
+    save_tiff(outname, storm_img, 'uint',16);
+    save_img_col(outname, storm_img, minval, maxval);
+end
 
 end
 

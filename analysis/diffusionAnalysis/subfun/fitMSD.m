@@ -39,7 +39,7 @@ R = zeros(order,1);
 h_plot = zeros(order,1);
 
 first_plot = true;
-markervec = {'p','h','+','o','*','.','x','s','d','^','v','>','<',};
+markervec = {'o','*','.','^','v','>','<','x','+','s','d','p','h',};
 colorvec = distinguishable_colors(order,'w');
 
 for iOrder=1:order
@@ -89,9 +89,9 @@ for iOrder=1:order
         end
         
         if ~fit_weights
-            plot(x*1e3,y,markervec{iOrder},'color',colorvec(iOrder,:)); %t in ms
+            plot(x*1e3,y,markervec{iOrder},'color',colorvec(iOrder,:),'MarkerFaceColor',colorvec(iOrder,:)); %t in ms
         else
-            errorbar(x*1e3,y,1./y_weight,markervec{iOrder},'color',colorvec(iOrder,:));
+            errorbar(x*1e3,y,1./y_weight,markervec{iOrder},'color',colorvec(iOrder,:),'MarkerFaceColor',colorvec(iOrder,:));
         end
         
         
@@ -118,7 +118,7 @@ if ~isempty(printParam)
             text(0.1,0.7-(iOrder-1)*0.11,['$R_',int2str(iOrder),' = ' num2str(R(iOrder),3),'$'],'Units','normalized');
         else
             text(0.15,0.64-(iOrder-1)*0.11,['R_',int2str(iOrder),' = ' num2str(R(iOrder),3)],'Units','normalized');
-            text(0.1,0.7-(iOrder-1)*0.11,['D_',int2str(iOrder),' = ' num2str(D(iOrder,1),3),' \pm ',num2str(D(iOrder,2)),' µm^2/s'],'Units','normalized');
+            text(0.1,0.7-(iOrder-1)*0.11,['D_',int2str(iOrder),' = ' num2str(D(iOrder,1),3),' \pm ',num2str(D(iOrder,2),2),' µm^2/s'],'Units','normalized');
         end
     end
     

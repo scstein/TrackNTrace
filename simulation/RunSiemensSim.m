@@ -18,19 +18,20 @@ optionsPhoton.lambda = 670; %[nm]
 optionsPhoton.amp = 50; %average number of photons for a full frame
 optionsPhoton.bg = 50;
 optionsPhoton.kOff = 1; %per frame
-optionsPhoton.kBleach = 0.1; %per frame
+optionsPhoton.kBleach = 0.15; %per frame
 optionsPhoton.kOn = 0.18*optionsPhoton.kOff/optionsSim.density; %slow density situation
 
 
 %% Run simulation
-% for i=1:numel(snr)
-%     i
-%     optionsPhoton.amp = snr(i);
-%     load('ground_truth_STORM_at_snr1.mat','fitData_truth');
-%     fitData_truth = cellfun(@(var) [var(:,1:3),var(:,4)*optionsPhoton.amp,var(:,5:end)],fitData_truth,'UniformOutput',false);
-    [movie, fitData_truth] = SiemensSim(optionsSim,optionsCamera,optionsPhoton);
-%     movie = createMovie(fitData_truth,optionsSim,optionsCamera,optionsPhoton);
-%     
-%     save(['simulation_star_snr_',num2str(snr(i),3),'.mat'],'fitData_truth','optionsSim','optionsCamera','optionsPhoton');
-%     save_tiff(['simulation_star_snr_',num2str(snr(i),3),'.tif'],movie,'uint',16,true);
-% end
+snr = 5:-0.5:1;
+for i=1:numel(snr)
+    i
+    optionsPhoton.amp = snr(i);
+    load('ground_truth_STORM_zoom20_at_snr1.mat','fitData_truth');
+    fitData_truth = cellfun(@(var) [var(:,1:3),var(:,4)*optionsPhoton.amp,var(:,5:end)],fitData_truth,'UniformOutput',false);
+%     [movie, fitData_truth] = SiemensSim(optionsSim,optionsCamera,optionsPhoton);
+    movie = createMovie(fitData_truth,optionsSim,optionsCamera,optionsPhoton);
+    
+    save(['simulation_star_snr_',num2str(snr(i),3),'.mat'],'fitData_truth','optionsSim','optionsCamera','optionsPhoton');
+    save_tiff(['simulation_star_snr_',num2str(snr(i),3),'.tif'],movie,'uint',16,true);
+end

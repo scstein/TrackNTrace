@@ -49,7 +49,7 @@ set(gca,'FontSize',14)
 
 linkaxes([hs1,hs2],'xy');
 
-tightfig; % Remove space around plot
+% tightfig; % Remove space around plot
 
 
 % Plot the drift

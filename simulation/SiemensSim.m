@@ -15,26 +15,29 @@ function [movie, fitData_truth] = SiemensSim(optionsSim,optionsCamera,optionsPho
 %     movie: [Y,X,F] stack of F images with width X and height Y. Format is
 %     UINT16.
 
+zoom = 1/20; %10-times finer grid for calculating well-resolved Siemens star
 fov = optionsCamera.fov;
-[x,y] = meshgrid(-floor(fov(1)/2):floor(fov(1)/2)-1,-floor(fov(2)/2):floor(fov(2)/2)-1);
+% [x,y] = meshgrid(-floor(fov(1)/2):floor(fov(1)/2)-1,-floor(fov(2)/2):floor(fov(2)/2)-1);
+[x,y] = meshgrid(-floor(fov(1)/2):zoom:floor(fov(1)/2)-zoom,-floor(fov(2)/2):zoom:floor(fov(2)/2)-zoom);
 imgMask = cos(atan2(y,x)*optionsSim.arms)>0;
 psf_sigma = 0.3*optionsPhoton.lambda/optionsSim.NA/optionsCamera.pixelSize;
 halfw = round(3*psf_sigma);
 imgMaskBorder = zeros(size(imgMask));
-imgMaskBorder(halfw+2:fov(2)-halfw-1,halfw+2:fov(1)-halfw-1) = 1;
+% imgMaskBorder(halfw+2:fov(2)-halfw-1,halfw+2:fov(1)-halfw-1) = 1;
+imgMaskBorder((halfw+2)/zoom:(fov(2)-halfw-2)/zoom+1,(halfw+2)/zoom:(fov(1)-halfw-2)/zoom+1) = 1;
 imgMask = imgMask & imgMaskBorder; %cut off border of mask
 
 [idxRow,idxCol] = ind2sub(size(imgMask),find(imgMask));
 nrMaskPixels = size(idxRow,1);
-nrPos = round(nrMaskPixels*(optionsCamera.pixelSize/1e3)^2*optionsSim.density); %calculate total number of emitters
+nrPos = round(nrMaskPixels*(optionsCamera.pixelSize/1e3*zoom)^2*optionsSim.density); %calculate total number of emitters
 posIdx = randi(nrMaskPixels,[nrPos,1]);
 posRow = idxRow(posIdx); posCol = idxCol(posIdx);
-posRow = posRow+rand(nrPos,1)-0.5; posCol = posCol+rand(nrPos,1)-0.5;
+posRow = (posRow+rand(nrPos,1)-0.5)*zoom; posCol = (posCol+rand(nrPos,1)-0.5)*zoom;
 
 [fitData_truth] = createStates([posCol,posRow],optionsSim,optionsCamera,optionsPhoton);
 
-movie = createMovie(fitData_truth,optionsSim,optionsCamera,optionsPhoton);
-% movie = [];
+% movie = createMovie(fitData_truth,optionsSim,optionsCamera,optionsPhoton);
+movie = [];
 
 end
 
@@ -136,7 +139,9 @@ for iFrame=1:numel(fitData_truth)
     movie(:,:,iFrame) = img_truth;
 end
 
-movie = poissrnd(movie+optionsPhoton.bg) *optionsCamera.gain/optionsCamera.sensitivity + optionsCamera.bias + randn(size(movie))*optionsCamera.readNoise;
+for iChunk=1:ceil(size(movie,3)/2e2)
+    movie(:,:,1+(iChunk-1)*2e2:min(iChunk*2e2,size(movie,3))) = poissrnd(movie(:,:,1+(iChunk-1)*2e2:min(iChunk*2e2,size(movie,3)))+optionsPhoton.bg) *optionsCamera.gain/optionsCamera.sensitivity + optionsCamera.bias;% + randn(size(movie))*optionsCamera.readNoise;
+end
 movie(movie<0) = 0;
 movie = uint16(movie);
 
