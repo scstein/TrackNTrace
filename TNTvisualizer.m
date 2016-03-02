@@ -138,7 +138,13 @@ movie = []; % Set by parse_inputs_and_setup depending on 'movieOrTNTfile'
 candidateData = []; % Set by parse_inputs_and_setup depending on 'candidateDataOrTNTfile'
 id_tracks = []; % Unique ids for the tracks. If tracks are numbered continously from 1 to N, this is identical to the track index.
 cell_traj = {}; % Each cell saves the data for one track. Is initialized by parse_inputs_and_setup.
+n_tracks = 0;
 parse_inputs_and_setup(nargin);
+
+tracksVisibleInFrame = {}; % tracksVisibleInFrame{frame} is list of all track numbers visible in frame 'frame'
+nr_VisibleTracksInFrame = []; % Number of visible tracks in each frame. 
+maxNr_visibleTracksInFrame = 0; % Maximum number of tracks concurrently visible in one frame
+compute_tracksVisibleInFrame(); % Sets tracksVisibleInFrame, nr_VisibleTracksInFrame and maxNr_visibleTracksInFrame.
 % ---------------------------
 
 % Show the GUI!
@@ -193,7 +199,8 @@ h_all.timer = timer(...
 
 % Store handles to the plot objects (which is faster)
 % Handles are set on first use (mostly in plotFrame)
-linehandles = -1*ones(n_tracks,1);
+linehandles = -1*ones(maxNr_visibleTracksInFrame,1); % Note: Size can increase dynamically if more lines are needed.
+linehandleNr_to_TrackNr = -1*ones(maxNr_visibleTracksInFrame,1); % Stores which track the linehandle is assigned to
 dothandle_fit = -1;
 dothandle_cand = -1;
 imagehandle = -1;
@@ -223,14 +230,6 @@ caxis(zl);
 
 updateTopText();
 
-
-% Calling this creates handles for all tracks not plotted before.
-% Although this takes some time, the visualizer will respond smoother
-% afterwards. If you uncomment this function, the visualizer starts faster,
-% but may show jerky behaviour during first play as handles for tracks that
-% did not occur before are created on demand.
-setUnitinializedTrackHandles();
-
 % -- Change into the right mode (candidate/fitting/tracking) --
 callback_changeMode();
 
@@ -244,12 +243,19 @@ end
 
 % --- Nested Functions ---
 
+
 % Change visualizer into the chosen mode 'movie' 'candidate','fitting','tracking'
 % and display its relevant content.
 % If "modus" input is given, the mode is set to "modus". Its
 % implemented this way to use one callback for all buttons selecting the modes.
     function callback_changeMode(~,~,modus)
+        % Note: nargin>2 is true if callback was invoked by a button
+        % (and not from a direct call in this file)
         if nargin>2
+            % Do nothing if the current modes button is pressed again
+            if strcmp(modus,mode)
+                return
+            end
             mode = modus;
         end
         DEFAULT_COLOR = [0.941,0.941,0.941]; % Default color of buttons.
@@ -264,20 +270,9 @@ end
         % Set all mode specific panels invisible
         set(h_all.panel_tracking,'Visible','off');
         set(h_all.panel_histogram,'Visible','off');
-        
-        
-        % Reset graphic object handles
-        if dothandle_fit ~= -1
-            set(dothandle_fit,'xdata',[],'ydata',[]);
-        end
-        if dothandle_cand ~= -1
-            set(dothandle_cand,'xdata',[],'ydata',[]);
-        end
-        for iTr = 1:n_tracks
-            if(linehandles(iTr)~=-1)
-                set(linehandles(iTr),'xdata',[],'ydata',[]);
-            end
-        end
+                
+        % Delete all graphics objects, except the movie frame and invalidate all handles       
+        resetGraphics();
         
         % Delete active datatip
         % WARNING this also deletes other hggroup objects associated with the figure which are also invisible and draggable.
@@ -300,6 +295,8 @@ end
                 set(h_all.popup_distribution, 'String', fittingParams);
                 set(h_all.panel_histogram,'Visible','on');
             case 'tracking'
+                initializeLinehandles(); %Initializes all needed line handles, if this is uncommented, linehandles are created on the fly
+                
                 set(dcm_obj,'UpdateFcn',{@modeSpecificDatatipFunction});
                 set(h_all.button_trackingMode,'BackgroundColor', SELECTED_COLOR);
                 set(h_all.popup_distribution, 'String', trackingParams);
@@ -320,6 +317,17 @@ end
         updateFrameDisplay();
     end
 
+    % Delete all graphics objects, except the movie frame and invalidate all handles       
+    function resetGraphics()
+        allHandles = get(h_all.axes,'Children');
+        if imagehandle ~= -1 % Remove image handle from list
+            allHandles(allHandles==imagehandle) = [];
+        end
+        delete(allHandles);
+        dothandle_fit = -1;
+        dothandle_cand = -1;
+        linehandles = -1*ones(maxNr_visibleTracksInFrame,1);
+    end
 
 % Update size of GUI, show mode specific panels
     function resizeGUIforMode()
@@ -396,7 +404,8 @@ end
                         txt = [txt, {[fittingParams{iPar},': ', num2str(fittingData{frame}(I,iPar))]}]; %#ok<AGROW>
                     end
                 case 'tracking'
-                    TrackNr = find(linehandles==graphObjHandle); % Find lineobject for the selected point
+                    handleNr = linehandles==graphObjHandle; % Find lineobject for the selected point
+                    TrackNr = linehandleNr_to_TrackNr(handleNr);
                     PointData = cell_traj{TrackNr}(I,:); % Data of the selected point
                     TrackID = sprintf('%i',id_tracks(TrackNr)); % Get track ID from its index (in case TracIDs go from 1 to N without missing numbers, TrackNr==TrackID)
                     % Plot all parameters available for selected datapoint in the datacursor window
@@ -539,7 +548,7 @@ end
         if(MATLAB_2015b_or_newer)
             drawnow nocallbacks; 
         else
-            drawnow expose update; 
+            drawnow expose update;
         end
     end
 
@@ -600,27 +609,30 @@ end
             case 'tracking'
                 % Draw the tracks of currently visible particles
                 hold on;
-                for iTr = 1:n_tracks
-                    % Don't draw tracks not yet visible (iF <...) or not visible any more
-                    % (iF > ...). If traj_lifetime>0 the tracks are displayed for
-                    % the given number of frames longer.
-                    if iF < cell_traj{iTr}(1,1) || iF > cell_traj{iTr}(end,1) + traj_lifetime
-                        mask_toPlot = false(size(cell_traj{iTr},1),1);
-                    else
-                        % Plot trajectories a) only the last traj_displayLength positoins AND  b) up to the current frame
-                        mask_toPlot = ((cell_traj{iTr}(:,1)>iF-traj_displayLength) & cell_traj{iTr}(:,1)<=iF);
-                    end
+                handleNr = 1;
+                for iTr = tracksVisibleInFrame{iF}                    
+                    % Plot trajectories a) only the last traj_displayLength positions AND  b) up to the current frame
+                    mask_toPlot = ((cell_traj{iTr}(:,1)>iF-traj_displayLength) & cell_traj{iTr}(:,1)<=iF);
                     
-                    % If this trajectory was already plotted before, we just set
-                    % its data via its handle (which is fast!). If not, create a
-                    % new lineseries by using the plot command.
-                    if (linehandles(iTr) == -1)
-                        if( sum(mask_toPlot) ~= 0) % only plot the first time we have actual data to display
-                            linehandles(iTr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:));
-                        end
+                    % We use the next free linehandle. If there is no
+                    % free handle left, we create a new one on the fly.
+                    if (handleNr>numel(linehandles) || linehandles(handleNr) == -1)
+                        linehandles(handleNr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:));
+                        linehandleNr_to_TrackNr(handleNr) = iTr;
+                        handleNr = handleNr+1;
                     else
-                        set(linehandles(iTr),'xdata',cell_traj{iTr}(mask_toPlot, 2),'ydata', cell_traj{iTr}(mask_toPlot, 3));
+                        set(linehandles(handleNr),'xdata',cell_traj{iTr}(mask_toPlot, 2),'ydata', cell_traj{iTr}(mask_toPlot, 3),'Color',track_colors(iTr,:));
+                        linehandleNr_to_TrackNr(handleNr) = iTr;
+                        handleNr=handleNr+1;
                     end
+                end
+                % Empty data of unused linehandles
+                while(handleNr<= numel(linehandles))
+                    if(linehandles(handleNr) ~= -1)                        
+                        set(linehandles(handleNr),'xdata',[],'ydata',[]);
+                        linehandleNr_to_TrackNr(handleNr) = -1;
+                    end
+                    handleNr=handleNr+1;
                 end
                 hold off;
             otherwise
@@ -755,13 +767,6 @@ end
         % tracks, we periodically repeat the colors.
         track_colors = repmat( distinguishable_colors(num_colors, bg), ceil(n_tracks/num_colors) ,1);
         track_colors = track_colors(1:n_tracks,:);
-        
-        % Set the line color for each track
-        for iH = 1:length(linehandles)
-            if(linehandles(iH) ~= -1)
-                set(linehandles(iH),'Color',track_colors(iH,:));
-            end
-        end
     end
 
 
@@ -1053,6 +1058,50 @@ end
 
 
 %%  Tracking mode related functions
+
+    % Compute which tracks are visible in each frame
+    % This is done to iterate only over visible tracks when plotting. Otherwise
+    % a large number of tracks in the movie slows us down, even if we skip them
+    % on the fly (because we have to check each track for every frame)
+    %
+    % Sets:
+    %  tracksVisibleInFrame
+    %  maxNr_visibleTracksInFrame
+    function compute_tracksVisibleInFrame()
+        nr_frames = size(movie,3);
+        tracksVisibleInFrame = cell(nr_frames,1);
+        tracksVisibleInFrame_bool = false(n_tracks,nr_frames);
+        
+        %Note: We need the bool to compute this fast (at the cost of memory)
+        % but convert the data to a cell array for using it later
+        for iTrack = 1:n_tracks
+            track_firstFrame = cell_traj{iTrack}(1,1);
+            track_lastFrame = cell_traj{iTrack}(end,1);
+
+            tracksVisibleInFrame_bool(iTrack, track_firstFrame:min(track_lastFrame+traj_lifetime, nr_frames)) = true;
+        end
+        
+        % Convert bool matrix to indices
+        for iFrame = 1:nr_frames
+            tracksVisibleInFrame{iFrame} = find(tracksVisibleInFrame_bool(:,iFrame)).';
+        end
+
+        [~,nr_VisibleTracksInFrame] = cellfun(@size,tracksVisibleInFrame);
+        maxNr_visibleTracksInFrame = max(nr_VisibleTracksInFrame);
+    end
+
+    % Simply plots the frame with the maximum number of visible tracks,
+    % which initializes all linehandles needed for displaying the movie. If
+    % this is not called, linehandles are simply initialized on the fly
+    % (which might cause jerky playback on playing the movie)
+    %
+    % Make sure updateFrameDisplay() is called afterwards, so that the
+    % current frame is displayed again!
+    function initializeLinehandles()
+       [~, maxFrame] = max(nr_VisibleTracksInFrame);
+       plotFrame(maxFrame);
+    end
+
      % Sets the traj_lifetime variable if it changes in the GUI
     function callback_TrajLifetime(~, ~)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
@@ -1065,6 +1114,13 @@ end
             traj_lifetime = 0;
         end
         set(h_all.edit_lifetime,'String',sprintf('%i%',traj_lifetime));
+        
+        % We have to update which tracks are visible in which frames
+        % This alters the number of linehandles which are needed for
+        % display (the maximum number of concurrently visible tracks)
+        compute_tracksVisibleInFrame();
+        resetGraphics();
+        initializeLinehandles();
         
         if isTimerOn
             start(h_all.timer);
@@ -1113,18 +1169,6 @@ end
         else
             updateFrameDisplay();
         end
-    end
-
-    % Creates a line handle for every track that was not plotted before
-    function setUnitinializedTrackHandles()
-        hold on;
-        for iTr = 1:n_tracks
-            if(linehandles(iTr)==-1)
-                linehandles(iTr) = plot(cell_traj{iTr}(1, 2), cell_traj{iTr}(1, 3), '.--','Color',track_colors(iTr,:));
-                set(linehandles(iTr),'xdata',[],'ydata',[]);
-            end
-        end
-        hold off;
     end
 end
 
