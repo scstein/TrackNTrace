@@ -177,7 +177,7 @@ function [ params ] = psfFit_Image( img, varargin)
 %     3. Neither the name of Google Inc., nor the names of its contributors may be used to
 % endorse or promote products derived from this software without specific prior written permission.
 %
-% This software is provided by the copyright holders and contributors “AS IS” and any express or
+% This software is provided by the copyright holders and contributors ï¿½AS ISï¿½ and any express or
 % implied warranties, including, but not limited to, the implied warranties of merchantability and
 % fitness for a particular purpose are disclaimed. In no event shall Google Inc. be liable for any
 % direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited
@@ -187,11 +187,12 @@ function [ params ] = psfFit_Image( img, varargin)
 % possibility of such damage.
 
 % Make sure logicals are passed as correct datatype
+if numel(varargin) >= 2;  varargin{2} = logical(varargin{2});  end
 if numel(varargin) >= 3;  varargin{3} = logical(varargin{3});  end
 if numel(varargin) >= 4;  varargin{4} = logical(varargin{4});  end
 
 % Convert img to double if neccessary
-[ params ] = mx_psfFit_ImageNEW( double(img), varargin{:} );
+[ params ] = mx_psfFit_Image( double(img), varargin{:} );
 
 end
 
@@ -274,7 +275,7 @@ function [fitData,fittingOptions] = fitPositions_psfFitCeres_calculateZRot(fitDa
 % sigma_x value and the rotation angle shows how much a hypothetical
 % ellipse whose major axis is perfectly aligned with the y-axis is rotated.
 % Thus, rotation and sigma values are uniquely defined up to a symmetric
-% 180° rotation.
+% 180Â° rotation.
 % A positive angle corresponds to a counter-clockwise rotation
 % (mathematically positive).
 

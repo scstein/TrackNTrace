@@ -34,6 +34,19 @@ set(h_main,'CloseRequestFcn',@onAppClose); % For cleanup
 
 h_all = guihandles(h_main);
 
+% Unix specific
+if isunix
+        uiObjects = get(h_main,'Children');        
+        for iO = 1:numel(uiObjects)
+            set(uiObjects(iO),'FontSize',8);
+        end
+        
+        uiObjects = get(h_all.panel_general,'Children');        
+        for iO = 1:numel(uiObjects)
+            set(uiObjects(iO),'FontSize',8);
+        end
+end
+
 % Setup GUI specific elements at top of GUI
 set(h_all.text_title, 'String', titleText);
 [~, fname,extension] = fileparts(filename_movie);
@@ -342,11 +355,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % Used to resize the GUI after selecting a different plugin
     function updatePanelPositions()
         % -- Spacings --
-        units = 'characters';
-        TOPIC_SPACING = 3; % Spacing between topic panels (candidate/tracking etc)
-        ABOVE_PANEL_SPACING = 0.5; % Spacing topic panel and the UI elements above the panel (Fitting Method etc.)
-        BUTTON_SPACING = 2; % Spacing between last panels and buttons at the bottom
-        BOTTOM_SPACING = 0.75; % Spacing between buttons at the bottom and bottom of the GUI window        
+        units = 'pixels';
+        TOPIC_SPACING = 39; % Spacing between topic panels (candidate/tracking etc)
+        ABOVE_PANEL_SPACING = 6.5; % Spacing topic panel and the UI elements above the panel (Fitting Method etc.)
+        BUTTON_SPACING = 26; % Spacing between last panels and buttons at the bottom
+        BOTTOM_SPACING = 9.75; % Spacing between buttons at the bottom and bottom of the GUI window        
         % -- -------- --
         
         set(h_all.panel_candidate,'Units',units);

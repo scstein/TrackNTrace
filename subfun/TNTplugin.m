@@ -287,7 +287,7 @@ classdef TNTplugin < handle % Inherit from handle class
                         h_val= uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
                             'Style','edit','BackgroundColor', 'w','FontSize',fontSize,'String',num2str(pValue));
                     case 'bool'
-                        val_pos = [value_position(1), value_position(2), 11.5, elemHeight];
+                        val_pos = [value_position(1), value_position(2), 14, elemHeight];
                         h_val= uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
                             'Style','checkbox','FontSize',fontSize,'Value',pValue,'String','');
                     case 'string'
