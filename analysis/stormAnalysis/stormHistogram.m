@@ -13,7 +13,7 @@ function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,hist
 %     
 %     pixelSize: Double, pixel size in [nm].
 %     
-%     histogramType: tring, either 'weighted', 'jitter', 'gauss' or
+%     histogramType: String, either 'weighted', 'jitter', 'gauss' or
 %     something else in which case the routine defaults to simply binning
 %     localizations.
 %     'WEIGHTED': All localizations are binned with a weight of 1/precision
@@ -100,7 +100,6 @@ if ischar(inputData)
         fittingData = vertcat(inputData{:});
     end
 else
-    
     if iscell(inputData)
         %... then it's fittingData
         fittingData = vertcat(inputData{:});
@@ -112,13 +111,13 @@ end
 % Calculate localization precision if necessary
 pos = fittingData(:,1:2)-0.5; %shift to: upper left pixel center = (0.5,0.5)
 if guessLocPrecision
-    % locPrecision is given in pixels!
+    % !!locPrecision is given in pixels!!
     if size(fittingData,2)<7
         sigma_sq = fittingData(:,6).^2;
     else
         sigma_sq = mean(fittingData(:,6)+fittingData(:,7),2).^2;
     end
-    N = fittingData(:,4).*2*pi.*sigma_sq;
+    N = fittingData(:,4).*2*pi.*sigma_sq; %total number of photons
     tau = 2*pi*fittingData(:,5).*(sigma_sq+1/12)./N;
     locPrecision = sqrt((sigma_sq+1/12)./N.*(1+4*tau+sqrt(2*tau./(1+4*tau)))); %Rieger et al, DOI 10.1002/cphc.201300711
 else
@@ -170,7 +169,7 @@ switch(histogramType)
                 % out of bounds?
                 continue
             end
-            [img] = gaussianMask(rem(pos(iPos,1),1),rem(pos(iPos,2),1),locPrecision(iPos),locPrecision(iPos),halfw);
+            [img] = gaussianMask(rem(pos(iPos,1),1),rem(pos(iPos,2),1),sigma,sigma,halfw);
             stormRaw(pos_idx(iPos,2)-halfw:pos_idx(iPos,2)+halfw,pos_idx(iPos,1)-halfw:pos_idx(iPos,1)+halfw) = stormRaw(pos_idx(iPos,2)-halfw:pos_idx(iPos,2)+halfw,pos_idx(iPos,1)-halfw:pos_idx(iPos,1)+halfw)...
                 +img;
         end
