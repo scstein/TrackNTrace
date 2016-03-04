@@ -1,0 +1,3 @@
+[submodule "mex/FastPsfFitting"]
+	path = mex/FastPsfFitting
+	url = U:/Global/GitRepositories/FastPsfFitting.git
