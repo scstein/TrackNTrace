@@ -8,12 +8,13 @@ Compiling the TNT fitter needs a few extra steps to compile the ceres library be
 
 - FastPsfFitting -
 
+(x) Execute "git submodule update --init --recursive" which gets the FastPsfFittingCode. 
+    For compiling ceres we use Tal Ben-Nun's github repository for windows (we use it for linux as well),
+    which is also downloaded with the previous command.
 (x) Go to the FastPsfFitting directory
-   For compiling ceres we use Tal Ben-Nun's github repository for windows (we use it for linux as well)
-   Execute "git submodule init" and "git submodule update" to download it automatically
 (x) Download the eigen library from
      URL: http://eigen.tuxfamily.org/ 
-   and put it in "ceres-windows/eigen"
+    and put it in "ceres-windows/eigen"
 
 Windows:
 To build ceres with Visual Studio simply open the project files in ceres-windows and 
