@@ -21,7 +21,7 @@ try %% TNT fitter
         copyfile('FastPsfFitting\mx_psfFit_Image.mexw64','..\subfun\');
     elseif isunix % Unix (assuming gcc > 4.5)
         run('FastPsfFitting/build_psfFit_Image');
-        !cp TNTfitter/libceres* ../subfun/
+        !cp FastPsfFitting/libceres* ../subfun/
         copyfile('FastPsfFitting/mx_psfFit_Image.mexa64','../subfun/');
     end
 catch err
