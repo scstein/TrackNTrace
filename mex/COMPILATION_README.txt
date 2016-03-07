@@ -16,11 +16,11 @@ Compiling the TNT fitter needs a few extra steps to compile the ceres library be
      URL: http://eigen.tuxfamily.org/ 
     and put it in "ceres-windows/eigen"
 
-Windows:
+Windows (build tested with Windows 7, Visual Studio Professional 2012):
 To build ceres with Visual Studio simply open the project files in ceres-windows and 
 start the compilation of project "ceres" in "Release" "x64" mode.
 
-Linux (tested with Kubuntu):
+Linux (build tested with Kubuntu 14.4):
 With Linux ceres can be compiled with CMake as follows:
 - Execute linux_install_forCeresBuild.sh to install neccessary libraries
 - Switch to the "ceres-windows/ceres-solver/" directory
