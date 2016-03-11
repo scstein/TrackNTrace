@@ -7,6 +7,7 @@ global candidateOptions
 global fittingOptions
 global trackingOptions
 global movie;
+global filename_movie;
 global imgCorrection; %#ok<NUSED>
 
 addRequiredPathsTNT();
@@ -295,7 +296,7 @@ clearGlobals();
 
 % Clear all global variables
     function clearGlobals()
-        clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection parallelProcessingAvailable;
+        clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection parallelProcessingAvailable filename_movie;
     end
 end
 

@@ -21,7 +21,6 @@ TNToptions.defaultFittingPlugin = 'TNT Fitter';
 TNToptions.defaultTrackingPlugin = 'TNT NearestNeighbor';
 
 % General Options of the GUI
-globalOptions.filename_movies = ''; % This directory is chosen as startup when clicking to select movies
 globalOptions.filename_dark_movie = ''; % This directory is chosen as startup when clicking to select a movie
 globalOptions.previewMode = true; %enable/disable previewMode by setting true/false.
 globalOptions.firstFrame = 1; %integer, first movie frame to consider. 

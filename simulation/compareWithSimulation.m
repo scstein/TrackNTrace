@@ -105,9 +105,14 @@ if randomize || isempty(fitData2)
 else
     loc1 = vertcat(fitData1{:}); loc1 = loc1(:,1:2);
     loc2 = vertcat(fitData2{:}); loc2 = loc2(:,1:2);
-    
-    loc1 = loc1(loc1(:,1)>=3*256/8&loc1(:,1)<5*256/8&loc1(:,2)>=3*256/8&loc1(:,2)<5*256/8,:)-3*256/8;
-    loc2 = loc2(loc2(:,1)>=3*256/8&loc2(:,1)<5*256/8&loc2(:,2)>=3*256/8&loc2(:,2)<5*256/8,:)-3*256/8;
+    n_loc1 = size(loc1,1); n_loc2 = size(loc2,1);
+    if n_loc1>n_loc2
+        rand_bool = randperm(n_loc1,n_loc2);
+        loc1 = loc1(rand_bool(:),:);
+    elseif n_loc1<n_loc2
+        rand_bool = randperm(n_loc2,n_loc1);
+        loc2 = loc2(rand_bool(:),:);
+    end
 end
 
 

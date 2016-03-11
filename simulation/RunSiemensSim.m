@@ -19,7 +19,7 @@ optionsPhoton.amp = 50; %average number of photons for a full frame
 optionsPhoton.bg = 50;
 optionsPhoton.kOff = 1; %per frame
 optionsPhoton.kBleach = 0.15; %per frame
-optionsPhoton.kOn = 0.18*optionsPhoton.kOff/optionsSim.density; %slow density situation
+optionsPhoton.kOn = 0.2*optionsPhoton.kOff/optionsSim.density; %slow density situation
 
 
 %% Run simulation
