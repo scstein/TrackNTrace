@@ -32,7 +32,7 @@ globalOptions.lastFrameTesting = 50; %integer, last movie frame to consider duri
 % Options for photon conversion
 globalOptions.usePhotonConversion = false; %boolean, enables photon conversion (absolutely necessary for MLE)
 globalOptions.photonBias = 100; %integer, camera A/D count floor which is added to the image to remove negativ counts
-globalOptions.photonSensitivity = 4; %double, electrons per image count, depends on pre-amp setting and readout mode. Check your camera manual and spec sheet!
+globalOptions.photonSensitivity = 5; %double, electrons per image count, depends on pre-amp setting and readout mode. Check your camera manual and spec sheet!
 globalOptions.photonGain = 100; %integer, EMCCD gain of camera
 
 % Options for tracking particle positions
