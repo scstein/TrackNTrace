@@ -53,24 +53,24 @@ function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,hist
 
 %% Parse input
 
-if nargin < 4
+if nargin < 5
     filename = [];
 end
 
-if isempty(mag) || nargin < 5
+if nargin < 6 || isempty(mag) 
     mag = 8;
 end
 mag = round(mag);
 
-if isempty(nHistogramSteps) || nargin < 6
+if nargin < 7 || isempty(nHistogramSteps)
     nHistogramSteps = 4;
 end
 
-if isempty(MLEenabled) || nargin < 7
+if nargin < 8 || isempty(MLEenabled) 
     MLEenabled = false;
 end
 
-if nargin < 8
+if nargin < 9
     locPrecision = [];
 end
 
@@ -79,7 +79,7 @@ if MLEenabled
     guessLocPrecision = true;
 end
 
-if isempty(minIntens) || isempty(maxIntens) || nargin < 9
+if  nargin < 10 || isempty(minIntens) || isempty(maxIntens)
     minIntens = 0;
     maxIntens = 0.8;
 end

@@ -5,7 +5,7 @@ function [bleachData,blinkData,intensityData] = surfaceFluorophoreAnalysis(dataO
 % intensity distribution
 %
 % INPUT:
-%     dataObject: Can be either full path to TrackNTrace file to analyze OR trajectoryData array which comes out of TrackNTrace.
+%     dataObject: Can be either full path to TrackNTrace file to analyze OR trackingData array which comes out of TrackNTrace.
 %
 %     timestep: Camera acquisition time in seconds.
 %
@@ -42,12 +42,12 @@ if ischar(dataObject)
     [folder,file,~] = fileparts(filename);
     filename_base = [folder,filesep,file];
     saveToFile = true;
-    load(filename,'trajectoryData');
+    load(filename,'trackingData');
 else
     time = clock;
     timestamp = sprintf('%i-m%02i-d%02i-%ih%i',time(1),time(2),time(3),time(4),time(5));
     filename_base = ['surfaceAnalysis_',timestamp];
-    trajectoryData = dataObject;
+    trackingData = dataObject;
     saveToFile = false;
 end
         
@@ -55,12 +55,12 @@ dt = timestep;
 
 %load file
 
-nrFrames = max(trajectoryData(:,2));
-nrTraj = max(trajectoryData(:,1));
+nrFrames = max(trackingData(:,2));
+nrTraj = max(trackingData(:,1));
 
 %Integrate intensities (factory 2pi sigma^2)
-if size(trajectoryData,2)==7
-    trajectoryData(:,5) = trajectoryData(:,5)*2*pi.*trajectoryData(:,7).^2;
+if size(trackingData,2)==8
+    trackingData(:,6) = trackingData(:,6)*2*pi.*trackingData(:,8).^2;
 end
 
 %% Intitialize arrays
@@ -78,7 +78,7 @@ intensity_trace_mean_counter = zeros(nrFrames,1); %number of traces contributing
 nrTraj_analyzed = [];
 for iTraj = 1:nrTraj
     %Get current trajectory, increment active molecules counter
-    trajectory = trajectoryData(trajectoryData(:,1)==iTraj,:);
+    trajectory = trackingData(trackingData(:,1)==iTraj,:);
     if size(trajectory,2)<2
         continue;
     else
@@ -100,9 +100,9 @@ for iTraj = 1:nrTraj
     blink_distr(nr_blink_frames+1) = blink_distr(nr_blink_frames+1)+1; %increment histogram
     
     %Get intensity statistics
-    intensity_total_distr(iTraj) = sum(trajectory(:,5));
-    trajectory(:,5) = trajectory(:,5)/max(trajectory(:,5));
-    intensity_trace_mean(trajectory(:,2)) = intensity_trace_mean(trajectory(:,2))+trajectory(:,5);
+    intensity_total_distr(iTraj) = sum(trajectory(:,6));
+    trajectory(:,6) = trajectory(:,6)/max(trajectory(:,6));
+    intensity_trace_mean(trajectory(:,2)) = intensity_trace_mean(trajectory(:,2))+trajectory(:,6);
     intensity_trace_mean_counter(trajectory(:,2)) = intensity_trace_mean_counter(trajectory(:,2))+ones(size(trajectory,1),1);
 end
 intensity_total_distr = intensity_total_distr(nrTraj_analyzed,:);
@@ -130,16 +130,16 @@ else
 end
 
 %Intensity curves  - we could use intensity filters for this!
-[intensity_xbins,intensity_distr,~] = Hist1D(trajectoryData(:,5),0,false,'freedman',true,false,true);
+[intensity_xbins,intensity_distr,~] = Hist1D(trackingData(:,6),0,false,'freedman',true,false,true);
 intensity_distr = [intensity_xbins(1:end-1),intensity_distr(1:end-1)];
 
 [intensity_total_xbins,intensity_total_distr,~] = Hist1D(intensity_total_distr,0,false,'freedman',true,false,true);
 intensity_total_distr = [intensity_total_xbins(1:end-1),intensity_total_distr(1:end-1)];
 
-[bg_xbins,bg_distr,~] = Hist1D(trajectoryData(:,6),0,false,'freedman',true,false,true);
+[bg_xbins,bg_distr,~] = Hist1D(trackingData(:,7),0,false,'freedman',true,false,true);
 bg_distr = [bg_xbins(1:end-1),bg_distr(1:end-1)];
 
-sbr_distr = trajectoryData(:,5)./trajectoryData(:,6);
+sbr_distr = trackingData(:,6)./trackingData(:,7);
 [sbr_xbins,sbr_distr,~] = Hist1D(sbr_distr(sbr_distr<100*median(sbr_distr)),0,false,'freedman',true,false,true);
 sbr_distr = [sbr_xbins(1:end-1),sbr_distr(1:end-1)];
 
