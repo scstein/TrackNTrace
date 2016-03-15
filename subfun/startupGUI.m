@@ -1,4 +1,4 @@
-function [filename_movies, globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = startupGUI()
+function [filename_movies, globalOptions, candidateOptions,fittingOptions,trackingOptions, candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, GUIreturns] = startupGUI()
 %
 % Author: Simon Christoph Stein
 % E-Mail: scstein@phys.uni-goettingen.de
@@ -11,6 +11,11 @@ globalOptions = [];
 candidateOptions = [];
 fittingOptions = [];
 trackingOptions = [];
+
+candidateData_loaded = [];
+fittingData_loaded = [];
+movieSize_loaded = [];
+firstFrame_lastFrame_loaded = [];
 
 filename_movies ={};
 
@@ -42,7 +47,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
         warning off
-        allOptions = load([path,infile],'globalOptions', 'candidateOptions','fittingOptions','trackingOptions','filename_movie');
+        allOptions = load([path,infile],'globalOptions', 'candidateOptions','fittingOptions','trackingOptions','filename_movie','candidateData','fittingData','movieSize','firstFrame_lastFrame');
         warning on
         globalOptions   = allOptions.globalOptions;
         candidateOptions = allOptions.candidateOptions;
@@ -50,6 +55,19 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if isfield(allOptions,'trackingOptions')
             trackingOptions  = allOptions.trackingOptions;
         end
+        if isfield(allOptions,'candidateData')
+            candidateData_loaded  = allOptions.candidateData;
+        end
+        if isfield(allOptions,'fittingData')
+            fittingData_loaded  = allOptions.fittingData;
+        end
+        if isfield(allOptions,'movieSize')
+            movieSize_loaded  = allOptions.movieSize;
+        end
+        if isfield(allOptions,'firstFrame_lastFrame')
+            firstFrame_lastFrame_loaded  = allOptions.firstFrame_lastFrame;
+        end
+        
         filename_movies = {allOptions.filename_movie};
         
         callback_exit();

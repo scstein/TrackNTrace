@@ -36,7 +36,12 @@ if TNToptions.enableParallelProcessing
 end
 
 %% Load and adjust the default settings for this batch
-[movie_list, globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = startupGUI();
+[movie_list, globalOptions, candidateOptions_loaded,fittingOptions_loaded,trackingOptions_loaded, ...
+    candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, GUIreturns] = startupGUI();
+candidateOptions = candidateOptions_loaded;
+fittingOptions = fittingOptions_loaded;
+trackingOptions = trackingOptions_loaded;
+
 if(isempty(globalOptions))
     globalOptions = globalOptions_def;
 end;
@@ -50,6 +55,8 @@ GUIinputs.TNToptions = TNToptions;
 GUIinputs.showStartupInformation = true;
 GUIinputs.outputFolderSameAsMovie = true;
 GUIinputs.outputFolder = '';
+GUIinputs.candidateData_loaded = ~isempty(candidateData_loaded);
+GUIinputs.fittingData_loaded = (GUIinputs.candidateData_loaded && ~isempty(fittingData_loaded)); % candidateData must always be there
 
 % Calculate default dark image if given in default options
 dark_img_def = [];
@@ -195,9 +202,29 @@ for iMovie=1:numel(movie_list)
     end
     list_filenames_TNTdata = [list_filenames_TNTdata; {filename_TNTdata}]; %#ok<AGROW> % Append name of datafile to list
     
+    % Should loaded candidateData be used?
+    if(GUIreturns.use_loaded_candidateData)
+        candidateOptions =  candidateOptions_loaded;
+        struct_helper.candidateData = candidateData_loaded;
+    end
+    
+    % Should loaded candidateData be used?
+    if(GUIreturns.use_loaded_fittingData)
+        fittingOptions =  fittingOptions_loaded;
+        struct_helper.fittingData = fittingData_loaded;
+    end
+    
     save(filename_TNTdata,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
     if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
         save(filename_TNTdata,'trackingOptions','-append');
+    end
+    
+    % Append loaded data and movieSize + firstFrame_lastFrame so that movie
+    % must not be loaded to do tracking
+    if(GUIreturns.use_loaded_candidateData || GUIreturns.use_loaded_fittingData)
+        struct_helper.movieSize = movieSize_loaded;
+        struct_helper.firstFrame_lastFrame = firstFrame_lastFrame_loaded;
+        save(filename_TNTdata,'-append','-struct','struct_helper');
     end    
     
     if not(GUIreturns.useSettingsForAll || TNToptions.rememberSettingsForNextMovie)
@@ -215,24 +242,38 @@ clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions
 for iMovie=1:numel(list_filenames_TNTdata)
     filename_TNTdata = list_filenames_TNTdata{iMovie};
     load(filename_TNTdata,'-mat');
-    
-    % Read movie
-    if iMovie==1 || ~strcmp(filename_movie,filename_movie_last_loop)
-        movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
+        
+    if  not(exist('candidateData','var') && exist('fittingData','var'))
+        % Read movie
+        if iMovie==1 || ~strcmp(filename_movie,filename_movie_last_loop)
+            movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
+        end
+        filename_movie_last_loop = filename_movie;
+
+        % Compute the positions
+        if not(exist('candidateData','var'))
+            fprintf('######\nTNT: Locating candidates in movie %s.\n',filename_movie);
+            [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
+        else
+            fprintf('######\nTNT: Using loaded candidateData for processing.\n');
+        end
+        if not(exist('fittingData','var'))
+            fprintf('######\nTNT: Refining positions in movie %s.\n',filename_movie);
+            [fittingData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
+        else
+            fprintf('######\nTNT: Using loaded fittingData for processing.\n');
+        end
+
+        % Save positions, movieSize, and index of first and last frame processed
+        firstFrame_lastFrame = [globalOptions.firstFrame,  globalOptions.firstFrame + size(movie,3)-1];  %#ok<NASGU> % Note: lastFrame could have been set to 'inf', now we synchronize with the correct number
+        movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
+    else
+        fprintf('######\nTNT: Using loaded candidateData & fittingData for processing.\n');
     end
-    filename_movie_last_loop = filename_movie;
     
-    % Compute the positions
-    fprintf('######\nTNT: Locating particles in movie %s.\n',filename_movie);
-    [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
-    [fittingData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
-    
-    % Save positions, movieSize, and index of first and last frame processed
-    firstFrame_lastFrame = [globalOptions.firstFrame,  globalOptions.firstFrame + size(movie,3)-1];  %#ok<NASGU> % Note: lastFrame could have been set to 'inf', now we synchronize with the correct number
-    movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
     save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','firstFrame_lastFrame','-append');
+    clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions globalOptions
 end
-clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions globalOptions
 
 %% Compute trajectories for every movie
 for iMovie=1:numel(list_filenames_TNTdata)

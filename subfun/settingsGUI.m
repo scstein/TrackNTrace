@@ -47,6 +47,8 @@ if isunix
         end
 end
 
+
+
 % Setup GUI specific elements at top of GUI
 set(h_all.text_title, 'String', titleText);
 [~, fname,extension] = fileparts(filename_movie);
@@ -76,9 +78,21 @@ set(h_all.edit_photonGain, 'Callback', {@callback_IntEdit,1,1000});
 
 % % Candidate plugin
 set(h_all.popup_candidateMethod, 'Callback', @callback_updatePlugins);
+set(h_all.cbx_candidate_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
+if(GUIinputs.candidateData_loaded)
+ set(h_all.cbx_candidate_loaded, 'Value', true);
+else
+ set(h_all.cbx_candidate_loaded, 'Visible', 'off');
+end
 
 % % Fitting plugin
 set(h_all.popup_fittingMethod, 'Callback', @callback_updatePlugins);
+set(h_all.cbx_fitting_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
+if(GUIinputs.fittingData_loaded)
+ set(h_all.cbx_fitting_loaded, 'Value', true);
+else
+ set(h_all.cbx_fitting_loaded, 'Visible', 'off');
+end
 
 % % Tracking plugin
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateMainGUIstate);
@@ -132,6 +146,8 @@ movegui(h_main,'center');
 
 % % GUI main
 setGUIBasedOnOptions();
+callback_updateMainGUIstate_loadedData();
+
 uiwait(h_main);
 drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 
@@ -303,10 +319,16 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         % Enable/disable photon conversion
         if get(h_all.cbx_usePhotonConv, 'Value')
+            set(h_all.text_bias, 'Enable', 'on');
+            set(h_all.text_sensitivity, 'Enable', 'on');
+            set(h_all.text_gain, 'Enable', 'on');
             set(h_all.edit_photonBias, 'Enable','on');
             set(h_all.edit_photonSensitivity, 'Enable','on');
             set(h_all.edit_photonGain, 'Enable','on');
         else
+            set(h_all.text_bias, 'Enable', 'off');
+            set(h_all.text_sensitivity, 'Enable', 'off');
+            set(h_all.text_gain, 'Enable', 'off');
             set(h_all.edit_photonBias, 'Enable','off');
             set(h_all.edit_photonSensitivity, 'Enable','off');
             set(h_all.edit_photonGain, 'Enable','off');
@@ -325,6 +347,65 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.button_trackingHelp,'Enable','off');
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
         end
+        
+    end
+
+% Update GUI based on if data loaded from a settings file should be used
+    function callback_updateMainGUIstate_loadedData(hObj, event)    
+        % Enable/disable panels depending on data loaded from a TNT file
+        % Loaded fitting data can only be used if the loaded candidate data
+        % is also used.
+        if get(h_all.cbx_candidate_loaded, 'Value')
+            candidateOptions = candidateOptions_atStartup;
+        end
+        
+        if get(h_all.cbx_fitting_loaded, 'Value')
+            fittingOptions = fittingOptions_atStartup;
+        end
+        
+        if get(h_all.cbx_candidate_loaded, 'Value') || get(h_all.cbx_fitting_loaded, 'Value')
+            % Update plugins
+            selectPluginsBasedOnOptions();
+            
+            globalOptions.firstFrame = globalOptions_atStartup.firstFrame;
+            globalOptions.lastFrame = globalOptions_atStartup.lastFrame;
+            setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
+            setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
+            
+            set(h_all.text_FrameInterval, 'Enable', 'off');
+            set(h_all.text_firstFrame, 'Enable', 'off');
+            set(h_all.text_lastFrame, 'Enable', 'off');
+            set(h_all.edit_firstFrame, 'Enable','off');
+            set(h_all.edit_lastFrame, 'Enable','off');
+        else
+            set(h_all.text_FrameInterval, 'Enable', 'on');
+            set(h_all.text_firstFrame, 'Enable', 'on');
+            set(h_all.text_lastFrame, 'Enable', 'on');
+            set(h_all.edit_firstFrame, 'Enable','on');
+            set(h_all.edit_lastFrame, 'Enable','on');
+        end
+        
+        if get(h_all.cbx_candidate_loaded, 'Value')            
+            set(h_all.cbx_fitting_loaded,'Enable','on');
+            set(h_all.popup_candidateMethod,'Enable','off');
+            set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','off');
+        else
+            set(h_all.cbx_fitting_loaded,'Enable','off');
+            set(h_all.popup_candidateMethod,'Enable','on');
+            set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','on');
+        end
+        
+        if get(h_all.cbx_fitting_loaded, 'Value')            
+            set(h_all.cbx_candidate_loaded,'Enable','off');
+            set(h_all.popup_fittingMethod,'Enable','off');
+            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','off');
+        else
+            set(h_all.cbx_candidate_loaded,'Enable','on');
+            set(h_all.popup_fittingMethod,'Enable','on');
+            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','on');
+        end
+        
+        
     end
 
 % This function is called if the selection of plugins changes
@@ -380,6 +461,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         pos = get(h_all.button_fittingHelp, 'Position');
         pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2 + 0.1; % Note the 0.1 is empirical and fits better
         set(h_all.button_fittingHelp, 'Position',pos);
+        
+        set(h_all.cbx_fitting_loaded, 'Units',units);
+        pos = get(h_all.cbx_fitting_loaded, 'Position');
+        pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.cbx_fitting_loaded, 'Position',pos);
         
         % Relative to label_fitting_Method
         set(h_all.panel_fitting, 'Units',units);
@@ -701,6 +787,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         candidateOptions = candidate_plugins(selected_candidate_plugin).getOptions();
         fittingOptions = fitting_plugins(selected_fitting_plugin).getOptions();
         trackingOptions = tracking_plugins(selected_tracking_plugin).getOptions();
+        
+        % Store if loaded data should be used
+        GUIreturns.use_loaded_candidateData = get(h_all.cbx_candidate_loaded,'Value');
+        GUIreturns.use_loaded_fittingData = get(h_all.cbx_fitting_loaded,'Value');
         
         %Check if options were changed compared to intial ones
         GUIreturns.globalOptionsChanged   = ~isequaln(globalOptions_atStartup, globalOptions);
