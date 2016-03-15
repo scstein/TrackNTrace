@@ -164,19 +164,21 @@ pdfkeywords={}]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Inhalt %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
+
 \chapter*{TrackNTrace}
 \vspace*{-30pt}\textbf{written for Matlab by Simon Christoph Stein and Jan Thiart}\\ [20pt]
-TrackNTrace is a fast, easy-to-use Matlab program created for locating bright, Gaussian-shaped spots in a 2D fluorescence microscopy image or movie and track such emitters over time. It can be used in localization microscopy (PALM, STORM, ...), Single-molecule Particle Tracking (SPT), for drift correction and similar applications and comes with a convenient interface for configuration. Locating and tracking fluorescent emitters is done in two separate steps and it is comparatively easy to everyone with basic Matlab knowledge to alter the respective scripts, e.g. to include additional tracking algorithms. TrackNTrace should be useful to anyone who seeks to combine the speed of established software packages such as RapidSTORM or quickPALM with the simplicity and direct modifiablity of Matlab, especially when further post-processing is also done in Matlab.\\
-In general, TrackNTrace reads a movie file, corrects for camera artifacts if applicable and obtains a rough guess of all possible positions of bright spots in every image. These position candidates then serve as the basis for a fitting routine which fits a 2D Gaussian bell curve to the pixel intensity values around each candidate as an approximation of the microscope Point Spread Function (PSF), obtaining position, amplitude and local background. Finally, these fit results are then returned to a particle tracking algorithm which tries to link particles close in time and space to form trajectories.\\[10pt]
-This manual will first provide all necessary steps for installation (section~\ref{sec:install}) and explain the configuration utility (section~\ref{sec:config}). Some in-depth information about the operation of TrackNTrace is provided in section~\ref{sec:in-depth}.
+TrackNTrace is a fast, easy-to-use Matlab framework for single molecule localization, tracking and super-resolution applications. The purpose of this software is to facilitate development, distribution, and comparison of methods in the community by providing an easily extendable, plugin-based system and combining it with an easy-to-use graphical user interface (GUI). This GUI incorporates possibilities for quick inspection of localization and tracking results, giving direct feedback of the quality achieved with the chosen algorithms and parameter values, as well as possible errors, a feature neglected in most software packages available. The plugin system greatly simplifies adapting and tailoring methods towards any research problem's individual requirements. We provide a set of plugins implementing state-of-the-art methods together with the basic program, alongside tools for common post-processing steps such as STORM image generation, or drift correction. TrackNTrace should be useful to anyone who seeks to combine the speed of established software packages such as RapidSTORM or quickPALM with the simplicity and direct modifiablity of Matlab, especially when further post-processing is also done in Matlab.\\
+  
+In general, TrackNTrace reads a movie file, corrects for camera artifacts if applicable and obtains a rough guess of all possible positions of bright spots in every image. These position candidates then serve as the basis for a fitting routine which refines these candidates, obtaining position, amplitude and local background. Finally, these fit results are then returned to a particle tracking algorithm which tries to link particles close in time and space to form trajectories.\\[10pt]
+This manual will first provide all necessary steps for installation (section~\ref{sec:install}) and explain how to use the GUI (section~\ref{sec:overview}). Some in-depth information about the operation of TrackNTrace is provided in section~\ref{sec:in-depth}.
 \begin{table}[!h]
 \centering
 \caption*{\textbf{Requirements}}
 \label{tab:requirements}
 \begin{tabular}{p{.2\textwidth} p{.45\textwidth}}
 \toprule
-OS & Windows 7 64-bit or higher\tablefootnote{Necessary libraries can also be compiled for Linux and Mac.} \\[5pt]
-Matlab version & 2009a or higher\\[5pt]
+OS & Windows 7 64-bit or higher, Linux (tested with Kubuntu 14.4) \\[5pt]
+Matlab version & 2013a or higher\\[5pt]
 Toolboxes & Image Processing, Statistics \\[0pt]
 \bottomrule
 \end{tabular}
@@ -184,74 +186,92 @@ Toolboxes & Image Processing, Statistics \\[0pt]
 
 Please also note: TrackNTrace currently can only handle single-channel, $\mathrm{2D}+\mathrm{t}$ Tif image stacks. Convert your experimental data accordingly. \clearpage%
 
+\tableofcontents
+
 \section{Installation}\label{sec:install}
 Installation procedure for Windows 7:
 \begin{enumerate}
-\item Extract \texttt{TrackNTrace.zip} to your Matlab root path directory (e.g. \url{C:\\Users\\\%USERNAME\%\\Documents\\MATLAB}).
-\item Open the TrackNTrace folder and run \texttt{vcredist\_x64.exe}.
-\item Open Matlab and go to the TrackNTrace folder.
-\item Run \texttt{RunTrackNTrace.m}.
+\item TrackNTrace is available via a version controlled git repository. Clone the TrackNTrace repository to some directory (e.g. your MATLAB directory). If you do not have git you can get it from \url{http://git-scm.com}.
+\item For the included mex files (compiled C++ code) to work, you need to install the Visual Studio 2012 C++ 2012 Redistributable (x64). This can either be found in the folder \texttt{external\textbackslash{}vcredist\_x64.exe} or downloaded from the Microsoft website.
 \end{enumerate}
 
-\section{Configuration}\label{sec:config}
-When you first run \texttt{RunTrackNTrace.m}, the GUI as seen in figure~\ref{subfig:settings-gui} pops up. Here, you can select the relevant movie files to process, set options to find spots and fit a PSF model to them, and handle the particle tracking algorithms. All relevant file names, options, particle locations, and trajectories are stored in a time-stamped \texttt{mat}-file whenever they become available which makes it very easy to repeat and compare different experiments and very hard to lose any progress. Before processing begins, users can enable a preview mode to try and optimize different settings, either individually for all selected movies or globally. Finally, finished movies can be inspected in Matlab with trajectories overlaid.\\
-You can always save the current settings in a different \texttt{mat}-file and load them at the start by clicking on \textsf{Save Settings} and \textsf{Load settings}, respectively. In such a case, one only needs to select the movies to process and can skip anything else. Clicking on \textsf{Continue \& use for all} will use the same settings for all selected movies while clicking \textsf{Continue} will invoke the GUI again for each individual movie.
+\noindent  Installation procedure for Linux (tested with Kubuntu 14.4):
+\begin{enumerate}
+\item TrackNTrace is available via a version controlled git repository. Clone the TrackNTrace repository to some directory (e.g. your MATLAB directory). If you do not have git you can install it via your package manager (e.g. ``sudo apt get install git'').
+\item Depending on your MATLAB version TrackNTrace might run without the need for additional configuration.
+Matlab in Linux comes with its own c++ standard library, which might be too old and not compatible with the shared libraries used by ceres. As Matlab loads its own STL before the system libraries (by setting LD\_LIBRARY\_PATH to a MATLAB library directory) this will result  in failures when the mex file (shared library) is called. If you encounter invalid mex files while executing the program or runtime linking errors try setting the LD\_PRELOAD environment variable to the directory with your system libraries (where libstdc++ and libgfortran are located; try the ``locate'' command or ``find / -name to find them) before starting matlab. If you still encounter problems, consider installing the ceres dependencies (see \url{http://ceres-solver.org/building.html}, Linux).
+\end{enumerate}
 
-\subsection*{General options}
-\begin{itemize}[leftmargin=2cm]
-\item[Movie list] Click on \textsf{Select} to open a file dialogue where you can select one or multiple movies to analyze.
-\item[Dark movie] Select a movie taken with the exact same camera settings used in your experiment but with the shutter closed. This movie is used to correct for non-isotropic camera sensitivity, dead pixels and other artifacts according to [1].
-\item[Frame interval] Select the first and the last movie frame for processing. Anything not in this interval will be discarded. If \textsf{Last frame} is higher than the movie size or set to \textsf{Inf}, the whole movie is processed, starting at \textsf{First frame}.
-\item[Preview mode] Enable previw mode and select its frame interval. If you click \textsf{Continue} and preview mode is enabled, all current settings will be applied to analyze a portion of the movie (keep the frame interval between 50 and 100 frames to avoid performance drops). A movie player (see fig.~\ref{subfig:preview},\ref{subfig:preview2}) will pop up where you can see all positions, and trajectories if tracking was enabled, which are the result of the settings you choose. This is very useful for fine-tuning all relevant options before starting analysis on the whole movie.\\
-Please note: Additional preview options are available when leaving \textsf{Tracking} disabled. In this case. fig.~\ref{subfig:preview2} shows up and you have additional filtering options for amplitude and SNR. On top of that, you can also plot histograms of the fitted amplitudes, background counts, and PSF standard deviations which, for example, enables you to first fit the PSF, choose an appropriate value, and fit (and track) the rest of the movie with a fixed PSF standard deviation.\\
-Once you close the preview window, you will get asked to continue testing or abort the preview. Clicking \textsf{Yes} takes you back to the settings GUI, \textsf{No} acknowledges your satisfaction with the current settings and continues with the next film.
-\end{itemize}
+
+
+\section{Overview}\label{sec:overview}
+Before reading this manual a note: To make TrackNTrace easy to use, we want to emphasize that every UI element has a tooltip explanation, which pops out when resting the mouse on top of the element. Ideally these explanations should be enough to use the program / plugin efficiently.
 
 \begin{figure}[!h]
 \centering
-\subfloat[][GUI for TrackNTrace settings.]{\includegraphics[width=5.95cm]{./settings_gui_first.png} \label{subfig:settings-gui}} \qquad
-\subfloat[][GUI for trajectory preview.]{\includegraphics[width=6.88cm]{./preview_gui.png} \label{subfig:preview}}\\
-\subfloat[][GUI for positions preview with a histogram of fitted PSF standard deviations.]{\includegraphics[width=12.88cm]{./fitdata_visual.png} \label{subfig:preview2}}\\
-\caption{TrackNTrace GUIs.}
+\includegraphics[width=0.9\textwidth]{./fig0.pdf} 
+\caption{Program flow and user interface of TrackNTrace. First, a list of movies or a previously saved settings file is loaded before the main GUI is initialized. There, plugins for steps 2{--}4 are chosen and their settings adjusted for each movie. At any time during parameter tuning, a preview for an arbitrary part of the current movie can be computed and visualized. The visualizer is able to display the output from all stages (here shown in tracking mode). Selecting a candidate, localization, or track showcases the respective plugin-specific output (e.g. fitted parameter values). After parameter adjustment for all movies, the actual processing starts, saving each movie's output data along with the chosen settings in a single file.}
+\label{fig:flowdiagram}
 \end{figure}
 
-\subsection*{Spot candidate options}
-Here, you can control how to roughly identify bright spots in your movies. These spot candidates are later fit and accurate positions and amplitudes get extracted. 
-\begin{itemize}[leftmargin=2cm]
-\item[Loop direction] Movies can be processed in a forward direction, from beginning to end, or backwards. Normally, there is no difference between the two. However, this setting can be used in combination with \textsf{Calculate candidates once} (see below).
-\item[\smash{\tshortstack[1]{Calculate candi-\\dates once}}] If enabled, spots are only detected once from an average over the first (or last, with \textsf{Loop direction = Backward}) $N$ frames of the movie. The number of frames $N$ can be adjusted below the checkbox. Instead of independent spot detection \& fitting for every frame, the fit results of the last frame are carried over as an initial guess for the next frame. Useful for drift correction or blinking/bleaching analysis of non-moving particles at low signal to noise.
-\item[Method] Choose the method used to find spot candidates, which can be intensity filtering or cross-correlation. The former works well in any case while the latter is very useful if looking at non-moving diffraction limited emitters.
-\item[PSF std. dev.] TrackNTrace assumes an isotropic Gaussian PSF model for fluorescent emitters [2], where the provided value is the Gaussian standard deviation $\sigma$ in pixels. A lower bound can be calculated as $\sigma = \frac{\lambda_\mathrm{em}}{4\sqrt{2\ln 2}\: \mathrm{NA}}$, where $\lambda_\mathrm{em}$ is the fluorescence emission wavelength in pixels and NA is the numerical aperture of the microscope. This number is especially important when using cross-correlation. Use the positions preview (\textsf{Tracking} disabled) to check the distribution of fitted $\sigma$ to set an appropriate value.
-\item[Spot radius] Average radius of a spot in pixels, must be an integer.
-\item[\smash{\tshortstack[1]{Percent brightest\\ pixels}}] Only the brightest $q\%$ of all pixels can be considered as candidates. Lower means less candidates but higher candidate amplitude.
-\item[P-test value] Every emitter's brightness is compared to its background via a hypothesis test, with the background assumed to be Gaussian. Lower means less candidates but higher candidate amplitude. Must be between 1 and 0.
-\item[BG calc. interval] This setting forces a new local background image to be calculated every $n$ frames. Setting a low number results in higher quality localizations at the cost of a severely reduced performance.
-\item[Threshold] This number $t$ is only used in the cross-correlation step and must be between 1 and 0. Choosing a large value for $t$ will make sure only spots which strongly match the Gaussian PSF model are chosen as spot candidates.\\[0pt]%
+\subsection*{Startup (fig. \ref{fig:flowdiagram}.1)}
+When you first run \texttt{RunTrackNTrace.m}, the GUI as seen in figure~\ref{fig:flowdiagram}.1 pops up. Here, you can select the relevant movie files to process. Movies are added via the ``\textsf{+}'' button, where multiple movies can be selected in one go using the ``shift'' key. Likewise, the ``\textsf{-}'' button removes the selected entry from the list. Pressing \textsf{Start} invokes the main GUI (fig. \ref{fig:flowdiagram}.2). If ``\textsf{Load TNT file}'' is pressed, a TrackNTrace settings file (Matlabs \texttt{*.mat} file format, files end on \texttt{\_TNT}) can be selected, which loads all settings from a previous run, also starting the main GUI.
+
+\subsection*{Main GUI (fig. \ref{fig:flowdiagram}.2)}
+In the main GUI all processing settings are adjusted. On first startup it always shows the settings for the first movie in the list. The current settings can be saved to a file or previously saved settings loaded via the \textsf{Save Settings} and \textsf{Load settings} buttons on the top. Below the current file's name is displayed (hovering reveals full path). The main part of the GUI is designed for four processing steps:
+\begin{enumerate}
+ \item \textbf{Correcting raw data:} Measurements can be corrected for dark currents and camera artifacts. Algorithms based on quantitative analysis of photon signals (e.g. maximum-likelihood estimation, MLE) require subsequent conversion of analogue-digital-converter counts to photon numbers.
+ \item \textbf{Detecting candidates:} Potential sources of signal above the background noise are identified in each frame to obtain rough estimates of emitter positions with pixel precision. %This step is critical as misses or false detections cannot be distinguished from true events lateer.
+  \item \textbf{Position refinement:} Each candidate's position estimate is refined wtih sub-pixel accuracy and additional information (background strength, brightness, dipole orientation, etc.) extracted. Commonly, this involves fitting a representation of the microscope's PSF to a subsection of the frame.
+    \item \textbf{Tracking:} Positions separated in time are connected frame-by-frame to form trajectories. High particle density, intersecting tracks, and re-appearing, previously lost emitters are the main obstacles to overcome during this stage.
+\end{enumerate}
+
+The first part corresponds to the \textsf{General options} panel, where the following elements can be adjusted:
+\begin{itemize}[leftmargin=3.5cm]
+\item[Output folder] Folder where the TNT output file is saved. The filename is always derived from the movies name with an additional timestamp and the ending \texttt{\_TNT}. For example: the movie ``\texttt{data.tif}'' output could become ``\texttt{data\_2016-m03-d14-13h15\_TNT.mat}''. If \textsf{Same as movie} is checked, the output will be right next to the movie. Otherwise press \textsf{Select} to open a file dialogue where you can select a folder (or simply type one into the field directly). Leaving the field empty saves in the current MATLAB location.
+\item[Dark movie] Select a movie taken with the exact same camera settings used in your experiment but with the shutter closed. This movie is used to correct for non-isotropic camera sensitivity, dead pixels and other artifacts according to [1].
+\item[Frame interval] Select the first and the last movie frame for processing. Anything not in this interval will be discarded. If \textsf{Last frame} is higher than the movie size or set to \textsf{Inf}, the whole movie is processed, starting at \textsf{First frame}.
+\item[Photon conversion]  If checked, the movie frames are converted from ADC counts to photons before they are handed to the plugins for processing. The conversion formula is
+\begin{align}
+I_{\texttt{phot}} = (I_{\texttt{ADC}}-\texttt{Bias})*\texttt{Sensitivity}/\texttt{Gain}.
+\end{align}
+A conversion of this type is only meaningful for EMCCD cameras. The values for \texttt{Bias}, \texttt{Sensitivity} and \texttt{Gain} should be available in the cameras performance sheet.
 \end{itemize}
 
-\subsection*{Fitting options}
-The fitting options let you control how the PSF model is fit to the candidate spots. You can also enable photon conversion here.
-\begin{itemize}[leftmargin=2cm]
-\item[Fit PSF std. dev.] This enables fitting the PSF standard deviation on top of position, amplitude and background. Useful for wide particle size distributions or diffusing molecules.
-\item[Pixel integrated fit] Enables or disables fitting a Gaussian model integrated over one pixel. It more accurately resembles the process of photons hitting the discrete pixel grid of a camera chip surface and is recommended to be enabled [2].
-\item[\smash{\tshortstack[1]{Maximum Likeli- \\hood refinement}}] If enabled, the fitting algorithm uses a combination of Least-squares Minimization and Maximum Likelihood Estimation [2] for parameter optimization. MLE refinement necessitates converting the camera image counts to photons.
-\item[Photon conversion] This setting enables photon conversion of the original camera image, which can be calculated as $i_\mathrm{photon} = (i_\mathrm{camera} - \mathrm{bias})\times \mathrm{sensitivity}/\mathrm{gain}$. Please note: The number of recorded photons can be converted to the incident photon count by dividing with the quantum efficiency of the camera chip. However, the number of recorded photons, not the photons incident on the chip, is important for the PSF fitting quality.  The option is always enabled if MLE fitting is used
-\item[Bias] After A/D-conversion of the camera chip signal, the image count floor is offset by this number to avoid negative image counts. This value is usually pre-set by the manufacturer or can be altered in the camera software.
-\item[Sensitivity] The sensitivity, given in electrons per count, is used to convert signal counts to signal electrons. It depends on amplification and readout settings and is usually listed in the camera specification sheet.
-\item[Gain] The EM-gain, given in electrons per photon, is used to obtain the original number of signal photons before electron multiplication.
+The center part houses the plugins for steps 2-4, where the plugin for each step is selected using a popup menu. The \textsf{?} button besides these menues shows an explanation of the currently selected plugin. Tracking (step 4) can optionally be disabled/enabled, the other two steps are always carried out. That said, the \texttt{Use candidate data} plugin for step 3 simply copies the data from step 2 and converts it to the right output format. As each plugins inputs are different, we will not explain the plugins here, but rely on their explanation and their tooltip.
+
+At the bottom left part of the GUI the preview button is placed, which starts the visualizer (see below) for the frame interval specified by   \textsf{First frame} and \textsf{Last frame} to the right of the button. This visualization is one of TrackNTrace's core features, making data analysis and parameter optimization much easier. The bottom right button either switches to the settings of the next movie in the list (displays ``\textsf{Next movie}) or starts processing all movies (displays ``\textsf{START processing}''). If all movies are alike, the ``\textsf{Use settings for all following}'' button applies the current movie's settings to all yet unadjusted movies in the list and starts the processing directly.
+
+\subsection*{Preview/Visualizer (fig. \ref{fig:flowdiagram}.3)}
+The visualizer shows the data acquired from steps 2 through 4 (if available). Aside from its use by \texttt{RunTrackNTrace.m}, the visualizer can also be started directly by executing \texttt{TNTvisualizer.m} (check the file for the different input options). This is useful for viewing data from previous runs or even just tif movies.  In the top right the type of data to display can be selected. If a data point is selected with the mouse, all corresponding output parameters from the plugin that computed it are shown. The counter in the top left shows the current / maximum frame. Different modes can show different options at the bottom of the player.  \newline 
+
+\textsf{Player options}
+\begin{itemize}[leftmargin=3cm]
+\item[FPS] The frames per second (speed) the movie is played back with when \textsf{Play} is pressed.
+\item[B/W] Black / white colormap for displaying the movie.
+\item[Adj. contrast] Shows a popup menu which allows manually changing the contrast.
+\item[Autocontrast] The contrast is chosen automatically. Similar to the popular \texttt{imageJ} software, holding the ``shift'' key during playback continously adjusts the contrast.
+\newline
+\end{itemize} 
+
+
+\textsf{Histogram options (unavailable in \textsf{Movie} mode)}
+\begin{itemize}[leftmargin=3cm]
+\item[Bins] Number of bins the histogram is computed for.
+\item[Value] Parameter to histogram. What is available depends on the plugin that computed the current mode's data.
+\item[Cut to X \%] Cuts (100-X)/2 \% of data from the lower and upper tails of the distribution before computing the histogram. 
+\item[Show] Computes and displays the histogram.
+\newline
 \end{itemize}
 
-\subsection*{Tracking options}
-This section contains all settings relevant to particle tracking. Tracking can also be disabled altogether by unticking \textsf{Tracking}.
-\begin{itemize}[leftmargin=2cm]
-\item[Method] Choose the tracking algorithm you would like to use. Possible methods at this point are \textsf{u-track} [3], and a custom nearest-neighbor tracker written in \CC.
-\item [Link radius] Maximum allowed distance a particle can travel between two frames in px. A good setting for diffusing particles is $3\sqrt{2 D t_a}$, where $D$ is the diffusion coefficient and $t_a$ is the frame aquisition time.
-\item [Max. gap] Maximum amount of frames a particle can be invisible (e.g. by entering a non-radiative triplet state) between two observations without ending the trajectory prematurely. While useful for stationary, blinking fluorophores, allowing gaps for diffusing particles can severely distort the result. Set to 0 to disable.
-\item [Min. track length] All trajectories shorter than the minimum allowed track length will be discarded automatically. 
-\item [\smash{\tshortstack[1]{Split movie\\into parts}}] Particle tracking can be very memory-intensive and taxing on the CPU when dealing with a large amount of frames and particles, especially when gap closing is enabled. As performance does not scale linearly, splitting the movie into 2 or more parts can boost performance considerably. Choose with care if you do not want to allow tracks being split into smaller segments, e.g. when large gap closing values were chosen.
-\item [Verbose] If enabled, progress updates will be displayed if the tracking algorithm supports it.
+\textsf{Tracking related (only \textsf{Tracking} mode)}
+\begin{itemize}[leftmargin=3.5cm]
+\item[Traj. Lifetime] Number of frames a trajectory is visible after its detection.
+\item[Show last X frames] Shows only the past X frames of each trajectory.
+\item[\# Colors] Number of colors the trajectories are displayed in. 
 \end{itemize}
 
+\clearpage
 \section{TrackNTrace data structures}
 All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the format \texttt{'moviename\_timestamp\_TNT.mat'}. Here is a list of all variables it contains:
 \begin{table}[!h]
@@ -263,13 +283,15 @@ All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the form
 \multicolumn{1}{c}{Variable name} & \multicolumn{1}{c}{Description}\\ \midrule
 \texttt{filename\_movie} & String containing full path of movie file. \\[5pt]
 \texttt{dark\_img} & 2D double array containing correction image to be added to each movie frame. \\[5pt]
-\texttt{globalOptions} & $1\times1$ struct of general options variables set by the GUI. \\[5pt]
-\texttt{candidateOptions} & $1\times1$ struct of candidate options variables set by the GUI. \\[5pt]
-\texttt{fittingOptions} & $1\times1$ struct of fitting options variables set by the GUI. \\[5pt]
-\texttt{trackingOptions} & $1\times1$ struct of general options variables set by the GUI. \\[5pt]
-\texttt{fitData} & $n\times 1$ cell array of fitted positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique fit and the column order according to the model PSF is $\mu_x$, $\mu_y$, $A$, $B$, $\sigma$ and $\varepsilon$ (see sec~\ref{sec:in-depth} for details). $\varepsilon$ is a flag set by the fitting routine indicating if a fit converged ($\varepsilon = 1$) or not ($\varepsilon = -1$), or if the fit failed altogether ($\varepsilon = -2$) Currently, failed fits are not saved at all. \\
- & For example, \texttt{fitData\{f\}(:,1:3)} shows a list of all valid particles in frame $f$ in row order with $xy$ position and amplitude as columns.\\[5pt]
-\texttt{trajectoryData} & 2D double array of all trajectories. Each trajectory is assigned a unique id after which the array is sorted. The column order is id, frame, $\mu_x$, $\mu_y$, $A$. Both id and frame begin at 1. \\
+\texttt{movieSize} & 1x3 matrix saving the size of the movie [rowPixel, colPixel, nrFrames] \\[5pt]
+\texttt{firstFrame\_lastFrame} & 1x2 matrix [first frame, last frame] saving the first and last processed frame of the movie. This is important if only parts of a movie were read in and processed. \\[5pt]
+\texttt{globalOptions} & Struct of general options variables set by the GUI. \\[5pt]
+\texttt{candidateOptions} & Struct of fitting options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
+\texttt{fittingOptions} & Struct of fitting options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
+\texttt{trackingOptions} & Struct of tracking plugin parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
+\texttt{candidateData} & $n\times 1$ cell array of fitted positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique candidate fit and the column order is $\mu_x$, $\mu_y$These columns are mandatory for the fitting to work. Plugins can output extra data.\\
+\texttt{fittingData} & $n\times 1$ cell array of fitted positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique fit and the column order according to the model PSF is $\mu_x$, $\mu_y$, $\mu_z$, Amplitude, Background. These five columns are mandatory for most trackers to work correctly in step 4. Plugins can output extra data.\\
+\texttt{trackingData} & 2D double array, list of trajectories with columns  [id,frame,xpos,ypos,zpos] + additional columns. Every trajectory is given an id, starting at 1, after which the list is sorted. Frame number starts with 1.\\
 \bottomrule
 \end{tabular}
 \end{table}
