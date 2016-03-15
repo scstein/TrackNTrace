@@ -60,8 +60,13 @@ else
     GUIinputs.outputFolderSameAsMovie = false;
     GUIinputs.outputFolder = outputPath_loaded;
 end
-GUIinputs.candidateData_loaded = ~isempty(candidateData_loaded);
-GUIinputs.fittingData_loaded = (GUIinputs.candidateData_loaded && ~isempty(fittingData_loaded)); % candidateData must always be there
+GUIinputs.candidateOptions_loaded = candidateOptions_loaded;
+GUIinputs.fittingOptions_loaded = fittingOptions_loaded;
+GUIinputs.show_candidateData_fromFile_cbx = ~isempty(candidateData_loaded);
+GUIinputs.show_fittingData_fromFile_cbx = (GUIinputs.show_candidateData_fromFile_cbx && ~isempty(fittingData_loaded)); % candidateData must always be there
+GUIinputs.use_loaded_candidateData = true;
+GUIinputs.use_loaded_fittingData = true;
+GUIinputs.firstFrame_lastFrame_loaded = firstFrame_lastFrame_loaded;
 
 % Calculate default dark image if given in default options
 dark_img_def = [];
@@ -113,6 +118,10 @@ for iMovie=1:numel(movie_list)
         GUIinputs.outputFolderSameAsMovie = GUIreturns.outputFolderSameAsMovie;
         GUIinputs.outputFolder = GUIreturns.outputFolder;
         
+        % Save use loaded data settings
+        GUIinputs.use_loaded_candidateData = GUIreturns.use_loaded_candidateData;
+        GUIinputs.use_loaded_fittingData = GUIreturns.use_loaded_fittingData;
+        
         GUIinputs.showStartupInformation = false; % Only show this on first startup
         if GUIreturns.userExit;
             userExitFunc(); % Cleanup
@@ -143,6 +152,10 @@ for iMovie=1:numel(movie_list)
                     % Save output folder settings
                     GUIinputs.outputFolderSameAsMovie = GUIreturns.outputFolderSameAsMovie;
                     GUIinputs.outputFolder = GUIreturns.outputFolder;
+                    
+                    % Save use loaded data settings
+                    GUIinputs.use_loaded_candidateData = GUIreturns.use_loaded_candidateData;
+                    GUIinputs.use_loaded_fittingData = GUIreturns.use_loaded_fittingData;
                     
                     if GUIreturns.userExit;
                         userExitFunc();

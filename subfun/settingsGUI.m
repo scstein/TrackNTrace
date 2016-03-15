@@ -79,8 +79,8 @@ set(h_all.edit_photonGain, 'Callback', {@callback_IntEdit,1,1000});
 % % Candidate plugin
 set(h_all.popup_candidateMethod, 'Callback', @callback_updatePlugins);
 set(h_all.cbx_candidate_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
-if(GUIinputs.candidateData_loaded)
- set(h_all.cbx_candidate_loaded, 'Value', true);
+if(GUIinputs.show_candidateData_fromFile_cbx)
+ set(h_all.cbx_candidate_loaded, 'Value', GUIinputs.use_loaded_candidateData);
 else
  set(h_all.cbx_candidate_loaded, 'Visible', 'off');
 end
@@ -88,8 +88,8 @@ end
 % % Fitting plugin
 set(h_all.popup_fittingMethod, 'Callback', @callback_updatePlugins);
 set(h_all.cbx_fitting_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
-if(GUIinputs.fittingData_loaded)
- set(h_all.cbx_fitting_loaded, 'Value', true);
+if(GUIinputs.show_fittingData_fromFile_cbx)
+ set(h_all.cbx_fitting_loaded, 'Value', GUIinputs.use_loaded_fittingData);
 else
  set(h_all.cbx_fitting_loaded, 'Visible', 'off');
 end
@@ -356,19 +356,19 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Loaded fitting data can only be used if the loaded candidate data
         % is also used.
         if get(h_all.cbx_candidate_loaded, 'Value')
-            candidateOptions = candidateOptions_atStartup;
+            candidateOptions = GUIinputs.candidateOptions_loaded;
         end
         
         if get(h_all.cbx_fitting_loaded, 'Value')
-            fittingOptions = fittingOptions_atStartup;
+            fittingOptions = GUIinputs.fittingOptions_loaded;
         end
         
         if get(h_all.cbx_candidate_loaded, 'Value') || get(h_all.cbx_fitting_loaded, 'Value')
             % Update plugins
             selectPluginsBasedOnOptions();
             
-            globalOptions.firstFrame = globalOptions_atStartup.firstFrame;
-            globalOptions.lastFrame = globalOptions_atStartup.lastFrame;
+            globalOptions.firstFrame = GUIinputs.firstFrame_lastFrame_loaded(1);
+            globalOptions.lastFrame = GUIinputs.firstFrame_lastFrame_loaded(2);
             setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
             setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
             
