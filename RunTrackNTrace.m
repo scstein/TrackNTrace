@@ -37,7 +37,7 @@ end
 
 %% Load and adjust the default settings for this batch
 [movie_list, globalOptions, candidateOptions_loaded,fittingOptions_loaded,trackingOptions_loaded, ...
-    candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, GUIreturns] = startupGUI();
+    candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI();
 candidateOptions = candidateOptions_loaded;
 fittingOptions = fittingOptions_loaded;
 trackingOptions = trackingOptions_loaded;
@@ -53,8 +53,13 @@ end;
 %% Adjust options for each movie and test settings if desired
 GUIinputs.TNToptions = TNToptions;
 GUIinputs.showStartupInformation = true;
-GUIinputs.outputFolderSameAsMovie = true;
-GUIinputs.outputFolder = '';
+if (isfloat(outputPath_loaded))
+    GUIinputs.outputFolderSameAsMovie = true;
+    GUIinputs.outputFolder = '';
+else
+    GUIinputs.outputFolderSameAsMovie = false;
+    GUIinputs.outputFolder = outputPath_loaded;
+end
 GUIinputs.candidateData_loaded = ~isempty(candidateData_loaded);
 GUIinputs.fittingData_loaded = (GUIinputs.candidateData_loaded && ~isempty(fittingData_loaded)); % candidateData must always be there
 

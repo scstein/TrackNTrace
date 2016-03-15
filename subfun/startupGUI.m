@@ -1,4 +1,4 @@
-function [filename_movies, globalOptions, candidateOptions,fittingOptions,trackingOptions, candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, GUIreturns] = startupGUI()
+function [filename_movies, globalOptions, candidateOptions,fittingOptions,trackingOptions, candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI()
 %
 % Author: Simon Christoph Stein
 % E-Mail: scstein@phys.uni-goettingen.de
@@ -16,6 +16,7 @@ candidateData_loaded = [];
 fittingData_loaded = [];
 movieSize_loaded = [];
 firstFrame_lastFrame_loaded = [];
+outputPath_loaded = -1;
 
 filename_movies ={};
 
@@ -44,6 +45,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if isfloat(infile);
             return;
         end; % User clicked cancel
+        
+        outputPath_loaded = path;
+        
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
         warning off
