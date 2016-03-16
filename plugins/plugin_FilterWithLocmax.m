@@ -21,7 +21,7 @@ outParamDescription = {'x';'y'};
 plugin = TNTplugin(name,type, mainFunc,outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Filter image with appropriate kernel and locate features by local maximum suppression.';
+plugin.info = 'Filter image with appropriate kernel and locate features by local maximum suppression. \nFirst, the image is convolved with the chosen kernel of size kernelSize. For the Gaussian filters, kernelSize is overwritten by 2*ceil(3*GaussSigma)+1. If a filter relies on two convolutions, the second kernel'' size is determined by filterBlowup*kernelSize. After filtering, maximums (meaning: emitters) in the image are detected through local maximum suppression by image dilation. Both the radius of the detection window and the minimum signal strength can be set by the user \nCandidates at the border of the image cannot be detected efficiently. ';
 plugin.initFunc = @findCandidates_prepareFilters;
 
 % Add parameters
@@ -31,26 +31,26 @@ plugin.add_param('kernelName',...
     'list',...
     {'Gauss Difference','Gauss','Gauss Zero','Average','Average Difference','Median'},...
     'Choose filter kernel.');
-plugin.add_param('PSFSigma',...
+plugin.add_param('GaussSigma',...
     'float',...
     {1.3, 0, inf},...
-    'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma. Applies to Gaussian filters and overwrites kernelSize.');
+    'Standard deviation of Gaussian filters in [pixel]. \nA good choice is the PSF sigma, sigma ~ 0.21*lambda/NA. where lambda is the wavelength in pixels and NA is the numerical aperture of the objective. \nOverwrites kernelSize with 2*ceil(3*GaussSigma)+1.');
 plugin.add_param('kernelSize',...
     'int',...
     {5,3,inf},...
-    'Window size of first kernel. Does not apply to Gaussian filters.');
+    'Total window size of first kernel. Does not apply to Gaussian filters.');
 plugin.add_param('filterBlowup',...
     'float',...
     {1.5,1.01,inf},...
-    'Blow up PSFSigma or kernelSize by this factor when applying second filtering step. Only applies to Average Difference and Gauss Difference.');
+    'Blow up GaussSigma or kernelSize by this factor when applying second filtering step. \nOnly applies to Average Difference and Gauss Difference.');
 plugin.add_param('detectionRadius',...
     'int',...
     {3,1,inf},...
-    'Size of local maximum detection window. Should be similar to kernelSize.');
+    'Radius of local maximum detection window. Should be comparable to kernelSize. A higher value leads candidates only detected when they are apart.');
 plugin.add_param('detectionThreshold',...
     'float',...
     {2.5,0,inf},...
-    'Detection threshold. Higher means less detected candidates.');
+    'Local maximum detection threshold. \nHigher means less detected, higher quality candidates.');
 end
 
 
@@ -95,7 +95,7 @@ end
 
 function [candidateOptions] = findCandidates_prepareFilters(candidateOptions)
 
-PSFSigma = candidateOptions.PSFSigma;
+GaussSigma = candidateOptions.GaussSigma;
 kernelSize = candidateOptions.kernelSize;
 sizeFactor = candidateOptions.filterBlowup;
 kernelSizeLarge = kernelSize;
@@ -113,22 +113,22 @@ switch candidateOptions.kernelName
 %         [kernel,isSeparable] = testFilterPerformance(kernel1D,kernel2D);
         
     case 'Gauss'
-        kernelSize = 2*ceil(3*PSFSigma)+1;
-        kernel1D = gauss_window(kernelSize,PSFSigma);
+        kernelSize = 2*ceil(3*GaussSigma)+1;
+        kernel1D = gauss_window(kernelSize,GaussSigma);
 %         kernel2D = kernel1D*kernel1D.';
 %         [kernel,isSeparable] = testFilterPerformance(kernel1D,kernel2D);
         
     case 'Gauss Zero'
-        kernelSize = 2*ceil(3*PSFSigma)+1;
-        kernel1D = {gauss_window(kernelSize,PSFSigma),ones(kernelSize,1)/kernelSize};
+        kernelSize = 2*ceil(3*GaussSigma)+1;
+        kernel1D = {gauss_window(kernelSize,GaussSigma),ones(kernelSize,1)/kernelSize};
 %         kernel2D = kernel1D{1}*kernel1D{1}.'; kernel2D = kernel2D-mean(kernel2D(:));
 %         [kernel,isSeparable] = testFilterPerformance(kernel1D,kernel2D);
         
     case 'Gauss Difference'
-        PSFSigmaLarge = sizeFactor*PSFSigma;
-        kernelSize = 2*ceil(3*PSFSigma)+1;
-        kernelSizeLarge = 2*ceil(3*PSFSigmaLarge)+1;
-        kernel1D = {gauss_window(kernelSize,PSFSigma),gauss_window(kernelSizeLarge,PSFSigmaLarge)};
+        GaussSigmaLarge = sizeFactor*GaussSigma;
+        kernelSize = 2*ceil(3*GaussSigma)+1;
+        kernelSizeLarge = 2*ceil(3*GaussSigmaLarge)+1;
+        kernel1D = {gauss_window(kernelSize,GaussSigma),gauss_window(kernelSizeLarge,GaussSigmaLarge)};
 %         kernel2D = {kernel1D{1}*kernel1D{1}.',kernel1D{2}*kernel1D{2}.'};
 %         [kernel,isSeparable] = testFilterPerformance(kernel1D,kernel2D);
         

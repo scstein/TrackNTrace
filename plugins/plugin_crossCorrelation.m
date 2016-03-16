@@ -21,22 +21,22 @@ outParamDescription = {'x';'y'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross correlation.';
+plugin.info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross-correlation. \nA Gaussian PSF template is created using the PSFsigma value provided by the user. The whole image is cross-correlated with this image using Matlab''s normxcorr2 function and maximums (meaning: emitters) in this correlation image are detected through non-maximum suppression by image dilation using the search window size 2*round(PSFsigma*distanceFactor)+1. \nCandidates at the border of the image cannot be detected efficiently.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
 plugin.add_param('PSFsigma',...
     'float',...
     {1.3, 0, inf},...
-    'Standard deviation of the PSF in pixels. sigma = FWHM/(2*sqrt(2*log(2))).');
+    'Standard deviation of the PSF in pixels. \nsigma = FWHM/(2*sqrt(2*log(2))) ~ 0.21*lambda/NA where lambda is the emission wavelength in pixels and NA is the numerical aperture of the objective.');
 plugin.add_param('CorrThreshold',...
     'float',...
     {0.35, 0, 1},...
-    'Threshold between 0 and 1.');
+    'Correlation threshold for pixels to count as emitter candidates. \nMust be between 0 and 1, a good range is 0.25 (many low quality candidates) to 0.4 (fewer, higher quality candidates).');
 plugin.add_param('distanceFactor',...
     'float',...
     {2.5, 1, inf},...
-    'The search window size is 2*round(PSFsigma*distanceFactor)+1.');
+    'The local maximum search window size is 2*round(PSFsigma*distanceFactor)+1. \nLowering this value let''s you detect candidates closer to each other but lowers candidate quality.');
 
 end
 
@@ -44,8 +44,8 @@ end
 %   -------------- User functions --------------
 
 function candidatePos = findCandidates_crossCorrelation(img, options, currentFrame)
-%Wrapper function for cross correlation candidate finding. Refer to
-%matchSpot below or tooltips above to obtain information on input and
+%Wrapper function for cross-correlation candidate finding. Refer to
+%matchPattern below or tooltips above to obtain information on input and
 %output variables.
 %
 % INPUT:
@@ -64,7 +64,7 @@ function candidatePos = findCandidates_crossCorrelation(img, options, currentFra
 sigma = options.PSFsigma;
 CORR_THRESH = options.CorrThreshold;
 
-% Candidate selection by normalized cross correlation
+% Candidate selection by normalized cross-correlation
 model = gaussian2d(round(10*sigma),sigma,true);
 pattRows = size(model,1);
 pattCols = size(model,2);
@@ -115,7 +115,7 @@ function [ match_data, match_img ] = matchPattern( img, patt, CORR_THRESH, MIN_D
 % returned match is the best candidate within a box window with edge
 % length 2*MIN_DIST+1 centered around the candidate.
 %
-% USAGE: [ match_data, match_img ] = match_pattern(img, patt, CORR_THRESH, MIN_DIST)
+% USAGE: [ match_data, match_img ] = matchPattern(img, patt, CORR_THRESH, MIN_DIST)
 %
 % Input:
 %    img         - The image to search in
@@ -159,7 +159,7 @@ pattCols = size(patt,2);
 MIN_DIST = min(max(1, MIN_DIST),min(imgRows,imgCols)); % Distance should be at least 1 and not greater than image size
 
 % -- Pattern detection by cross-correlation --
-% NOTE: Normalized cross correlation should to be used for feature matching,
+% NOTE: Normalized cross-correlation should to be used for feature matching,
 % as otherwise the amplitude of the measured image will influence the
 % result. For example: a spot much brighter than the pattern in the image
 % will always lead to a local maximum.

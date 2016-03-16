@@ -24,7 +24,7 @@ plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 plugin.initFunc = @fitPositions_gpugaussinit;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Fit a Gaussian PSF via GPU-MLE fitting. Absolutely requires photon conversion. \nFunction published in Smith et al,NatMet 7,373-375(2010),doi:10.1038/nmeth.1449';
+plugin.info = 'Refine candidate positions by assuming a Gaussian PSF and finding the center and other parameters via GPU-MLE fitting. Absolutely requires photon conversion. \nFunction published in Smith et al,NatMet 7,373-375(2010),doi:10.1038/nmeth.1449';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
@@ -32,7 +32,7 @@ plugin.info = 'Fit a Gaussian PSF via GPU-MLE fitting. Absolutely requires photo
 plugin.add_param('PSFSigma',...
     'float',...
     {1.3, 0, inf},...
-    'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma.');
+    'Standard deviation of the PSF in pixels. \nsigma = FWHM/(2*sqrt(2*log(2))) ~ 0.21*lambda/NA where lambda is the emission wavelength in pixels and NA is the numerical aperture of the objective.');
 plugin.add_param('fitType',...
     'list',...
     {'[x,y,A,BG]', '[x,y,A,BG,s]','[x,y,A,BG,sx,sy]'},...
@@ -53,6 +53,8 @@ function [fitData] = fitPositions_gpugaussmle(img,candidatePos,options,currentFr
 % Smith et al, Fast, single-molecule localization that achieves
 % theoretically minimum uncertainty, Nature Methods 7, 373-375 (2010),
 % doi:10.1038/nmeth.1449
+% All files can be downloaded at http://omictools.com/gaussmlev2-tool 
+% (put in external folder).
 % 
 % INPUT:
 %     img: 2D matrix of pixel intensities, data type and normalization
@@ -98,13 +100,13 @@ end
 
 fittingOptions.halfWindowSize = min(10,ceil(3*fittingOptions.PSFSigma));
 switch fittingOptions.fitType
-    case '[x,y,A,BG]'
+    case '[x,y,N,BG]'
         fitType = 1;
         nrParam = 0;
-    case '[x,y,A,BG,s]'
+    case '[x,y,N,BG,s]'
         fitType = 2;
         nrParam = 1;
-    case '[x,y,A,BG,sx,sy]'
+    case '[x,y,N,BG,sx,sy]'
         fitType = 4;
         nrParam = 2;
 end
@@ -150,7 +152,14 @@ end
 
 
 function [P,CRLB,LL]=gaussmlev2(data,PSFSigma,iterations,fittype,function_name,Ax,Ay,Bx,By,gamma,d)
-%gaussmlev2  MLE of single molecule positions 
+% modified version of gaussmlev2 which was changed to work with TrackNTrace
+% gaussmlev2.m was released as part of the following
+% publication under the GNU public licence: 
+% Smith et al, Fast, single-molecule localization that achieves
+% theoretically minimum uncertainty, Nature Methods 7, 373-375 (2010),
+% doi:10.1038/nmeth.1449
+% All files can be downloaded at http://omictools.com/gaussmlev2-tool (put in external folder).
+%
 %
 %   [P CRLB LL t]=gaussmlev2(data,PSFSigma,iterations,fittype,Ax,Ay,Bx,By,gamma,d)
 %
