@@ -148,7 +148,7 @@ switch(histogramType)
         pos_jitter = pos+randn(size(pos,1),2).*[locPrecision,locPrecision];
         stormRaw = createHistogram(pos_jitter,1/mag,ones(size(pos_jitter,1),1));
         
-        for i=2:nHistogramSteps
+        for i=2:max(2,nHistogramSteps)
             pos_jitter = pos+randn(size(pos,1),2).*[locPrecision,locPrecision];
             stormRaw = stormRaw+createHistogram(pos_jitter,1/mag,ones(size(pos_jitter,1),1));
         end
@@ -192,7 +192,11 @@ ylabel('y [nm]');
 
 if ~isempty(filename)
     [folder, name, ~] = fileparts(filename);
-    outname = [folder,filesep,name '_storm.png'];
+    if isempty(folder)
+        outname = [name '_storm.png'];
+    else
+        outname = [folder,filesep,name '_storm.png'];
+    end
     fprintf('Saving image %s ..\n', outname);
     print(h,outname,'-dpng','-r300');
     save([outname(1:end-4),'_raw.mat'],'stormRaw','stormMap','x','y');
