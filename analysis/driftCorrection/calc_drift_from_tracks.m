@@ -9,7 +9,7 @@ function [ drift ] = calc_drift_from_tracks( filepathOrData, minLength, maxLengt
 %   Input:
 %         filepathOrData -  path to TNT file 
 %                               OR
-%                           trajectoryData: 2D double array, list of trajectories with
+%                           trackingData: 2D double array, list of trajectories with
 %                           columns [id,frame,xpos,ypos, ... ]. 
 %                           (The first possible frame must be 1 not 0)
 %         minLength - Minimum length of trajectories to use for computation | default = 1         
@@ -26,12 +26,12 @@ function [ drift ] = calc_drift_from_tracks( filepathOrData, minLength, maxLengt
 
 % Parse inputs
 if ischar(filepathOrData)
-   load(filepathOrData,'trajectoryData','-mat');
-   if ~exist('trajectoryData','var')
-       error('No trajectoryData found in specified file');
+   load(filepathOrData,'trackingData','-mat');
+   if ~exist('trackingData','var')
+       error('No trackingData found in specified file');
    end
 else
-   trajectoryData = filepathOrData; 
+   trackingData = filepathOrData; 
 end
 
 if nargin<2 || isempty(minLength)
@@ -45,18 +45,18 @@ if nargin<4 || isempty(minParticles)
 end
 
 %% Get number of frames
-min_frame = min(trajectoryData(:,2));
-max_frame = max(trajectoryData(:,2));
+min_frame = min(trackingData(:,2));
+max_frame = max(trackingData(:,2));
 n_frames =  max_frame-min_frame+1;
 
 
 %% Convert data to cell, drop particle identifier
-id_tracks = unique(trajectoryData(:,1));
+id_tracks = unique(trackingData(:,1));
 
 tracks = {};
 cnt = 1;
 for iTrack = id_tracks.'
-    trackData = trajectoryData( trajectoryData(:,1)== iTrack, 2:4);
+    trackData = trackingData( trackingData(:,1)== iTrack, 2:4);
     if (size(trackData,1)< minLength) || (size(trackData,1) > maxLength)
         continue
     end

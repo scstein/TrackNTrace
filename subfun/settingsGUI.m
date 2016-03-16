@@ -1,8 +1,11 @@
 function [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs)
+% TrackNTrace main GUI. Here plugins can be selected, their options 
+% adjusted. This GUI is used for this management only, while the overall
+% program flow is handled by RunTrackNTrace.m
 %
 % Author: Simon Christoph Stein
 % E-Mail: scstein@phys.uni-goettingen.de
-% Date: 2015
+% Date: 2016
 %
 
 titleText = 'Adjust options for movie:';
@@ -151,6 +154,8 @@ callback_updateMainGUIstate_loadedData();
 uiwait(h_main);
 drawnow; % makes figure disappear instantly (otherwise it looks like it is existing until script finishes)
 
+
+%% -------- Nested functions --------
 
 % Load plugins from the plugins folder
 % Note: This loads the plugin data, but does not build their panels

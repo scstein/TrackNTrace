@@ -5,7 +5,8 @@ function imgdata = read_BigTiff(filename, convert2double, minmax_frame)
 % a specified part of the file. File can be read in their original format
 % (instead of converting to double).
 %
-% For reading files larger then 4GB. Implementation is somewhat shaky, reads ONLY 16-bit uint format at this point
+% This is used by the read_tiff.m function for reading files larger then 4GB. 
+% Implementation is somewhat shaky, reads ONLY 16-bit uint format at this point
 % and will probabably not work for all Tiff files, but many imageJ files should work.
 %
 % Input:

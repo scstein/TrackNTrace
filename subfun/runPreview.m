@@ -1,15 +1,16 @@
 function [candidateData, fittingData, trackingData, previewOptions] = runPreview(movie,darkImage, candidateData, fittingData,trackingData, previewOptions, GUIreturns)
+% Computes candidates, refines the position and tracks if requested.
 %
-% %read first 50 frames, hopefully this is enough for testing. If a movie is
-% %smaller than that, we're screwed as read_tiff_DEMO doesn't check for movie
-% %length to be fast enough
-% movie = read_tiff_DEMO(movie_filename, false, [1,50]);
-% %don't correct for dark image counts if size doesn'T match
-% if ~isempty(dark_stack)
-%     if sum([size(movie,1),size(movie,2)]==[size(dark_stack,1),size(dark_stack,2)])~=2 || size(movie,3)<=1
-%         dark_stack = [];
-%     end
-% end
+% Note: previewOptions is a struct with the fields candidateOptions, fittingOptions, trackingOptions
+%         We need this, as plugins might alter their options (e.g. add
+%         information computed in the init function) when running. As
+%         runnning the preview should have no side effects, we can not use
+%         the global candidateOptions,fittingOptions,trackingOptions directly.
+%         
+%       GUIreturns is a struct output by the settings GUI, which gives us
+%         information on which plugins settings changed so that we do not
+%         need to compute steps (e.g. fit again) if parameters are unchanged
+%
 
 % We need the global access here, as plugins might want to access/change
 % the values in their options or options of other plugins.

@@ -1,16 +1,66 @@
 classdef TNTplugin < handle % Inherit from handle class
-    %TNTPLUGIN Summary of this class goes here
-    %   Detailed explanation goes here
+% Base class of TrackNTrace plugins. After a plugin is specified, a
+% graphical representation can be constructed inside a given UI panel 
+% using the "createOptionsPanel(panel_handle) function.
+%
+% Property overview:
+%  - Internal properties, do not set manually! -
+%   param_specification: This saves
+%       the names and information about all parameters. Use by the
+%       add_param function
+%
+%  - User specified properties -
+%   name: Plugin name.
+%   type: Integer, type of plugin. 1: Candidate detection, 2: Spot fitting, 3: Tracking
+%   mainFunc: Handle to main function the plugin implements. For type 1 and 2
+%       this is called by TrackNTrace in a loop for each individual frame of
+%       the input movie.
+%   outParamDescription: Description / name of all output parameters (columns) of the plugin
+%   info: Description of the plugin itself. Should describe the method and the general way how to use it.
+%   initFunc: Initialization function which is called once before the main is first executed.
+%   postFunc: Post-processing function which is called after the main function is last executed.
+%   useParallelProcessing: Boolean. If false, TrackNTrace does not
+%       parallelize this plugins main function on a frame-by-frame basis for
+%       type 1&2 plugins. Useful if the main function itself is parallelized
+%       (e.g. a compiled multithreaded mex file) or if global information is
+%       needed (e.g. access to multiple frames of the movie).
+%
+%
+% Function overview:
+%  - User callable functions -
+%   function obj = TNTplugin(name, type, mainFunc, outParamDescription)
+%      : Constructor of the plugin object taking mandatory parameters as input
+%   function add_param(obj, par_name, par_type, par_settings, par_tooltip )
+%      : Add a paramter to this plugin, see description in the function code below.
+%
+%  - Internal function used by TrackNTrace -
+%   function options = getOptions(obj)
+%      : Get the options of this plugin, which contain all its data with 
+%        the current value of its paramers in the GUI.
+%   function setOptions(obj, inputOptions)
+%      : Set the options of this plugin. This also sets the parameters of
+%        the GUI. Should only be called with input options that fit to this
+%        plugin.
+%   function addInternalsToOptions(obj)
+%      : Add data to the options that have nothing to do with the GUI and
+%      its parameters. Used by getOptions.
+%   function createOptionsPanel(obj, h_panel)
+%      : Creates the graphical representation of this GUI inside the
+%      existing UI panel with handle 'h_panel'
+%
+% Author: Simon Christoph Stein
+% E-Mail: scstein@phys.uni-goettingen.de
+% Date: 2016
     
     properties
         param_specification % This saves the names and information about all parameters
         name
         type
-        info
-        initFunc
         mainFunc
-        postFunc
         outParamDescription
+        info
+        initFunc        
+        postFunc        
         useParallelProcessing
     end
     

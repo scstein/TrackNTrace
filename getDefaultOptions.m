@@ -2,7 +2,7 @@ function [globalOptions, TNToptions] = getDefaultOptions()
 % [globalOptions] = getDefaultOptions 
 % 
 % Set default options for TrackNTrace program and return them
-% to main script.
+% to main script. Users may adapt these settings to their liking.
 % 
 % OUTPUT:
 %     globalOptions: struct containing general options (filename,

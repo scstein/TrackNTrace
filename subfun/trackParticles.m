@@ -15,11 +15,10 @@ function [trackingData, trackingOptions] = trackParticles(fittingData,trackingOp
 %     plugins.
 %
 % OUTPUT:
-%     trajectoryData: 2D double array, list of trajectories in a suitable
-%     format [id,frame,xpos,ypos,amp]. Every trajectory is given an id,
-%     starting at 1, after which the list is sorted. Frame number starts
-%     with 1, positions are given in pixels and the amplitude is the
-%     gaussian amplitude value A in A*exp(...)+B given by locateParticles.
+%     trackingData: 2D double array, list of trajectories with columns 
+%     [id,frame,xpos,ypos,zpos] + additional columns. Every trajectory is
+%     given an id, starting at 1, after which the list is sorted. 
+%     Frame number starts with 1.
 % 
 %     trackingOptions: see above
 

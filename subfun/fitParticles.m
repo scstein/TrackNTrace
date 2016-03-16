@@ -19,18 +19,24 @@ function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, 
 %     fittingOptions: struct of input options used to fit localization
 %     candidates. See respective plugin function for details.
 %
-%     candidateData: Cell array of position estimates used in fitting routine
+%     candidateData: Nx1 cell array of candidate positions where 
+%        N is the number of analyzed frames. Each cell contains a 
+%        KxP double array, where P is the number of model parameters
+%        and K is the maximum amount of particles in the respective frame. 
+%        Each row represents a unique candidate fit and the column order is 
+%        [x, y]. These columns are mandatory for the fitting to work. 
+%        Plugins can output extra data.
 %
 %
 % OUTPUT:
-%     fittingData: 1D cell array of of Gaussian distribution parameters for all
-%     found particles with one cell per frame. The column order in one cell
-%     is [x,y,A,B,sigma,flag], the line order is the particle index. The
-%     positions x (img column) and y (img row) are not corrected by a middle pixel
-%     shift, the center of the top left pixel is [1.0,1.0]. A is the
-%     unnormalized amplitude of a Gaussian distribution A*exp(...)+B with
-%     constant background B. flag is the exit flag of the fitting routine,
-%     see psfFit_Image.m for details.
+%     fittingData: Nx1 cell array of fitted positions where N is
+%        the number of analyzed frames. Each cell contains a KxP
+%       double array, where P is the number of model parameters and K
+%        is the maximum amount of particles in the respective frame. 
+%        Each row represents a unique fit and the column order according to 
+%        the model PSF is [\mu_x, \mu_y, \mu_z, Amplitude, Background].
+%        These five columns are mandatory for most trackers to work correctly
+%        in the next step. Plugins can output extra data.
 %
 %     fittingOptions: see above
 

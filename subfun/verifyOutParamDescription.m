@@ -1,8 +1,12 @@
 function options = verifyOutParamDescription(outputData, options)
+% This is used to check (and update) the XXXoptions.outParamDescription for
+% each plugin by findCandidateParticles.m, fitParticles.m and trackParticles.m
+%
 % Verifies there is a description for every column of the output data.
 % Columns without a descriptor get the description '<Unknown>'. If
 % there are too many descriptors, they are simply cut down to the
 % number of columns present in the output.
+%
 
 outParamDescription = options.outParamDescription;
 unknown_name = '<Unknown>';

@@ -20,7 +20,13 @@ function [ candidateData, candidateOptions ] = findCandidateParticles( movieStac
 %
 %
 % OUTPUT:
-%     candidateData: 1D cell array of xy position estimates (2D row array)
+%     candidateData: Nx1 cell array of fitted positions where 
+%        N is the number of analyzed frames. Each cell contains a 
+%        KxP double array, where P is the number of model parameters
+%        and K is the maximum amount of particles in the respective frame. 
+%        Each row represents a unique candidate fit and the column order is 
+%        [x, y]. These columns are mandatory for the fitting to work. 
+%        Plugins can output extra data.
 %     used in later fitParticles routine.
 %
 %     candidateOptions: see above
