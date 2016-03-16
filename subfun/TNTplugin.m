@@ -17,6 +17,7 @@ classdef TNTplugin < handle % Inherit from handle class
 %       the input movie.
 %   outParamDescription: Description / name of all output parameters (columns) of the plugin
 %   info: Description of the plugin itself. Should describe the method and the general way how to use it.
+%         Supports sprintf modifiers directly (e.g. \n for newline).
 %   initFunc: Initialization function which is called once before the main is first executed.
 %   postFunc: Post-processing function which is called after the main function is last executed.
 %   useParallelProcessing: Boolean. If false, TrackNTrace does not
@@ -145,7 +146,9 @@ classdef TNTplugin < handle % Inherit from handle class
             %   'list':   A cell array string list of possible choices for 'list' (first entry is default)
             %   'filechooser': A cell array string list {'default directory','filterEnding'}
             % 
-            % par_tooltip: Tooltip shown when hovering over the parameter with the mouse
+            % par_tooltip: Tooltip shown when hovering over the parameter
+            %   with the mouse. Supports sprintf modifier (e.g. \n for newline) directly
+            % 
             
             
             %   -------------- Input checking --------------
@@ -186,7 +189,7 @@ classdef TNTplugin < handle % Inherit from handle class
             end
             
             % --- Add parameter information ---
-            obj.param_specification = vertcat(obj.param_specification, {par_name, par_type, par_settings, par_tooltip});
+            obj.param_specification = vertcat(obj.param_specification, {par_name, par_type, par_settings, sprintf(par_tooltip)});
         end
         
         % Add data to the options that have nothing to do with the GUI and its parameters.
