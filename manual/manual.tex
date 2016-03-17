@@ -125,7 +125,7 @@ pdfkeywords={}]
 
 
 
-% \parindent0mm
+\setlength{\parindent}{0pt}
 
 \hyphenation{TrackNTrace}
 
@@ -158,6 +158,8 @@ pdfkeywords={}]
 
 
 \def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+
+
 
 
 
@@ -205,7 +207,7 @@ Matlab in Linux comes with its own c++ standard library, which might be too old 
 
 
 \section{Overview}\label{sec:overview}
-Before reading this manual a note: To make TrackNTrace easy to use, we want to emphasize that every UI element has a tooltip explanation, which pops out when resting the mouse on top of the element. Ideally these explanations should be enough to use the program / plugin efficiently.
+Before reading this manual a note: To make TrackNTrace easy to use, we want to emphasize that every UI element has a tooltip explanation, which pops out when resting the mouse on top of the element. Ideally these explanations should be enough to use the program / plugin efficiently.\\
 
 Some of the general behaviour of the TrackNTrace software can be altered by individual users by editing the \texttt{getDefaultOptions.m} file. For example, the default plugins on startup can be selected and it can be choosen if the program should use parallel processing or not.
 
@@ -235,12 +237,12 @@ The first part corresponds to the \textsf{General options} panel, where the foll
 \item[Frame interval] Select the first and the last movie frame for processing. Anything not in this interval will be discarded. If \textsf{Last frame} is higher than the movie size or set to \textsf{Inf}, the whole movie is processed, starting at \textsf{First frame}.
 \item[Photon conversion]  If checked, the movie frames are converted from ADC counts to photons before they are handed to the plugins for processing. The conversion formula is
 \begin{align}
-I_{\texttt{phot}} = (I_{\texttt{ADC}}-\texttt{Bias})*\texttt{Sensitivity}/\texttt{Gain}.
+I_{\texttt{phot}} = (I_{\texttt{ADC}}-\texttt{Bias})\times\texttt{Sensitivity}/\texttt{Gain}.
 \end{align}
 A conversion of this type is only meaningful for EMCCD cameras. The values for \texttt{Bias}, \texttt{Sensitivity} and \texttt{Gain} should be available in the cameras performance sheet.
 \end{itemize}
 
-The center part houses the plugins for steps 2-4, where the plugin for each step is selected using a popup menu. The \textsf{?} button besides these menues shows an explanation of the currently selected plugin. Tracking (step 4) can optionally be disabled/enabled, the other two steps are always carried out. That said, the \texttt{Use candidate data} plugin for step 3 simply copies the data from step 2 and converts it to the right output format. As each plugins inputs are different, we will not explain the plugins here, but rely on their explanation and their tooltip.
+The center part houses the plugins for steps 2-4, where the plugin for each step is selected using a popup menu. The [ \textsf{?} ] button besides these menues shows an explanation of the currently selected plugin. Tracking (step 4) can optionally be disabled/enabled, the other two steps are always carried out. That said, the \texttt{Use candidate data} plugin for step 3 simply copies the data from step 2 and converts it to the right output format. As each plugins inputs are different, we will not explain the plugins here, but rely on their explanation and their tooltip.\\
 
 At the bottom left part of the GUI the preview button is placed, which starts the visualizer (see below) for the frame interval specified by   \textsf{First frame} and \textsf{Last frame} to the right of the button. This visualization is one of TrackNTrace's core features, making data analysis and parameter optimization much easier. The bottom right button either switches to the settings of the next movie in the list (displays ``\textsf{Next movie}) or starts processing all movies (displays ``\textsf{START processing}''). If all movies are alike, the ``\textsf{Use settings for all following}'' button applies the current movie's settings to all yet unadjusted movies in the list and starts the processing directly.
 
@@ -274,7 +276,7 @@ The visualizer shows the data acquired from steps 2 through 4 (if available). As
 \end{itemize}
 
 \clearpage
-\section{TrackNTrace data structures}
+\section{TrackNTrace data structures}\label{sec:datastructures}
 All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the format \texttt{'moviename\_timestamp\_TNT.mat'}. Here is a list of all variables it contains:
 \begin{table}[!h]
 \centering
@@ -297,6 +299,107 @@ All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the form
 \bottomrule
 \end{tabular}
 \end{table}
+
+\section{How plugins are written}\label{sec:howto_plugins}
+This section explains how plugins are added to the TrackNTrace framework. A plugin is defined as a function in a single file named ``\texttt{plugin\_NAME.m}'' inside the \texttt{plugins} subfolder of the TrackNTrace root directory. The plugin name displayed in the GUI is not taken from the filename but defined inside the file.\\
+
+The function inside the file returns a TNTplugin object. In the simplest case, the file content looks like this:
+\begin{verbatim}
+function [plugin] = plugin_NAME()
+    ... % define name, type, outParamDescription
+
+    plugin = TNTplugin(name, type, @mainFunc, outParamDescription);
+end
+
+function output = mainFunc(img, options, currentFrame) % Input depends on plugin type
+  ... % implement algorithm
+end
+\end{verbatim}
+
+While the four parameters used in the constructor are mandatory for every plugin, there are additional parameters that can be set optionally after the object is constructed. Here is a complete list:
+
+\begin{tabular}{p{.25 \textwidth} p{.7\textwidth}}
+ \toprule \multicolumn{2}{c}{TNTplugin properties} \\  \midrule
+  \texttt{name} & Plugin name as displayed by the GUI. \\
+  \texttt{type} & Integer, type of plugin. 1: Candidate detection, 2: Spot fitting, 3: Tracking \\
+  \texttt{mainFunc} & Handle to main function the plugin implementing the actual algorithm. For type 1 and 2 this is called by TrackNTrace in a loop for each individual frame of the input movie. The interface (output/input) of this function depends on the plugin type and must match the TrackNTrace specification (see below). \\
+  \texttt{outParamDescription} &  Cell array of strings with description / name of all output parameters (columns) of the plugin \\
+ \texttt{info} & Description of the plugin itself. Should describe the method and the general way how to use it. Supports sprintf modifiers directly (e.g. \textbackslash{} n for newline). \\
+  \texttt{initFunc} &  Initialization function which is called once before the main is first executed. \\
+  \texttt{postFunc} & Post-processing function which is called after the main function is last executed. \\
+  \texttt{useParallelProcessing}&  Boolean. If false, TrackNTrace does not parallelize this plugins main function on a frame-by-frame basis for type 1\&2 plugins. Useful if the main function itself is parallelized (e.g. a compiled multithreaded mex file) or if global information is needed (e.g. access to multiple frames of the movie).\\
+  \bottomrule
+\end{tabular}\\
+
+Parameters which can be adjusted by the GUI are defined by calling the \texttt{add\_param(par\_name, par\_type, par\_settings, par\_tooltip )} function of the newly created plugin instance. Lets look at the ``RadialSymmetry'' fitting plugin as an example:
+\begin{verbatim}
+function [plugin] = plugin_RadialSymmetry()
+
+name = 'Radial symmetry';
+type = 2;
+mainFunc =  @fitParticles_radialsymmetry;
+outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
+
+% Create the plugin
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
+
+% Description of plugin, supports sprintf format specifier like '\n' for a newline
+plugin.info = ['Particle localization by radial symmetry centers.', ...
+                ' Algorithm published in Parthasarathy, NatMet 2012(9).'];
+
+% Add parameters
+plugin.add_param('PSFSigma',...
+    'float',...
+    {1.3,0,inf},...
+    'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma.');
+plugin.add_param('estimateWidth',...
+    'bool',...
+    true,...
+    'Estimate particle width.');
+end
+\end{verbatim}
+ 
+As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugins main function via a struct called \texttt{`options'}, e.g. \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\_settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\{default value, lower bound, upper bound\} }. The complete list of parameter types and needed settings is: \\
+
+\begin{tabular}{cl}
+\toprule \texttt{type} & \texttt{par\_settings} \\ \midrule
+  \texttt{'float'}  &Cell array \{defaultValue, lowerBound, upperBound\}\\
+   \texttt{'int'}    &Cell array \{defaultValue, lowerBound, upperBound\}\\
+   \texttt{'bool'}   &The default value true/false\\
+   \texttt{'string'} & The default value (a string)\\
+   \texttt{'list'}  & A cell array of strings with possible choices for 'list' (first entry is default)\\
+   \texttt{'filechooser'} &A cell array of strings \{'default directory','file ending filter'\}\\
+   \bottomrule
+\end{tabular} \\
+
+The last parameter type \texttt{filechooser} combines an edit field which displays a file path with a button to select files of a given ending from the filesystem. The fourth parameter of the \texttt{add\_param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports sprintf modifier [e.g. \textbackslash{}n for newline]). \\
+
+The last thing to know about plugin creation is how the different plugin functions \texttt{mainFunc},\texttt{initFunc} and \texttt{postFunc} must be implemented. The interfaces for \texttt{initFunc} and \texttt{postFunc} are identical for all types of plugins (but the type of \texttt{data} depends on the plugin type, of course. See Sec.~\ref{sec:datastructures}):
+\begin{verbatim}
+   function [options] = initFunc(options)
+   function [data, options] = postFunc(data, options)
+\end{verbatim}
+The \texttt{initFunc} can alter the options or add data to it before the main function is executed. This is useful for example for precomputing masks for filter steps or checking input parameter correcness. The \texttt{postFunc} function can be used to postprocess the data before it is saved and also add arbitrary information to the options.\\
+
+ The \texttt{mainFunc} functions has  a different interface for every plugin type and must look like this:
+\begin{verbatim}
+ % For type 1 (candidate detection)
+  function [candidates_frame_i] = func(img, candidateOptions, i)
+  
+ % For type 2 (fitting)
+  function [fits_frame_i]= func(img, candidateData_frame_i, fittingOptions, i)
+  
+  % For type 3(tracking)
+  function [trackingData] = func(fittingData, trackingOptions);
+        OR
+  function [trackingData, trackingOptions] = func(fittingData,trackingOptions);
+\end{verbatim}
+As the \texttt{mainFunc} for type 1\&2 plugins is called frame-by-frame but tracking is called for all acquired data at once, the second tracking function interface is just for convenience so that no post processing function is needed if you want to save something to the \texttt{trackingOptions}. \\
+
+If needed plugin function can access external data via global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{fittingOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\_movie} and \texttt{imgCorrection}. For example, the \texttt{TNT NearestNeighbor} plugin uses global access to  \texttt{fittingOptions} to copy the \texttt{outParamDescription} of all \texttt{fittingData} columns that are not needed for the tracking. The use of global variables inside type 1\&2 plugin functions should be kept to a minimum though, as functions with global variables can not be frame-by-frame parallelized by TNT, resulting in a possibly slower execution time. Also note that, for memory reasons, the global \texttt{movie} variable gives access to the 16-bit input movie without photon conversion, regardless of the TrackNTrace settings. If you want to correct frames inside your functions using the photon conversion settings of the GUI, use the following function call:
+\begin{verbatim}
+  [correctedStack] = correctMovie(movieStack)
+\end{verbatim}
 
 \section{How TrackNTrace works}\label{sec:in-depth}
 After storing all options, reading in the movie and, if applicable, a closed shutter movie for correction, the fitting routine starts. First, the movie frame is cleaned up by adding a correction image obtained from the closed shutter movie as described in [1] and then converted to a photon count image if possible. Then, the respective candidate search function is called for the respective frame and the result is passed to the fit function. Depending on the settings, candidate search is carried out in each frame or only once for the first (or last) frame or an average image of the first few (or last few) frames. In the latter case, fit results from the frame before are passed to the fit function in the next iteration. \\
