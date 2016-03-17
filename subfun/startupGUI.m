@@ -1,4 +1,6 @@
 function [filename_movies, globalOptions, candidateOptions,fittingOptions,trackingOptions, candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI()
+% TrackNTrace startup GUI. Here the input (movies/TNT data file) can be
+% selected when RunTrackNTrace.m is called.
 %
 % Author: Simon Christoph Stein
 % E-Mail: scstein@phys.uni-goettingen.de

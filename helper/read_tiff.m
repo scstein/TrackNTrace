@@ -5,6 +5,10 @@ function imgdata = read_tiff(filename, convert2double, minmax_frame)
 % a specified part of the file. File can be read in their original format
 % (instead of converting to double).
 %
+% Note: For tif files larger than 4 GB (which are not allowed in the TIFF
+% standard but for example written by imageJ) the function automatically 
+% switches to read_BigTiff.m
+%
 % Input:
 %   filename: Tiff file to read
 %   convert2double: Datatype conversion to double after reading | default: true

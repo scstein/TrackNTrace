@@ -1,4 +1,6 @@
 function RunTrackNTrace()
+% Run this function to start the TrackNTrace application.
+
 clearGlobals(); % Clear global variables used by TNT
 
 % Global variables accessible by plugins
@@ -35,7 +37,7 @@ if TNToptions.enableParallelProcessing
     end
 end
 
-%% Load and adjust the default settings for this batch
+%% Startup (loading input data information)
 [movie_list, globalOptions, candidateOptions_loaded,fittingOptions_loaded,trackingOptions_loaded, ...
     candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI();
 candidateOptions = candidateOptions_loaded;
@@ -50,7 +52,7 @@ if GUIreturns.userExit;
     return;
 end;
 
-%% Adjust options for each movie and test settings if desired
+%% Main GUI: Adjust options for each movie and test settings if desired
 GUIinputs.TNToptions = TNToptions;
 GUIinputs.showStartupInformation = true;
 if (isfloat(outputPath_loaded))
