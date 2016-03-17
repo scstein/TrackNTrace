@@ -1,4 +1,4 @@
-function [plugin] = plugin_RadialSymmetry()
+function [plugin] = plugin_radialSymmetry()
 
 %    -------------- Definition of plugin --------------
 
@@ -12,7 +12,7 @@ name = 'Radial symmetry';
 type = 2;
 
 % The functions this plugin implements
-mainFunc =  @fitParticles_radialsymmetry;
+mainFunc =  @refinePositions_radialSymmetry;
 
 % Description of output parameters
 outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
@@ -21,7 +21,7 @@ outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Particle localization by radial symmetry centers. Algorithm published in Parthasarathy, NatMet 2012(9).';
+plugin.info = 'Refine candidate positions by determining radial symmetry centers. \n\nThe algorithm assumes that all emitters are radially symmetric and determines their center by analytically without fitting. It is as precise (and slightly faster than) the TNT fitter but lacks a parameter output which allows traightforward determination of PSF size and photon yield. \n\nThe full algorithm was developed and published by Parthasarathy, NatMet 9(7), 724-726 (2012), doi:10.1038/nmeth.2071';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
@@ -29,21 +29,23 @@ plugin.info = 'Particle localization by radial symmetry centers. Algorithm publi
 plugin.add_param('PSFSigma',...
     'float',...
     {1.3,0,inf},...
-    'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma.');
+    'Standard deviation of the PSF in pixels. \nsigma = FWHM/(2*sqrt(2*log(2))) ~ 0.21*lambda/NA where lambda is the emission wavelength in pixels and NA is the numerical aperture of the objective.');
 plugin.add_param('estimateWidth',...
     'bool',...
     true,...
-    'Estimate particle width.');
+    'Set to true to estimate particle width. \nThis width should not be confused with a Gaussian PSF standard deviation.');
 end
 
 
-function [fitData] = fitParticles_radialsymmetry(img,candidatePos,options,currentFrame)
+function [fitData] = refinePositions_radialSymmetry(img,candidatePos,options,currentFrame)
 % Wrapper function for radialcenter function (see below). Refer to tooltips
 % above and to radialcenter help to obtain information on input and output
 % variables. radialcenter.m was released as part of the following
 % publication under the GNU public licence: 
 % Parthasarathy, Rapid, accurate particle tracking by calculation of radial
 % symmetry centers, Nature Methods 9,724–726 (2012),doi:10.1038/nmeth.2071
+% The file was downloaded from Mr. Parthasarathy's website:
+% http://physics-server.uoregon.edu/~raghu/particle_tracking.html
 %
 % INPUT:
 %     img: 2D matrix of pixel intensities, data type and normalization
@@ -78,6 +80,13 @@ end
 
 
 function [xc, yc, bkgestimate,sigma] = radialcenter(I,estimateSigma)
+% This function is a modified version of radialcenter.m from the following publication:
+% Parthasarathy, Rapid, accurate particle tracking by calculation of radial
+% symmetry centers, Nature Methods 9,724–726 (2012),doi:10.1038/nmeth.2071
+% The file was downloaded from Mr. Parthasarathy's website:
+% http://physics-server.uoregon.edu/~raghu/particle_tracking.html
+%
+%
 % radialcenter.m
 %
 % Copyright 2011-2012, Raghuveer Parthasarathy, The University of Oregon

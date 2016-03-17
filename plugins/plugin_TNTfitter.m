@@ -12,7 +12,7 @@ name = 'TNT Fitter';
 type = 2;
 
 % The functions this plugin implements
-mainFunc =  @fitPositions_psfFitCeres;
+mainFunc =  @refinePositions_psfFitCeres;
 
 % Description of output parameters
 outParamDescription = {' '}; % set depending on plugin options in init function
@@ -21,11 +21,11 @@ outParamDescription = {' '}; % set depending on plugin options in init function
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Additional functions to call before and after main function
-plugin.initFunc = @fitPositions_psfFitCeres_consolidateOptions;
-plugin.postFunc = @fitPositions_psfFitCeres_calculateZ;
+plugin.initFunc = @refinePositions_psfFitCeres_consolidateOptions;
+plugin.postFunc = @refinePositions_psfFitCeres_calculateZ;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = ['Fast Gaussian PSF fitting implemented in C++.\n\n', ...
+plugin.info = ['Refine candidate positions by fitting a Gaussian PSF to candidate positions in C++.\n\n', ...
     'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
 
 % Deactivate TNT's parallel processing, as fitter is parallelized in C++
@@ -37,7 +37,7 @@ plugin.useParallelProcessing = false;
 plugin.add_param('PSFsigma',...
     'float',...
     {1.3, 0,inf},...
-    'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
+    'Standard deviation of the PSF in pixels. \nsigma = FWHM/(2*sqrt(2*log(2))) ~ 0.21*lambda/NA where lambda is the emission wavelength in pixels and NA is the numerical aperture of the objective.');
 plugin.add_param('fitType',...
     'list',...
     {'[x,y,A,BG]', '[x,y,A,BG,s]', '[x,y,A,BG,sx,sy]', '[x,y,A,BG,sx,sy,angle]'},...
@@ -45,22 +45,22 @@ plugin.add_param('fitType',...
 plugin.add_param('usePixelIntegratedFit',...
     'bool',...
     true,...
-    'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.');
+    'Use a pixel integrated Gaussian PSF for fitting which emulates the discrete pixel grid of a camera chip. \nThis is automatically disabled when fitting a rotated Gaussian.');
 plugin.add_param('useMLE',...
     'bool',...
     false,...
-    'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');
+    'Use Maximum Likelihood Estimation in addition to Least-squares optimization. \nMLE fitting absolute requires photon conversion!');
 plugin.add_param('astigmaticCalibrationFile',...
     'filechooser',...
     {'','mat'},...
-    'For astigmatic imaging, please select a calibration file created with z-calibration plugin. Leave empty otherwise!');
+    'For astigmatic imaging, please select a calibration file created with  the ''TNT z-calibration'' plugin. \nLeave empty otherwise!');
 
 end
 
 
 %   -------------- User functions --------------
 
-function [fittingData] = fitPositions_psfFitCeres(img,candidatePos,options,currentFrame)
+function [fittingData] = refinePositions_psfFitCeres(img,candidatePos,options,currentFrame)
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input
 % and output variables.
@@ -214,7 +214,7 @@ end
 end
 
 
-function [fittingOptions] = fitPositions_psfFitCeres_consolidateOptions(fittingOptions)
+function [fittingOptions] = refinePositions_psfFitCeres_consolidateOptions(fittingOptions)
 %initializer function
 % plugin.add_param('fitType',...
 %     'list',...
@@ -229,6 +229,15 @@ if ~isempty(fittingOptions.astigmaticCalibrationFile)
         error('%s is not a valid calibration file. Aborting.',fittingOptions.astigmaticCalibrationFile);
     end
 end
+
+global globalOptions
+
+if ~globalOptions.usePhotonConversion && fittingOptions.useMLE
+    warning off backtrace
+    warning('MLE fitting strictly requires photon conversion!');
+    warning on backtrace
+end
+
 
 switch fittingOptions.fitType
     case '[x,y,A,BG]'
@@ -277,7 +286,7 @@ end
 end %consolidateOptions
 
 
-function [fittingData,fittingOptions] = fitPositions_psfFitCeres_calculateZ(fittingData,fittingOptions)
+function [fittingData,fittingOptions] = refinePositions_psfFitCeres_calculateZ(fittingData,fittingOptions)
 % If astigmatic imaging was performed, the axial position is
 % extrapolated from the calibration file. The axial position is given in
 % pixels (z in nm = z*fittingOptions.calibrationData.zPixel).

@@ -1,4 +1,4 @@
-function [plugin] = plugin_FilterWithLocmax()
+function [plugin] = plugin_generalFiltering()
 
 %    -------------- Definition of plugin --------------
 
@@ -21,7 +21,7 @@ outParamDescription = {'x';'y'};
 plugin = TNTplugin(name,type, mainFunc,outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Filter image with appropriate kernel and locate features by local maximum suppression. \nFirst, the image is convolved with the chosen kernel of size kernelSize. For the Gaussian filters, kernelSize is overwritten by 2*ceil(3*GaussSigma)+1. If a filter relies on two convolutions, the second kernel'' size is determined by filterBlowup*kernelSize. After filtering, maximums (meaning: emitters) in the image are detected through local maximum suppression by image dilation. Both the radius of the detection window and the minimum signal strength can be set by the user \nCandidates at the border of the image cannot be detected efficiently. ';
+plugin.info = 'Filter image with appropriate kernel and locate features by local maximum suppression. \n\nFirst, the image is convolved with the chosen kernel of size kernelSize. For the Gaussian filters, kernelSize is overwritten by 2*ceil(3*GaussSigma)+1. If a filter relies on two convolutions, the second kernel'' size is determined by filterBlowup*kernelSize. After filtering, maximums (meaning: emitters) in the image are detected through local maximum suppression by image dilation. Both the radius of the detection window and the minimum signal strength can be set by the user \n\nCandidates at the border of the image cannot be detected efficiently. ';
 plugin.initFunc = @findCandidates_prepareFilters;
 
 % Add parameters

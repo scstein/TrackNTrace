@@ -21,7 +21,7 @@ outParamDescription = {'x';'y'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross-correlation. \nA Gaussian PSF template is created using the PSFsigma value provided by the user. The whole image is cross-correlated with this image using Matlab''s normxcorr2 function and maximums (meaning: emitters) in this correlation image are detected through non-maximum suppression by image dilation using the search window size 2*round(PSFsigma*distanceFactor)+1. \nCandidates at the border of the image cannot be detected efficiently.';
+plugin.info = 'Candidate detection based on matching a Gaussian PSF template to the image using normalized cross-correlation. \n\nA Gaussian PSF template is created using the PSFsigma value provided by the user. The whole image is cross-correlated with this image using Matlab''s normxcorr2 function and maximums (meaning: emitters) in this correlation image are detected through non-maximum suppression by image dilation using the search window size 2*round(PSFsigma*distanceFactor)+1. \n\nCandidates at the border of the image cannot be detected efficiently.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO

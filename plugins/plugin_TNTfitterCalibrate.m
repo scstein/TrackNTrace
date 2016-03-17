@@ -12,7 +12,7 @@ name = 'TNT z-Calibration';
 type = 2;
 
 % The functions this plugin implements
-mainFunc =  @fitPositions_psfFitCeres_calibrate;
+mainFunc =  @refinePositions_psfFitCeres_calibrate;
 
 % Description of output parameters
 outParamDescription = {'x';'y';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'};
@@ -21,11 +21,11 @@ outParamDescription = {'x';'y';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'}
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Additional functions to call before and after main function
-plugin.initFunc = @fitPositions_psfFitCeres_consolidateOptions;
-plugin.postFunc = @fitPositions_psfFitCeres_createCalibrationTable;
+plugin.initFunc = @refinePositions_psfFitCeres_consolidateOptions;
+plugin.postFunc = @refinePositions_psfFitCeres_createCalibrationTable;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = ['Calibration version of TNT fitter for obtaining calibration curve.\n\n', ...
+plugin.info = ['Calibration version of TNT fitter for obtaining astigmatic z-calibration curve.\n\n', ...
                'The fitting code utilizes the ceres-solver library for optimization currently developed by Google (2015).'];
 
 % Add parameters
@@ -34,15 +34,15 @@ plugin.info = ['Calibration version of TNT fitter for obtaining calibration curv
 plugin.add_param('PSFsigma',...
       'float',...
       {1.3, 0,inf},...
-      'Standard deviation of the PSF in [pixels]. sigma = FWHM/(2*sqrt(2*log(2)))');
+      'Standard deviation of the PSF in pixels. \nsigma = FWHM/(2*sqrt(2*log(2))) ~ 0.21*lambda/NA where lambda is the emission wavelength in pixels and NA is the numerical aperture of the objective.');
 plugin.add_param('usePixelIntegratedFit',...
           'bool',...
           true,...
-          'Use a pixel integrated Gaussian PSF for fitting (true, recommended due to higher accuracy) or not.');
+          'Use a pixel integrated Gaussian PSF for fitting which emulates the discrete pixel grid of a camera chip. \nThis is automatically disabled when fitting a rotated Gaussian..');
 plugin.add_param('useMLE',...
           'bool',...
           false,...
-          'Use Maximum Likelihood Estimation in addition to Least-squares optimization (true) or not (false).');  
+          'Use Maximum Likelihood Estimation in addition to Least-squares optimization. \nMLE fitting absolute requires photon conversion!.');  
 plugin.add_param('zInterval',...
           'float',...
           {15,0,inf},...
@@ -52,7 +52,7 @@ end
 
 %   -------------- User functions --------------
 
-function [fittingData] = fitPositions_psfFitCeres_calibrate(img,candidatePos,options,currentFrame)
+function [fittingData] = refinePositions_psfFitCeres_calibrate(img,candidatePos,options,currentFrame)
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input
 % and output variables.
@@ -80,7 +80,7 @@ fittingData = params(1:end-2,params(end,:)==1).'; %delete exitflag, don't save a
 
 end
 
-function [fittingOptions] = fitPositions_psfFitCeres_consolidateOptions(fittingOptions)
+function [fittingOptions] = refinePositions_psfFitCeres_consolidateOptions(fittingOptions)
 
 fittingOptions.varsToFit = [ones(6,1);0]; %don't fit angle
 fittingOptions.halfw = ceil(3*fittingOptions.PSFsigma);
@@ -210,7 +210,7 @@ end
 end
 
 
-function [fittingData,fittingOptions] = fitPositions_psfFitCeres_createCalibrationTable(fittingData,fittingOptions)
+function [fittingData,fittingOptions] = refinePositions_psfFitCeres_createCalibrationTable(fittingData,fittingOptions)
 % This function creates a calibration Table [z,sigma_x/sigma_y] from an
 % astigmatic calibration movie where a number of diffraction-limited
 % fluorescent emitters was recorded at different axial positions with a

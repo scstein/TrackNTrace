@@ -12,7 +12,7 @@ name = 'GPU-Gauss MLE';
 type = 2;
 
 % The functions this plugin implements
-mainFunc = @fitPositions_gpugaussmle;
+mainFunc = @refinePositions_gpugaussmle;
 
 % Description of output parameters
 outParamDescription = {'x';'y';'z';'Intens. (integ.)'; 'Background'; 'sigma_x'; 'sigma_y'};
@@ -21,10 +21,10 @@ outParamDescription = {'x';'y';'z';'Intens. (integ.)'; 'Background'; 'sigma_x'; 
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Add initial function
-plugin.initFunc = @fitPositions_gpugaussinit;
+plugin.initFunc = @refinePositions_gpugaussinit;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Refine candidate positions by assuming a Gaussian PSF and finding the center and other parameters via GPU-MLE fitting. Absolutely requires photon conversion. \nFunction published in Smith et al,NatMet 7,373-375(2010),doi:10.1038/nmeth.1449';
+plugin.info = 'Refine candidate positions by assuming a Gaussian PSF and finding the center and other parameters via GPU-MLE fitting. Absolutely requires photon conversion. \n\nFunction published in ''Smith et al, NatMet 7, 373-375(2010), doi:10.1038/nmeth.1449''.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
@@ -35,7 +35,7 @@ plugin.add_param('PSFSigma',...
     'Standard deviation of the PSF in pixels. \nsigma = FWHM/(2*sqrt(2*log(2))) ~ 0.21*lambda/NA where lambda is the emission wavelength in pixels and NA is the numerical aperture of the objective.');
 plugin.add_param('fitType',...
     'list',...
-    {'[x,y,A,BG]', '[x,y,A,BG,s]','[x,y,A,BG,sx,sy]'},...
+    {'[x,y,N,BG]', '[x,y,N,BG,s]','[x,y,N,BG,sx,sy]'},...
     'Fit positions (xy), amplitude & background (A,BG), and sigma (s, or sx & sy for elliptic Gaussian).');
 plugin.add_param('Iterations',...
     'int',...
@@ -45,7 +45,7 @@ plugin.add_param('Iterations',...
 end
 
 
-function [fitData] = fitPositions_gpugaussmle(img,candidatePos,options,currentFrame)
+function [fitData] = refinePositions_gpugaussmle(img,candidatePos,options,currentFrame)
 % Wrapper function for gaussmlev2 function (see below). Refer to tooltips
 % above and to gaussmlev2 help to obtain information on input and output
 % variables. gaussmlev2.m was released as part of the following
@@ -89,7 +89,7 @@ fitData = fitData(fitData(:,1)>0,:);
 end
 
 
-function [fittingOptions] = fitPositions_gpugaussinit(fittingOptions)
+function [fittingOptions] = refinePositions_gpugaussinit(fittingOptions)
 global globalOptions
 
 if ~globalOptions.usePhotonConversion

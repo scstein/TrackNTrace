@@ -21,7 +21,7 @@ outParamDescription = {'x';'y'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Candidate detection based on a p-value hypothesis test against local background. \nIt is assumed that image pixels belonging to actual emitters cannot be purely described by flat background noise. Therefore, all pixels are compared against a Gaussian background. If a cluster of pixels fails this test, it is assumed to belong to an emitter and will count as a candidate.';
+plugin.info = 'Candidate detection based on a p-value hypothesis test against local background. \n\nIt is assumed that image pixels belonging to actual emitters cannot be purely described by flat background noise. Therefore, all pixels are compared against a Gaussian background. If a cluster of pixels fails this test, it is assumed to belong to an emitter and will count as a candidate.';
 
 % Deactivate this plugin's parallel processing, as plugin relys on persistent
 % variables depending on previous loop iterations
