@@ -79,7 +79,7 @@ function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile,
 %
 
 % Add all paths required to run TNT
-addRequiredPathsTNT();
+setPathsVisualizer();
 
 % Check MATLAB version
 MATLABversion = strsplit(version,'.');
@@ -888,7 +888,9 @@ end
                 case '.mat' % path to TNT file was given
                     % Load movie and data
                     fprintf('Loading TNT file..\n')
-                    TNTdata = load(movieOrTNTfile);
+                    warning off backtrace
+                        TNTdata = load(movieOrTNTfile);
+                    warning on backtrace
                     fprintf('Loading movie specified in TNT file..\n')
                     if(isfield(TNTdata,'firstFrame_lastFrame'))
                         firstFrame = TNTdata.firstFrame_lastFrame(1);
@@ -911,7 +913,9 @@ end
         if num_argin>1
             if ischar(candidateDataOrTNTfile) % TNT file was given
                 fprintf('Loading TNT file..\n')
-                TNTdata = load(candidateDataOrTNTfile);
+                warning off backtrace
+                    TNTdata = load(candidateDataOrTNTfile);
+                warning on backtrace
                 if(~isequal(size(movie), TNTdata.movieSize))
                    error('Input movie and given TNT file do not fit together! Movie size [%i,%i,%i], TNT file [%i,%i,%i].\n',size(movie),TNTdata.movieSize) 
                 end
@@ -1178,14 +1182,18 @@ end
 
 %% --- General functions ---
 
-function addRequiredPathsTNT()
+% Adds pathes needed for the visualizer.
+% The plugin subfolder path is removed, because loading an XXXoptions
+% struct with a (main/init/post) function handle where the plugin file exists,
+% but the subfunction does not (e.g. because it was renamed) throws an
+% error on loading the file
+function setPathsVisualizer()
     fullPathToThisFile = mfilename('fullpath');
     [path,~,~] = fileparts(fullPathToThisFile);
-    addpath(genpath([path,filesep,'external']));
-    addpath(genpath([path,filesep,'helper']));
-    addpath(genpath([path,filesep,'plugins']));
+    s = warning('off','all');
+        rmpath(genpath([path,filesep,'plugins']));
+    warning(s);
     addpath(genpath([path,filesep,'subfun']));
-    addpath(genpath([path,filesep,'analysis']));
 end
 
 % Function that cuts data from upper and lower tails of the distribution
