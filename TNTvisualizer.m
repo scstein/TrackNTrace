@@ -208,6 +208,7 @@ imagehandle = -1;
 % Draw the marker color depending on background color
 track_colors = [];
 marker_color = [];
+marker_fill_color = [];
 drawColors(nr_track_colors);
 
 % -- Variables for playback --
@@ -581,7 +582,7 @@ end
                 % Plot markers of candidates
                 hold on;
                 if dothandle_cand == -1 % Draw unitialized handles
-                    dothandle_cand = plot(candidateData{iF}(:,1), candidateData{iF}(:,2), 'x','Color',marker_color,'MarkerSize',8);
+                    dothandle_cand = plot(candidateData{iF}(:,1), candidateData{iF}(:,2), 's','Color',marker_color,'MarkerSize',5,'MarkerFaceColor', marker_fill_color');
                 else % For initialized handles set their data (MUCH faster than plot)
                     set(dothandle_cand,'xdata',candidateData{iF}(:,1),'ydata',candidateData{iF}(:,2));
                 end
@@ -599,7 +600,7 @@ end
                 % Plot markers of fitted positions
                 hold on;
                 if dothandle_fit == -1 % Draw unitialized handles
-                    dothandle_fit = plot(fittingData{iF}(:,1), fittingData{iF}(:,2), 'o','Color',marker_color);
+                    dothandle_fit = plot(fittingData{iF}(:,1), fittingData{iF}(:,2), 'o','Color',marker_color,'MarkerSize',5,'MarkerFaceColor', marker_fill_color ,'Linewidth',1);
                 else % For initialized handles set their data (MUCH faster than plot)
                     set(dothandle_fit,'xdata',fittingData{iF}(:,1),'ydata',fittingData{iF}(:,2));
                 end
@@ -617,7 +618,7 @@ end
                     % We use the next free linehandle. If there is no
                     % free handle left, we create a new one on the fly.
                     if (handleNr>numel(linehandles) || linehandles(handleNr) == -1)
-                        linehandles(handleNr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:));
+                        linehandles(handleNr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:),'Linewidth',2);
                         linehandleNr_to_TrackNr(handleNr) = iTr;
                         handleNr = handleNr+1;
                     else
@@ -688,7 +689,7 @@ end
         visibleXRange = max(1,floor(xl(1))):min(size(movie,2),ceil(xl(2)));
         visibleYRange = max(1,floor(yl(1))):min(size(movie,1),ceil(yl(2)));
         currImg = movie(visibleYRange,visibleXRange,frame);
-        
+                
         % Adjust contrast to match min/max intensity
         zl = [min(currImg(:)), max(currImg(:))];
         caxis(zl);
@@ -755,12 +756,14 @@ end
             bg = {'r'};
         end
         
-        marker_color = distinguishable_colors(1, bg);
+        colors = distinguishable_colors(2, bg);
+        marker_color = colors(2,:);
+        marker_fill_color = colors(1,:);
         if dothandle_cand ~= -1
-            set(dothandle_cand,'Color',marker_color);
+            set(dothandle_cand,'Color',marker_color, 'MarkerFaceColor',marker_fill_color);
         end
         if dothandle_fit ~= -1
-            set(dothandle_fit,'Color',marker_color);            
+            set(dothandle_fit,'Color',marker_color, 'MarkerFaceColor',marker_fill_color);            
         end
         
         % Draw num_colors colors. If num_colors is less then the number of
