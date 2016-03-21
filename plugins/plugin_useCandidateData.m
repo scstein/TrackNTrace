@@ -24,7 +24,7 @@ plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 plugin.initFunc = @updateOutParamDescription;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = ['Copies the positions acquired by the candidate detection plugin.\n\n'];
+plugin.info = ['Simply copies the positions acquired by the candidate detection plugin instead of doing any further refinement. '];
 
 end
 

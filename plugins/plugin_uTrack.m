@@ -20,31 +20,31 @@ outParamDescription = {'Track-ID';'Frame';'x';'y';'z';'Amplitude'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = ['u-Track was programmed in the lab of Gaudenz Danuser, see: ', ...
-               'Jaqaman et al, Nature Methods - 5, 695 - 702 (2008), doi:10.1038/nmeth.1237.'];
+plugin.info = ['Track particles using u-Track. \n\n',...
+    'u-Track is a very complex, memory intensive particle tracking suite with a vast array of options of which only a small part can be set here in the GUI. Advanced users can edit the file ''plugin_uTrack'' to access all options. \nu-Track was published in ''Jaqaman et al, NatMet 5(8), 695-702 (2008), doi:10.1038/nmeth.1237''.'];
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
 plugin.add_param('minTrajLength',...
     'int',...
-    {2, 0, inf},...
-    'Minimum length of trajectories AFTER gap closing in [frames].');
+    {2, 1, inf},...
+    'Minimum length of trajectories in [frames].');
 plugin.add_param('maxTrackRadius',...
     'float',...
     {6, 0, inf},...
-    'Maximum allowed linking distance between two spots in [pixels].');
+    'Maximum allowed linking distance between two localizations in [pixels].');
 plugin.add_param('maxFrameGap',...
     'int',...
     {0, 0, inf},...
-    'Maximum allowed time gap between two segments used for gap closing in [frames]. 0 = no gap closing.');
+    'Maximum allowed time gap between two segments used for gap closing in [frames]. \nWhen fluorophores blink or disappear, they obviuosly cannot be tracked anymore. If they reappear, however, tracked segments can be stitched back together. \n0 = no gap closing.');
 plugin.add_param('splitMovieIntervals',...
     'int',...
     {5, 0, inf},...
-    'Number of slices to divide movie into, useful when tracking high number of particles and frames.');
+    'Number of slices to divide movie into, useful when processing large number of particles and frames. \nTracks are stitched back together at the split frames.');
 plugin.add_param('track3D',...
     'bool',...
     false,...
-    'Enable 3D tracking');
+    'Enable 3D tracking.');
 plugin.add_param('verbose',...
     'bool',...
     false,...
@@ -54,29 +54,31 @@ end
 
 %   -------------- User functions --------------
 
-function [trajData] = trackParticles_uTrack(fitData,options)
+function [trackingData] = trackParticles_uTrack(fittingData,options)
 % Wrapper function for u-Track (see below). Refer to tooltips above, to
 % parseUtrackOptions function and to u-Track manual to obtain information
 % on input and output variables.
 % u-Track was programmed in the lab of Gaudenz Danuser, see:
-% Jaqaman et al, Nature Methods - 5, 695 - 702 (2008), doi:10.1038/nmeth.1237
-% Refer to GPL-License.txt for licensing information.
+% Jaqaman et al, Nature Methods - 5 (8), 695 - 702 (2008), doi:10.1038/nmeth.1237
+% Refer to GPL-License.txt for licensing information. u-Track can be downloaded here:
+% http://lccb.hms.harvard.edu/software.html
+% To install, extract all files into 'external' folder
 %
 % INPUT:
-%     fitData: Cell array of localizations created by locateParticles.m
+%     fittingData: Cell array of localizations created by locateParticles.m
 %     Refer to that function or to TrackNTrace manual for more information.
 %
 %     options: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     trajData: 2D double array of trajectories in format
+%     trackingData: 2D double array of trajectories in format
 %     [id,frame,xpos,ypos,zpos,amp]. Refer to trackParticles.m or to TrackNTrace
 %     manual for more information.
 
 
-% convert fitData cell array to adjust to tracker function input
+% convert fittingData cell array to adjust to tracker function input
 
-nrFrames = size(fitData,1);
+nrFrames = size(fittingData,1);
 if nrFrames<200
     options.splitMovieIntervals=1; %no need to split small movies
 end
@@ -85,8 +87,8 @@ pos = repmat(struct('xCoord',[],'yCoord',[],'zCoord',[],'amp',[],'sigma',[]),nrF
 
 
 for iFrame=1:nrFrames
-    if(isempty(fitData{iFrame})); continue; end; % Jump empty frames
-    pos_frame_now = fitData{iFrame};
+    if(isempty(fittingData{iFrame})); continue; end; % Jump empty frames
+    pos_frame_now = fittingData{iFrame};
     valid_pos = pos_frame_now(:,1)>=0; %error flag is 1?
     nCand = sum(valid_pos);
     pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
@@ -106,14 +108,14 @@ end
 
 
 % call main function
-[trajData] = uTrackMain(pos,options);
+[trackingData] = uTrackMain(pos,options);
 
 end
 
 
-function [trajData] = uTrackMain(pos,trackingOptions)
+function [trackingData] = uTrackMain(pos,trackingOptions)
 
-trajData = [];
+trackingData = [];
 traj_id = 0; %global trajectory idx
 
 % probDim = 2;
@@ -151,7 +153,7 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
     end
     
     %finally save data
-    trajData = [trajData; vertcat(cell_coord_tracks{:})]; %#ok<AGROW>
+    trackingData = [trackingData; vertcat(cell_coord_tracks{:})]; %#ok<AGROW>
     
     %connect slices; it's impossible to consider gaps between
     %slices, so only connect adjacent frames
@@ -160,7 +162,7 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
 %         track_slice = repmat(struct('xCoord',[],'yCoord',[],'amp',[]),2,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
         track_slice = repmat(struct('xCoord',[],'yCoord',[],'zCoord',[],'amp',[]),2,1); %1D struct array with nrFrames lines, inner arrays have two columns [value,error]
         for iFrame=1:2
-            pos_frame_now = trajData(trajData(:,2)==(slice(1)-2+iFrame),:);
+            pos_frame_now = trackingData(trackingData(:,2)==(slice(1)-2+iFrame),:);
             nCand = size(pos_frame_now,1);
             track_slice(iFrame).xCoord = [pos_frame_now(:,3),zeros(nCand,1)]; %careful, check if error should be >0!
             track_slice(iFrame).yCoord = [pos_frame_now(:,4),zeros(nCand,1)];
@@ -197,8 +199,8 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
                 id_pair = [pos_frame_first(abs(pos_frame_first(:,3)-x_pos(1))<1e-6,1);pos_frame_now(abs(pos_frame_now(:,3)-x_pos(2))<1e-6,1)];
                 
                 %now correct ids
-                connected_track_idx = (trajData(:,1)==id_pair(2)); %get all boolean entries of new trajectory to be connected to older one
-                trajData(connected_track_idx,1) = repmat(id_pair(1),sum(connected_track_idx),1);
+                connected_track_idx = (trackingData(:,1)==id_pair(2)); %get all boolean entries of new trajectory to be connected to older one
+                trackingData(connected_track_idx,1) = repmat(id_pair(1),sum(connected_track_idx),1);
             end
             
             %some of the ids were reverted to the smaller values of
@@ -207,10 +209,10 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
             %correct this now
             traj_update = 0;
             for jId = 1+traj_id:nrTracks+traj_id %go through all tracks in newly added slice
-                idx_trajData_update = trajData(:,1)==jId;
-                n_to_update = sum(idx_trajData_update); %is this an unconnected or new track?
+                idx_trackingData_update = trackingData(:,1)==jId;
+                n_to_update = sum(idx_trackingData_update); %is this an unconnected or new track?
                 if n_to_update>0
-                    trajData(idx_trajData_update,1) = repmat(traj_id+traj_update+1,n_to_update,1); %then set back the id...
+                    trackingData(idx_trackingData_update,1) = repmat(traj_id+traj_update+1,n_to_update,1); %then set back the id...
                     traj_update = traj_update+1; %increment the updater id...
                 end
             end
@@ -223,15 +225,15 @@ for iDiv = 1:nrSplit %slice position array if memory not large enough
     end %if iDiv>1
 end %for iDiv=1:nrSplit
 
-if ~isempty(trajData)
+if ~isempty(trackingData)
     %remove NaNs resulting from closed gaps
-    trajData = trajData(~isnan(trajData(:,end)),:);
+    trackingData = trackingData(~isnan(trackingData(:,end)),:);
     
     % if the movie was split, result array has to be sorted by
     % trajectory id again
     if nrSplit>1
-        [~,idx] = sort(trajData(:,1));
-        trajData = trajData(idx,:);
+        [~,idx] = sort(trackingData(:,1));
+        trackingData = trackingData(idx,:);
     end
 end
 

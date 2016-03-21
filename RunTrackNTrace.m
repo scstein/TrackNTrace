@@ -292,7 +292,7 @@ for iMovie=1:numel(list_filenames_TNTdata)
     end
     
     save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','firstFrame_lastFrame','-append');
-    clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions globalOptions
+    clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions globalOptions filename_movie_last_loop
 end
 
 %% Compute trajectories for every movie

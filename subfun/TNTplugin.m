@@ -136,7 +136,7 @@ classdef TNTplugin < handle % Inherit from handle class
             %   Use options.>NAME< within your plugins function to address these parameters
             %
             % par_type: Type of parameter
-            %   One of 'float', 'int', 'bool','string','list'
+            %   One of 'float', 'int', 'bool','string','list', 'filechooser'
             %
             % par_settings: Settings needed to setup parameter, depends on type
             %   'float':  Cell array {defaultValue, lowerBound, upperBound}
@@ -144,7 +144,7 @@ classdef TNTplugin < handle % Inherit from handle class
             %   'bool':   The default value true/false
             %   'string': The default value (a string)
             %   'list':   A cell array string list of possible choices for 'list' (first entry is default)
-            %   'filechooser': A cell array string list {'default directory','filterEnding'}
+            %   'filechooser': A cell array string list {'default directory','file ending filter'}
             % 
             % par_tooltip: Tooltip shown when hovering over the parameter
             %   with the mouse. Supports sprintf modifier (e.g. \n for newline) directly

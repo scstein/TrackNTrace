@@ -79,7 +79,7 @@ function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile,
 %
 
 % Add all paths required to run TNT
-addRequiredPathsTNT();
+setPathsVisualizer();
 
 % Check MATLAB version
 MATLABversion = strsplit(version,'.');
@@ -161,6 +161,8 @@ set(h_all.button_trackingMode,'Callback', {@callback_changeMode,'tracking'});
 set(h_all.but_play,'Callback',@playCallback);
 set(h_all.but_contrast,'Callback',@contrastCallback);
 set(h_all.but_autocontrast,'Callback',@autocontrastCallback);
+set(h_all.but_autocontrast,'TooltipString',sprintf('Set contrast automatically.\n The used algorithm can be selected in the popup menu to the right.\n Press  and hold "Shift" key during playback to adjust contrast automatically for each frame.'));
+set(h_all.popup_autocontrast, 'TooltipString', sprintf('Algorithm used for autocontrast.\n\b\b Spots: Emphasize highest 25%% intensity values.\n\b\b Min/Max: Spans all values.\n\b\b 98%% range: Cuts the lower and upper 1%% of intensities. '));
 set(h_all.but_distribution,'Callback',@distributionCallback);
 
 % Slider
@@ -208,6 +210,7 @@ imagehandle = -1;
 % Draw the marker color depending on background color
 track_colors = [];
 marker_color = [];
+marker_fill_color = [];
 drawColors(nr_track_colors);
 
 % -- Variables for playback --
@@ -581,7 +584,7 @@ end
                 % Plot markers of candidates
                 hold on;
                 if dothandle_cand == -1 % Draw unitialized handles
-                    dothandle_cand = plot(candidateData{iF}(:,1), candidateData{iF}(:,2), 'x','Color',marker_color,'MarkerSize',8);
+                    dothandle_cand = plot(candidateData{iF}(:,1), candidateData{iF}(:,2), 's','Color',marker_color,'MarkerSize',5,'MarkerFaceColor', marker_fill_color');
                 else % For initialized handles set their data (MUCH faster than plot)
                     set(dothandle_cand,'xdata',candidateData{iF}(:,1),'ydata',candidateData{iF}(:,2));
                 end
@@ -599,7 +602,7 @@ end
                 % Plot markers of fitted positions
                 hold on;
                 if dothandle_fit == -1 % Draw unitialized handles
-                    dothandle_fit = plot(fittingData{iF}(:,1), fittingData{iF}(:,2), 'o','Color',marker_color);
+                    dothandle_fit = plot(fittingData{iF}(:,1), fittingData{iF}(:,2), 'o','Color',marker_color,'MarkerSize',5,'MarkerFaceColor', marker_fill_color ,'Linewidth',1);
                 else % For initialized handles set their data (MUCH faster than plot)
                     set(dothandle_fit,'xdata',fittingData{iF}(:,1),'ydata',fittingData{iF}(:,2));
                 end
@@ -617,7 +620,7 @@ end
                     % We use the next free linehandle. If there is no
                     % free handle left, we create a new one on the fly.
                     if (handleNr>numel(linehandles) || linehandles(handleNr) == -1)
-                        linehandles(handleNr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:));
+                        linehandles(handleNr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:),'Linewidth',2);
                         linehandleNr_to_TrackNr(handleNr) = iTr;
                         handleNr = handleNr+1;
                     else
@@ -688,9 +691,22 @@ end
         visibleXRange = max(1,floor(xl(1))):min(size(movie,2),ceil(xl(2)));
         visibleYRange = max(1,floor(yl(1))):min(size(movie,1),ceil(yl(2)));
         currImg = movie(visibleYRange,visibleXRange,frame);
+                
+        selected_method =  get(h_all.popup_autocontrast,'Value');        
+
+        switch selected_method
+            case 1 % Focus on spots (upper quartil / 25% of data)
+                [~, centers] = rangedHist(double(currImg(:)), 100, 50);
+                zl = [centers(end), max(currImg(:))];
+            case 2 % Adjust contrast to match min/max intensity
+                zl = [min(currImg(:)), max(currImg(:))];
+            case 3 % 95% range of data (cut upper / lower tails)
+                [~, centers] = rangedHist(double(currImg(:)), 100, 98);
+                zl = [centers(1), centers(end)];                            
+            otherwise
+                error('Unknown autocontrast mode!')
+        end
         
-        % Adjust contrast to match min/max intensity
-        zl = [min(currImg(:)), max(currImg(:))];
         caxis(zl);
     end
 
@@ -755,12 +771,14 @@ end
             bg = {'r'};
         end
         
-        marker_color = distinguishable_colors(1, bg);
+        colors = distinguishable_colors(2, bg);
+        marker_color = colors(2,:);
+        marker_fill_color = colors(1,:);
         if dothandle_cand ~= -1
-            set(dothandle_cand,'Color',marker_color);
+            set(dothandle_cand,'Color',marker_color, 'MarkerFaceColor',marker_fill_color);
         end
         if dothandle_fit ~= -1
-            set(dothandle_fit,'Color',marker_color);            
+            set(dothandle_fit,'Color',marker_color, 'MarkerFaceColor',marker_fill_color);            
         end
         
         % Draw num_colors colors. If num_colors is less then the number of
@@ -885,7 +903,9 @@ end
                 case '.mat' % path to TNT file was given
                     % Load movie and data
                     fprintf('Loading TNT file..\n')
-                    TNTdata = load(movieOrTNTfile);
+                    warning off backtrace
+                        TNTdata = load(movieOrTNTfile);
+                    warning on backtrace
                     fprintf('Loading movie specified in TNT file..\n')
                     if(isfield(TNTdata,'firstFrame_lastFrame'))
                         firstFrame = TNTdata.firstFrame_lastFrame(1);
@@ -908,7 +928,9 @@ end
         if num_argin>1
             if ischar(candidateDataOrTNTfile) % TNT file was given
                 fprintf('Loading TNT file..\n')
-                TNTdata = load(candidateDataOrTNTfile);
+                warning off backtrace
+                    TNTdata = load(candidateDataOrTNTfile);
+                warning on backtrace
                 if(~isequal(size(movie), TNTdata.movieSize))
                    error('Input movie and given TNT file do not fit together! Movie size [%i,%i,%i], TNT file [%i,%i,%i].\n',size(movie),TNTdata.movieSize) 
                 end
@@ -1175,14 +1197,18 @@ end
 
 %% --- General functions ---
 
-function addRequiredPathsTNT()
+% Adds pathes needed for the visualizer.
+% The plugin subfolder path is removed, because loading an XXXoptions
+% struct with a (main/init/post) function handle where the plugin file exists,
+% but the subfunction does not (e.g. because it was renamed) throws an
+% error on loading the file
+function setPathsVisualizer()
     fullPathToThisFile = mfilename('fullpath');
     [path,~,~] = fileparts(fullPathToThisFile);
-    addpath(genpath([path,filesep,'external']));
-    addpath(genpath([path,filesep,'helper']));
-    addpath(genpath([path,filesep,'plugins']));
+    s = warning('off','all');
+        rmpath(genpath([path,filesep,'plugins']));
+    warning(s);
     addpath(genpath([path,filesep,'subfun']));
-    addpath(genpath([path,filesep,'analysis']));
 end
 
 % Function that cuts data from upper and lower tails of the distribution

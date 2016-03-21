@@ -12,35 +12,36 @@ name = 'TNT NearestNeighbor';
 type = 3;
 
 % The functions this plugin implements
-mainFunc =  @trackParticles_nearestNeighborCPP;
+mainFunc =  @trackParticles_nearestNeighbor;
 
 % Description of output parameters
-outParamDescription = {'Placeholder'}; % is set in mainFunc adapting to input data
+outParamDescription = {' '}; % is set in mainFunc adapting to input data
 
 % Create the plugin
 plugin = TNTplugin(name,type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Simple and fast nearest neighbor tracking implemented in C++\n\n Implementation uses the nanoflann library written by Marius Muja, David G. Lowe and Jose Luis Blanco. Nanoflann is under the BSD license.';
+plugin.info = ['Track particles using simple and fast nearest neighbor tracking with gap-closing implemented in C++\n\n', ...
+              'Implementation uses the nanoflann library written by Marius Muja, David G. Lowe and Jose Luis Blanco. Nanoflann is under the BSD license.'];
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
 % types are int, float, bool, list, string, filechooser
 plugin.add_param('minTrajLength',...
     'int',...
-    {2, 0, inf},...
-    'Minimum length of trajectories AFTER gap closing in [frames].');
+    {2, 1, inf},...
+    'Minimum length of trajectories in [frames].');
 plugin.add_param('maxTrackRadius',...
     'float',...
     {6, 0, inf},...
-    'Maximum allowed linking distance between two spots in [pixels].');
+    'Maximum allowed linking distance between two localizations in [pixels].');
 plugin.add_param('maxFrameGap',...
     'int',...
     {0, 0, inf},...
-    'Maximum allowed time gap between two segments used for gap closing in [frames]. 0 = no gap closing.');
+    'Maximum allowed time gap between two segments used for gap closing in [frames]. \nWhen fluorophores blink or disappear, they obviuosly cannot be tracked anymore. If they reappear, however, tracked segments can be stitched back together. \n0 = no gap closing.');
 plugin.add_param('minSegLength',...
     'int',...
-    {2, 0, inf},...
+    {1, 1, inf},...
     'Minimum length of trajectory segments BEFORE gap closing in [frames].');
 plugin.add_param('maxGapRadius',...
     'float',...
@@ -55,26 +56,26 @@ end
 
 %   -------------- User functions --------------
 
-function [trackingData, options] = trackParticles_nearestNeighborCPP(fitData,options)
+function [trackingData, options] = trackParticles_nearestNeighbor(fittingData,options)
 % Wrapper function for nearest neighbor C++ tracker (see below). Refer to
 % tooltips above and to nn_tracker_cpp help to obtain information on input
 % and output variables.
 %
 % INPUT:
-%     fitData: Cell array of localizations created by locateParticles.m
+%     fittingData: Cell array of localizations created by locateParticles.m
 %     Refer to that function or to TrackNTrace manual for more information.
 %
 %     options: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     trajData: 2D double array of trajectories in format
+%     trackingData: 2D double array of trajectories in format
 %     [id,frame,xpos,ypos,zpos,amp]. Refer to trackParticles.m or to TrackNTrace
 %     manual for more information.
 
 
-% convert fitData cell array to tracker input format
-nrFrames = size(fitData,1);
-nrPosInFrame = cellfun('size',fitData,1);
+% convert fittingData cell array to tracker input format
+nrFrames = size(fittingData,1);
+nrPosInFrame = cellfun('size',fittingData,1);
 
 % builds a vector with the frame number for every position
 % e.g. [1,1,1,2,2,3,3,3,3] for 3 particles in frame 1, 2 p. in fr. 2, 4 p. in fr. 3 etc.
@@ -82,7 +83,7 @@ frameVec = arrayfun( @(val,nr) repmat(val,nr,1), [1:nrFrames].',nrPosInFrame,'Un
 frameVec = vertcat(frameVec{:});
 
 % build a matrix with the frame number attached to each localization
-pos = [frameVec, vertcat(fitData{:})].';
+pos = [frameVec, vertcat(fittingData{:})].';
 
 % call main function
 trackingData = nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,options.maxGapRadius,options.maxFrameGap,options.minTrajLength,options.verbose).';

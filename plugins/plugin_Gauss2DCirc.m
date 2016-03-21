@@ -24,7 +24,7 @@ plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 plugin.initFunc = @fitParticles_gauss2dcirc_init;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Fit PSF by matrix inversion using gauss2dcirc.';
+plugin.info = 'Refine candidate positions by assuming a Gaussian PSF and finding the center by matrix inversion/linear regression using gauss2dcirc. \n\nThe algorithm was published in ''Anthony, S.M. & Granick, S. Image analysis with rapid and accurate two-dimensional Gaussian fitting. Langmuir 25, 8152–8160 (2009)''.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
@@ -32,11 +32,11 @@ plugin.info = 'Fit PSF by matrix inversion using gauss2dcirc.';
 plugin.add_param('PSFSigma',...
     'float',...
     {1.3, 0, inf},...
-    'PSF standard deviation in [pixel]. FWHM = 2*sqrt(2*log(2))*sigma.');
+    'Standard deviation of the PSF in pixels. \nsigma = FWHM/(2*sqrt(2*log(2))) ~ 0.21*lambda/NA where lambda is the emission wavelength in pixels and NA is the numerical aperture of the objective.');
 plugin.add_param('backgroundNoiseLevel',...
     'float',...
     {10, 0, inf},...
-    'Standard deviation of background noise in [ADU].');
+    'Standard deviation of background noise in [ADU] (camera counts). \nThis determines how the pixel intensities are weighted and should match the experiment.');
 end
 
 
@@ -62,12 +62,9 @@ function [fittingData] = fitParticles_gauss2dcirc(img,candidatePos,options,curre
 %     fittingData: 1x1 cell of 2D double array of fitted parameters
 %     [x,y,z,A,B,particle width]. 
 
-persistent x_mesh y_mesh
-
 fittingData = zeros(size(candidatePos,1),6);
-if isempty(x_mesh)
-    [x_mesh,y_mesh] = meshgrid(1:size(img,1),1:size(img,2));
-end
+[x_mesh,y_mesh] = meshgrid(1:size(img,1),1:size(img,2));
+
 
 for iCand = 1:size(candidatePos,1)
     candPos = round(candidatePos(iCand,:));
@@ -90,7 +87,8 @@ end
 
 
 function [xc,yc,Amp,width]=gauss2dcirc(z,x,y,noiselevel)
-
+% function downloaded from: http://groups.mrl.uiuc.edu/granick/software.html
+% 
 %[xc,yc,Amp,width]=gauss2dcirc(arr,x,y,noiselevel)
 %
 %GAUSS2DCIRC.m attempts to find the best 2D circular Gaussian fit for the

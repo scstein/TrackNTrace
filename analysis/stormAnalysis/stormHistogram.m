@@ -1,5 +1,6 @@
-function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,histogramType,filename,mag,nHistogramSteps,MLEenabled,locPrecision,minIntens,maxIntens)
-% [stormMap] = stormHistogram(inputData,movieSize,pixelSize,histogramType,filename,mag,nHistogramSteps,MLEenabled,locPrecision,minIntens,maxIntens)
+function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,histogramType,filename,superResMag,nHistogramSteps,photonConversion,locPrecision,minIntens,maxIntens)
+% [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,histogramType,filename,superResMag,nHistogramSteps,photonConversion,locPrecision,minIntens,maxIntens)
+% Easier call: [stormMap,stormRaw]
 % Create STORM histogram from TrackNTrace data using various histogramming
 % methods.
 % 
@@ -11,7 +12,7 @@ function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,hist
 %     movieSize: 1D integer array, [WIDTH,HEIGHT] of STORM movie in
 %     [pixels].
 %     
-%     pixelSize: Double, pixel size in [nm].
+%     pixelSize: Pixel size in [nm].
 %     
 %     histogramType: String, either 'weighted', 'jitter', 'gauss' or
 %     something else in which case the routine defaults to simply binning
@@ -23,27 +24,28 @@ function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,hist
 %     localization precision. These positions are binned and an average of
 %     <N> jittered histograms is calculated, default: N=4.
 %     'GAUSS': Add Gaussian PSFs with an amplitude of 1 and a standard
-%     deviation equal to the localization precision to the image instead if
+%     deviation equal to the localization precision to the isuperResMage instead if
 %     binning positions.
 %     
-%     filename: String, name of a file where the results and a PNG image
+%     filename: String, name of a file where the results and a PNG isuperResMage
 %     are saved to. Can be empty.
 %     
-%     mag: Double, magnification or 'zoom' factor of STORM histogram.
+%     superResMag: Magnification or 'zoom' factor of STORM histogram.
 %     
 %     nHistogramSteps: Integer, number of steps used for jittered
 %     histogram.
 %     
-%     MLEenabled: Boolean, set to true if MLE fitting was used.
+%     photonConversion: Boolean, set to true if ADU counts were converted
+%     to photons.
 %     
-%     locPrecision: Double, overrides localization precision to a fixed
+%     locPrecision: Overrides localization precision to a fixed
 %     value. Must be in [nm].
 %     
-%     minIntens: Double in [0,1] range, sets minimum contrast of STORM
-%     image.
+%     minIntens: Float in [0,1] range, sets minimum contrast of STORM
+%     isuperResMage.
 %     
-%     maxIntens: Double in [0,1] range, sets maximum contrast of STORM
-%     image.
+%     maxIntens: Float in [0,1] range, sets maximum contrast of STORM
+%     isuperResMage.
 %     
 %     
 % OUTPUT:
@@ -53,35 +55,69 @@ function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,hist
 
 %% Parse input
 
-if nargin < 5
+% No input data? Try to do things automatically as best as possible
+if nargin < 4 || isempty(inputData)
+    [inputData, path] = uigetfile({'*.mat*', 'MATLAB TrackNTrace file'},'Choose TrackNTrace file to analyze.');
+    inputData = [path,inputData];
+    load(inputData,'movieSize'); movieSize = movieSize(1:2);
+    
+    if ~exist('pixelSize','var') || isempty(pixelSize)
+        warning off backtrace
+        warning('Pixel size not given, setting to 100 nm.');
+        warning on backtrace
+        pixelSize = 100;
+    end
+    
+    if ~exist('histogramType','var') || isempty(histogramType)
+        warning off backtrace
+        warning('Histogram type not given, setting to ''gauss''.');
+        warning on backtrace
+        histogramType = 'gauss';
+    end
+    
+    load(inputData,'globalOptions');
+    if exist('globalOptions','var')
+        if isfield(globalOptions,'usePhotonConversion;')
+            photonConversion = globalOptions.usePhotonConversion;
+        end
+    end
+    
+    load(inputData,'filename_movie');
+    filename = filename_movie;
+        
+end
+
+    
+
+if ~exist('filename','var') || isempty(filename)
     filename = [];
 end
 
-if nargin < 6 || isempty(mag) 
-    mag = 8;
+if ~exist('superResMag','var') || isempty(superResMag) 
+    superResMag = 8;
 end
-mag = round(mag);
+superResMag = round(superResMag);
 
-if nargin < 7 || isempty(nHistogramSteps)
+if ~exist('nHistogramSteps','var') || isempty(nHistogramSteps)
     nHistogramSteps = 4;
 end
 
-if nargin < 8 || isempty(MLEenabled) 
-    MLEenabled = false;
+if ~exist('photonConversion','var') || isempty(photonConversion) 
+    photonConversion = false;
 end
 
-if nargin < 9
+if ~exist('locPrecision','var')
     locPrecision = [];
 end
 
 guessLocPrecision = false;
-if MLEenabled
+if photonConversion
     guessLocPrecision = true;
 end
 
-if  nargin < 10 || isempty(minIntens) || isempty(maxIntens)
+if ~exist('minIntens','var') || ~exist('maxIntens','var') || isempty(minIntens) || isempty(maxIntens)
     minIntens = 0;
-    maxIntens = 0.8;
+    maxIntens = 0.6;
 end
 minIntens1 = min([minIntens,maxIntens]);
 maxIntens = max([minIntens,maxIntens]);
@@ -92,12 +128,12 @@ minIntens = minIntens1; clear minIntens1;
 
 % Parse TNT data, either trackingData or fittingData
 if ischar(inputData)
-    try
-        load(inputData,'trackingData');
-        fittingData = inputData(:,3:end);
-    catch
-        load(inputData,'fittingData');
-        fittingData = vertcat(inputData{:});
+    load(inputData,'trackingData','fittingData');
+    if exist('trackingData','var');
+        fittingData = trackingData(:,3:end); %#ok<NODEF>
+        clear trackingData;
+    else
+        fittingData = vertcat(fittingData{:}); %#ok<NODEF>
     end
 else
     if iscell(inputData)
@@ -122,7 +158,7 @@ if guessLocPrecision
     locPrecision = sqrt((sigma_sq+1/12)./N.*(1+4*tau+sqrt(2*tau./(1+4*tau)))); %Rieger et al, DOI 10.1002/cphc.201300711
 else
     if isempty(locPrecision)
-        disp(sprintf('Localization precision estimation not possible, switchting to default STORM histogram.\n'));
+        disp(sprintf('Localization precision estimation not possible, switchting to default STORM histogram.\n')); %#ok<DSPS>
         histogramType = 'default';
     else
         locPrecision = repmat(locPrecision/pixelSize,size(pos,1),1);
@@ -137,7 +173,7 @@ switch(histogramType)
         valid_pos = ~isinf(locPrecision)&~isnan(locPrecision);
         pos = pos(valid_pos,:);
         locPrecision = locPrecision(valid_pos,:);
-        stormRaw = createHistogram(pos,1/mag,1./locPrecision);
+        stormRaw = createHistogram(pos,1/superResMag,1./locPrecision);
         
     case 'jitter'
         % create jittered histogram where an average histogram of noisy positions is calculated
@@ -146,24 +182,24 @@ switch(histogramType)
         locPrecision = locPrecision(valid_pos,:);
         
         pos_jitter = pos+randn(size(pos,1),2).*[locPrecision,locPrecision];
-        stormRaw = createHistogram(pos_jitter,1/mag,ones(size(pos_jitter,1),1));
+        stormRaw = createHistogram(pos_jitter,1/superResMag,ones(size(pos_jitter,1),1));
         
         for i=2:max(2,nHistogramSteps)
             pos_jitter = pos+randn(size(pos,1),2).*[locPrecision,locPrecision];
-            stormRaw = stormRaw+createHistogram(pos_jitter,1/mag,ones(size(pos_jitter,1),1));
+            stormRaw = stormRaw+createHistogram(pos_jitter,1/superResMag,ones(size(pos_jitter,1),1));
         end
         stormRaw = stormRaw/nHistogramSteps;
         
     case 'gauss'
-        % add gaussian functions with sigma = locPrecision to empty image
+        % add gaussian functions with sigma = locPrecision to empty isuperResMage
         valid_pos = ~isinf(locPrecision)&~isnan(locPrecision);
         pos = pos(valid_pos,:);
         locPrecision = locPrecision(valid_pos,:);
         
-        pos_idx = floor(pos*mag)+1;
-        stormRaw = zeros(movieSize(2)*mag,movieSize(1)*mag);
+        pos_idx = floor(pos*superResMag)+1;
+        stormRaw = zeros(movieSize(2)*superResMag,movieSize(1)*superResMag);
         for iPos = 1:size(pos,1)
-            sigma = locPrecision(iPos)*mag;
+            sigma = locPrecision(iPos)*superResMag;
             halfw = ceil(3*sigma);
             if pos_idx(iPos,1)-halfw<1 || pos_idx(iPos,1)+halfw>size(stormRaw,2) || pos_idx(iPos,2)-halfw<1 || pos_idx(iPos,2)+halfw>size(stormRaw,1)
                 % out of bounds?
@@ -176,16 +212,16 @@ switch(histogramType)
         
     otherwise
         % default to simple count histogram
-        stormRaw = createHistogram(pos,1/mag,ones(size(pos,1),1));
+        stormRaw = createHistogram(pos,1/superResMag,ones(size(pos,1),1));
         
 end %SWITCH
 
-%% Plot and save normalized image
+%% Plot and save normalized isuperResMage
 stormMap = (stormRaw-min(stormRaw(:)))./(max(stormRaw(:))-min(stormRaw(:)));
 
 h=figure;
-x = ((1:size(stormMap,2))-0.5)/mag*pixelSize;
-y = ((1:size(stormMap,1))-0.5)/mag*pixelSize;
+x = ((1:size(stormMap,2))-0.5)/superResMag*pixelSize;
+y = ((1:size(stormMap,1))-0.5)/superResMag*pixelSize;
 imagesc(x,y,stormMap,[minIntens,maxIntens]); colormap hot; axis image; colorbar;
 xlabel('x [nm]');
 ylabel('y [nm]');
@@ -197,7 +233,7 @@ if ~isempty(filename)
     else
         outname = [folder,filesep,name '_storm.png'];
     end
-    fprintf('Saving image %s ..\n', outname);
+    fprintf('Saving isuperResMage %s ..\n', outname);
     print(h,outname,'-dpng','-r300');
     save([outname(1:end-4),'_raw.mat'],'stormRaw','stormMap','x','y');
 end
@@ -209,9 +245,9 @@ end
         XY = XY(~out_of_bounds,:);
         XYweights = XYweights(~out_of_bounds,:);
         idx = floor(XY/binWidth)+1;
-        idx = sub2ind(movieSize*mag,idx(:,2),idx(:,1));
+        idx = sub2ind(movieSize*superResMag,idx(:,2),idx(:,1));
         
-        histogram = zeros(movieSize(2)*mag,movieSize(1)*mag);
+        histogram = zeros(movieSize(2)*superResMag,movieSize(1)*superResMag);
         for jPos = 1:numel(idx)
             histogram(idx(jPos)) = histogram(idx(jPos))+XYweights(jPos);
         end
