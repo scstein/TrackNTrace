@@ -161,6 +161,8 @@ set(h_all.button_trackingMode,'Callback', {@callback_changeMode,'tracking'});
 set(h_all.but_play,'Callback',@playCallback);
 set(h_all.but_contrast,'Callback',@contrastCallback);
 set(h_all.but_autocontrast,'Callback',@autocontrastCallback);
+set(h_all.but_autocontrast,'TooltipString',sprintf('Set contrast automatically.\n The used algorithm can be selected in the popup menu to the right.\n Press  and hold "Shift" key during playback to adjust contrast automatically for each frame.'));
+set(h_all.popup_autocontrast, 'TooltipString', sprintf('Algorithm used for autocontrast.\n\b\b Spots: Emphasize highest 25%% intensity values.\n\b\b Min/Max: Spans all values.\n\b\b 98%% range: Cuts the lower and upper 1%% of intensities. '));
 set(h_all.but_distribution,'Callback',@distributionCallback);
 
 % Slider
@@ -690,8 +692,21 @@ end
         visibleYRange = max(1,floor(yl(1))):min(size(movie,1),ceil(yl(2)));
         currImg = movie(visibleYRange,visibleXRange,frame);
                 
-        % Adjust contrast to match min/max intensity
-        zl = [min(currImg(:)), max(currImg(:))];
+        selected_method =  get(h_all.popup_autocontrast,'Value');        
+
+        switch selected_method
+            case 1 % Focus on spots (upper quartil / 25% of data)
+                [~, centers] = rangedHist(double(currImg(:)), 100, 50);
+                zl = [centers(end), max(currImg(:))];
+            case 2 % Adjust contrast to match min/max intensity
+                zl = [min(currImg(:)), max(currImg(:))];
+            case 3 % 95% range of data (cut upper / lower tails)
+                [~, centers] = rangedHist(double(currImg(:)), 100, 98);
+                zl = [centers(1), centers(end)];                            
+            otherwise
+                error('Unknown autocontrast mode!')
+        end
+        
         caxis(zl);
     end
 
