@@ -79,7 +79,7 @@ function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile,
 %
 
 % Add all paths required to run TNT
-setPathsVisualizer();
+addPathsVisualizer();
 
 % Check MATLAB version
 MATLABversion = strsplit(version,'.');
@@ -903,6 +903,14 @@ end
                 case '.mat' % path to TNT file was given
                     % Load movie and data
                     fprintf('Loading TNT file..\n')
+                    
+                    % Before loading, The plugin subfolder path is removed, because loading an XXXoptions
+                    % struct with a (main/init/post) function handle where the plugin file exists,
+                    % but the subfunction does not (e.g. because it was renamed) throws an
+                    % error on loading the file
+                    s = warning('off','all');
+                        rmpath(genpath([path,filesep,'plugins']));
+                    warning(s);          
                     warning off backtrace
                         TNTdata = load(movieOrTNTfile);
                     warning on backtrace
@@ -928,6 +936,13 @@ end
         if num_argin>1
             if ischar(candidateDataOrTNTfile) % TNT file was given
                 fprintf('Loading TNT file..\n')
+                % Before loading, The plugin subfolder path is removed, because loading an XXXoptions
+                % struct with a (main/init/post) function handle where the plugin file exists,
+                % but the subfunction does not (e.g. because it was renamed) throws an
+                % error on loading the file
+                s = warning('off','all');
+                    rmpath(genpath([path,filesep,'plugins']));
+                warning(s);
                 warning off backtrace
                     TNTdata = load(candidateDataOrTNTfile);
                 warning on backtrace
@@ -1198,16 +1213,9 @@ end
 %% --- General functions ---
 
 % Adds pathes needed for the visualizer.
-% The plugin subfolder path is removed, because loading an XXXoptions
-% struct with a (main/init/post) function handle where the plugin file exists,
-% but the subfunction does not (e.g. because it was renamed) throws an
-% error on loading the file
-function setPathsVisualizer()
+function addPathsVisualizer()
     fullPathToThisFile = mfilename('fullpath');
     [path,~,~] = fileparts(fullPathToThisFile);
-    s = warning('off','all');
-        rmpath(genpath([path,filesep,'plugins']));
-    warning(s);
     addpath(genpath([path,filesep,'subfun']));
 end
 
