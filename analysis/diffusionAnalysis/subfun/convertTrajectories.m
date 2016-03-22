@@ -47,8 +47,9 @@ switch lower(trmethod)
                     is_in_zone = sum(sqrt(sum((seg_temp-repmat(trajParam.inclusionZone(1:2),seg_size,1)).^2,2))<=trajParam.inclusionZone(3))==seg_size;
                 end
                 
+                max_displacement = max(sqrt(sum(abs(diff(seg_temp,1)).^2,2)));
                 %check if particle is moving, if the segment has the right length, if it's outside the inclusion zone
-                if sigma_guess>=trajParam.diffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone
+                if sigma_guess>=trajParam.diffusionGuess && seg_size>1 && seg_size<=trajParam.trajMaxLength && is_in_zone && max_displacement<=trajParam.frameMaxDistance
                     traj_result(iTraj) = {[traj_result{iTraj};seg_temp;NaN(1,2)]};
                 end
             end

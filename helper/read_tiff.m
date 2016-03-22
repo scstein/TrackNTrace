@@ -5,6 +5,10 @@ function imgdata = read_tiff(filename, convert2double, minmax_frame)
 % a specified part of the file. File can be read in their original format
 % (instead of converting to double).
 %
+% Note: For tif files larger than 4 GB (which are not allowed in the TIFF
+% standard but for example written by imageJ) the function automatically 
+% switches to read_BigTiff.m
+%
 % Input:
 %   filename: Tiff file to read
 %   convert2double: Datatype conversion to double after reading | default: true
@@ -38,8 +42,24 @@ end
 if strcmp(ext, '.tif') == 0
     filename = [filename '.tif'];
 end
-warning('off','all');
-t = Tiff(filename,'r');
+
+% Check if file is larger then 3.9GB
+fileinfo = dir(filename);
+if( (fileinfo.bytes/(1024*1024*1024) ) > 3.9)
+    warning off backtrace
+    warning('Reading image file > 3.9GB. Switching to read_BigTiff (unstable).');
+    warning on backtrace
+    imgdata = read_BigTiff(filename,convert2double,minmax_frame);
+    return;
+end
+
+try
+    warning('off','all');
+    t = Tiff(filename,'r');
+catch err
+    warning('on','all');
+    rethrow(err);
+end
 cleanupTrigger = onCleanup(@() cleanupFunc(t));
 
 

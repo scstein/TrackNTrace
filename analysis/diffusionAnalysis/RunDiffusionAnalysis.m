@@ -37,7 +37,7 @@ addpath(genpath([path,filesep,'helper']));
 %% Calculate displacements/find trajectories
 %no input? then ask user
 if isempty(dataObject)
-    [filename, pathname, ~] = uigetfile({'*.mat';'*.txt';'*.xls'}, 'Select all files to analyze.', 'MultiSelect','on');
+    [filename, pathname, ~] = uigetfile({'*.mat;*.txt;*.xls'}, 'Select all files to analyze.', 'MultiSelect','on');
     if ischar(filename)
         dataObject = cell(1,1);
         filename = {filename};

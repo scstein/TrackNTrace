@@ -1,12 +1,12 @@
-function plot_drift_correction(trajectoryData, driftCorr_trajectoryData, drift, pixSize )
+function plot_drift_correction(trackingData, driftCorr_trackingData, drift, pixSize )
 % Plots the original localizations in comparison to drift corrected data
 % and (optionally) the drift.
 %
 %   Input:
-%         trajectoryData -  2D double array, list of trajectories with
+%         trackingData -  2D double array, list of trajectories with
 %                           columns [id,frame,xpos,ypos, ... ]. 
 %                           (The first possible frame must be 1 not 0)
-%         driftCorr_trajectoryData -  drift corrected trajectories 2D double
+%         driftCorr_trackingData -  drift corrected trajectories 2D double
 %                           array, list of trajectories with columns 
 %                           [id,frame,xpos,ypos, ... ]. 
 %                           (The first possible frame must be 1 not 0)
@@ -30,7 +30,7 @@ end
 h = figure;
 
 hs1 = subplot(1,2,1);
-plot(trajectoryData(:,3)*pixSize, trajectoryData(:,4)*pixSize, '.','markersize',1);
+plot(trackingData(:,3)*pixSize, trackingData(:,4)*pixSize, '.','markersize',1);
 axis image;
 axis ij; % flip y-axis upside down
 title(hs1,'original data');
@@ -39,7 +39,7 @@ ylabel(['yPos',unit], 'FontSize',14);
 set(gca,'FontSize',14)
 
 hs2 = subplot(1,2,2);
-plot(driftCorr_trajectoryData(:,3)*pixSize, driftCorr_trajectoryData(:,4)*pixSize, '.','markersize',1);
+plot(driftCorr_trackingData(:,3)*pixSize, driftCorr_trackingData(:,4)*pixSize, '.','markersize',1);
 axis image;
 axis ij; % flip y-axis upside down
 title(hs2,'corrected data');
@@ -49,7 +49,7 @@ set(gca,'FontSize',14)
 
 linkaxes([hs1,hs2],'xy');
 
-tightfig; % Remove space around plot
+% tightfig; % Remove space around plot
 
 
 % Plot the drift

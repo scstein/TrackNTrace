@@ -99,9 +99,9 @@ if plot_fit
         end
     end
     
-    xlabel('Displacement [px]','fontsize',12);
-    ylabel('Frequency [-]','fontsize',12);
-    title(['Result of \chi^2 fit for \Delta_t = ',int2str(frame),' frames.'],'fontsize',12);
+    xlabel('Displacement [px]','fontsize',11);
+    ylabel('Frequency [-]','fontsize',11);
+    title(['Result of \chi^2 fit for \Delta_t = ',int2str(frame),' frames.'],'fontsize',11);
     
     text(0.7,0.75,['\chi^2_{\nu-1} = ' num2str(chi2)],'Units','normalized');
     for i=1:order
@@ -113,7 +113,7 @@ if plot_fit
     plot(x,zeros(size(x)),'r-');
     hold on;
     plot(x,residuals,'b.');
-    title({'Residuals'},'fontsize',12);
+    ylabel('Residuals','fontsize',11);
 end %plot_fit end
 
 end %FUNCTION END
