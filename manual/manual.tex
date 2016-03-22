@@ -6,8 +6,8 @@
 \usepackage[american]{babel}
 \usepackage{fancyhdr}
 \pagestyle{fancy}
+\fancyhead[RO,LE]{\thepage}
 \fancyfoot[C]{\vspace{3pt} \thepage}
-\usepackage[titletoc]{appendix}
 
 
 
@@ -20,56 +20,16 @@
 \usepackage{subfig}
 \captionsetup[subfloat]{labelfont={footnotesize,rm,md,up}}
 \usepackage{float}
-\usepackage{longtable}
 \usepackage{booktabs}
-% \usepackage{icomma}
-\usepackage{tablefootnote}
 \usepackage{enumitem}
 
 \usepackage{latexsym,exscale,amssymb,amsmath,amsfonts,amstext,amsbsy,esint}
 \usepackage[thinspace,thickqspace,squaren]{SIunits}
 
-% \usepackage[crop=pdfcrop]{pstool}
-
-% \usepackage{lscape}
-
-% \usepackage[square,numbers,sort&compress]{natbib}
 \usepackage[babel]{csquotes}
-% \usepackage[
-  % backend=biber,
-  % bibstyle=numeric,
-  % citestyle=numeric-comp,
-  % firstinits=true,
-  % maxcitenames=1,
-  % maxbibnames=99,
-  % date=short,
-  % isbn=false,
-  % url=false,
-  % eprint=true,
-  % sorting=none,
-  % sortcites=true]{biblatex}
-% \addbibresource{literatur.bib}
 
-% \renewbibmacro*{volume+number+eid}{%
-  % \textbf{%
-  % \printfield{volume}}%
-  % \setunit*{\addnbthinspace}%
-  % \printfield{number}%
-  % \setunit{\addcoma\space}%
-  % \printfield{eid}}%
-% \DeclareFieldFormat[article]{number}{\mkbibparens{#1}}
-% \renewbibmacro{in:}{}
 
-% \renewbibmacro*{issue+date}{%
-% %   \setunit{\addcomma\space}% NEW
-% %  \printtext[parens]{% DELETED
-    % \iffieldundef{issue}
-      % {\printfield{year}}
-      % {\printfield{issue}%
-       % \setunit*{\addspace}%
-% %       \usebibmacro{date}}}% DELETED
-       % \printfield{year}}% NEW
-  % \newunit}
+\usepackage{matlab-prettifier}
 
 
 \usepackage[
@@ -78,6 +38,7 @@ allcolors=black,
 allbordercolors=black,
 colorlinks=true,
 linkcolor=black,
+urlcolor=blue,
 pdfauthor={Jan Thiart, Simon Christoph Stein},
 pdftitle={TrackNTrace - Manual},
 pdfsubject={Manual},
@@ -111,15 +72,8 @@ pdfkeywords={}]
 \makeatother
 \setcounter{lofdepth}{2}
 
-\makeatletter
-\renewcommand{\paragraph}{\@startsection{paragraph}{4}{\z@}%
-  {-3.25ex\@plus -1ex \@minus -.2ex}%
-  {1.5ex \@plus .2ex}%
-  {\normalfont\normalsize\bfseries}}
-\makeatother
-
-\setcounter{secnumdepth}{5}
-\setcounter{tocdepth}{5}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
 
 
 
@@ -168,8 +122,8 @@ pdfkeywords={}]
 \begin{document}
 
 \chapter*{TrackNTrace}
-\vspace*{-30pt}\textbf{written for Matlab by Simon Christoph Stein and Jan Thiart}\\ [20pt]
-TrackNTrace is a fast, easy-to-use Matlab framework for single molecule localization, tracking and super-resolution applications. The purpose of this software is to facilitate development, distribution, and comparison of methods in the community by providing an easily extendable, plugin-based system and combining it with an easy-to-use graphical user interface (GUI). This GUI incorporates possibilities for quick inspection of localization and tracking results, giving direct feedback of the quality achieved with the chosen algorithms and parameter values, as well as possible errors, a feature neglected in most software packages available. The plugin system greatly simplifies adapting and tailoring methods towards any research problem's individual requirements. We provide a set of plugins implementing state-of-the-art methods together with the basic program, alongside tools for common post-processing steps such as STORM image generation, or drift correction. TrackNTrace should be useful to anyone who seeks to combine the speed of established software packages such as RapidSTORM or quickPALM with the simplicity and direct modifiablity of Matlab, especially when further post-processing is also done in Matlab.\\
+\vspace*{-30pt}\textbf{written for MATLAB by Simon Christoph Stein and Jan Thiart}\\ [20pt]
+TrackNTrace is a fast, easy-to-use MATLAB framework for single molecule localization, tracking and super-resolution applications. The purpose of this software is to facilitate development, distribution, and comparison of methods in the community by providing an easily extendable, plugin-based system and combining it with an easy-to-use graphical user interface (GUI). This GUI incorporates possibilities for quick inspection of localization and tracking results, giving direct feedback of the quality achieved with the chosen algorithms and parameter values, as well as possible errors, a feature neglected in most software packages available. The plugin system greatly simplifies adapting and tailoring methods towards any research problem's individual requirements. We provide a set of plugins implementing state-of-the-art methods together with the basic program, alongside tools for common post-processing steps such as STORM image generation, or drift correction. TrackNTrace should be useful to anyone who seeks to combine the speed of established software packages such as rapidSTORM or QuickPALM with the simplicity and direct modifiablity of MATLAB, especially when further post-processing is also done in MATLAB.\\
   
 In general, TrackNTrace reads a movie file, corrects for camera artifacts if applicable and obtains a rough guess of all possible positions of bright spots in every image. These position candidates then serve as the basis for a fitting routine which refines these candidates, obtaining position, amplitude and local background. Finally, these fit results are then returned to a particle tracking algorithm which tries to link particles close in time and space to form trajectories.\\[10pt]
 This manual will first provide all necessary steps for installation (section~\ref{sec:install}) and explain how to use the GUI (section~\ref{sec:overview}). Some in-depth information about the operation of TrackNTrace is provided in section~\ref{sec:in-depth}.
@@ -179,9 +133,9 @@ This manual will first provide all necessary steps for installation (section~\re
 \label{tab:requirements}
 \begin{tabular}{p{.2\textwidth} p{.45\textwidth}}
 \toprule
-OS & Windows 7 64-bit or higher, Linux (tested with Kubuntu 14.4) \\[5pt]
-Matlab version & 2013a or higher\\[5pt]
-Toolboxes & Image Processing, Statistics \\[0pt]
+OS & Windows 7 64-bit or higher, Linux x86\_64 (tested with Kubuntu 14.4) \\[5pt]
+MATLAB version & 2013a or higher\\[5pt]
+Toolboxes & Image Processing, Statistics, Parallelization (optional) \\[0pt]
 \bottomrule
 \end{tabular}
 \end{table}
@@ -194,14 +148,14 @@ Please also note: TrackNTrace currently can only handle single-channel, $\mathrm
 Installation procedure for Windows 7:
 \begin{enumerate}
 \item TrackNTrace is available via a version controlled git repository. Clone the TrackNTrace repository to some directory (e.g. your MATLAB directory). If you do not have git you can get it from \url{http://git-scm.com}.
-\item For the included mex files (compiled C++ code) to work, you need to install the Visual Studio 2012 C++ 2012 Redistributable (x64). This can either be found in the folder \texttt{external\textbackslash{}vcredist\_x64.exe} or downloaded from the Microsoft website.
+\item For the included mex files (compiled \CC~code) to work, you need to install the Visual Studio 2012 \CC~Redistributable (x64). This can either be found in the folder \texttt{external\textbackslash{}vcredist\_x64.exe} or downloaded from the Microsoft website \href{https://www.microsoft.com/en-us/download/details.aspx?id=30679}{here}.
 \end{enumerate}
 
-\noindent  Installation procedure for Linux (tested with Kubuntu 14.4):
+Installation procedure for Linux (tested with Kubuntu 14.4):
 \begin{enumerate}
-\item TrackNTrace is available via a version controlled git repository. Clone the TrackNTrace repository to some directory (e.g. your MATLAB directory). If you do not have git you can install it via your package manager (e.g. ``sudo apt get install git'').
+\item TrackNTrace is available via a version controlled git repository. Clone the TrackNTrace repository to some directory (e.g. your MATLAB directory). If you do not have git you can install it via your package manager (e.g. \texttt{sudo apt get install git}).
 \item Depending on your MATLAB version TrackNTrace might run without the need for additional configuration.
-Matlab in Linux comes with its own c++ standard library, which might be too old and not compatible with the shared libraries used by ceres. As Matlab loads its own STL before the system libraries (by setting LD\_LIBRARY\_PATH to a MATLAB library directory) this will result  in failures when the mex file (shared library) is called. If you encounter invalid mex files while executing the program or runtime linking errors try setting the LD\_PRELOAD environment variable to the directory with your system libraries (where libstdc++ and libgfortran are located; try the ``locate'' command or ``find / -name to find them) before starting matlab. If you still encounter problems, consider installing the ceres dependencies (see \url{http://ceres-solver.org/building.html}, Linux).
+MATLAB in Linux comes with its own \CC~standard library, which might be too old and not compatible with the shared libraries used by ceres. As MATLAB loads its own STL before the system libraries (by setting \texttt{LD\_LIBRARY\_PATH} to a MATLAB library directory) this will result  in failures when the mex file (shared library) is called. If you encounter invalid mex files while executing the program or runtime linking errors try setting the \texttt{LD\_PRELOAD} environment variable to the directory with your system libraries (where \texttt{libstdc++} and \texttt{libgfortran} are located; try the \texttt{locate} command or \texttt{find / -name} to find them) before starting MATLAB. If you still encounter problems, consider installing the ceres dependencies (see \url{http://ceres-solver.org/building.html}, Linux).
 \end{enumerate}
 
 
@@ -214,66 +168,63 @@ Some of the general behaviour of the TrackNTrace software can be altered by indi
 \begin{figure}[!h]
 \centering
 \includegraphics[width=0.9\textwidth]{./fig0.pdf} 
-\caption{Program flow and user interface of TrackNTrace. First, a list of movies or a previously saved settings file is loaded before the main GUI is initialized. There, plugins for steps 2{--}4 are chosen and their settings adjusted for each movie. At any time during parameter tuning, a preview for an arbitrary part of the current movie can be computed and visualized. The visualizer is able to display the output from all stages (here shown in tracking mode). Selecting a candidate, localization, or track showcases the respective plugin-specific output (e.g. fitted parameter values). After parameter adjustment for all movies, the actual processing starts, saving each movie's output data along with the chosen settings in a single file.}
+\caption{Program flow and user interface of TrackNTrace. First, a list of movies or a previously saved settings file is loaded before the main GUI is initialized. There, plugins for candidate detection, position refinement, and particle tracking are chosen and their settings adjusted for each movie. At any time during parameter tuning, a preview for an arbitrary part of the current movie can be computed and visualized. The visualizer is able to display the output from all stages (here shown in tracking mode). Selecting a candidate, localization, or track showcases the respective plugin-specific output (e.g. fitted parameter values). After parameter adjustment for all movies, the actual processing starts, saving each movie's output data along with the chosen settings in a single file.}
 \label{fig:flowdiagram}
 \end{figure}
 
 \subsection*{Startup (fig. \ref{fig:flowdiagram}.1)}
-When you first run \texttt{RunTrackNTrace.m}, the GUI as seen in figure~\ref{fig:flowdiagram}.1 pops up. Here, you can select the relevant movie files to process. Movies are added via the ``\textsf{+}'' button, where multiple movies can be selected in one go using the ``shift'' key. Likewise, the ``\textsf{-}'' button removes the selected entry from the list. Pressing \textsf{Start} invokes the main GUI (fig. \ref{fig:flowdiagram}.2). If ``\textsf{Load TNT file}'' is pressed, a TrackNTrace settings file (Matlabs \texttt{*.mat} file format, files end on \texttt{\_TNT}) can be selected, which loads all settings from a previous run, also starting the main GUI.
+When you first run \texttt{RunTrackNTrace.m}, the GUI as seen in figure~\ref{fig:flowdiagram}.1 pops up. Here, you can select the relevant movie files to process. Movies are added via the ``\textsf{+}'' button, where multiple movies can be selected in one go using the ``\textsf{Shift}'' key. Likewise, the ``\textsf{-}'' button removes the selected entry from the list. Pressing \textsf{Start} invokes the main GUI (fig. \ref{fig:flowdiagram}.2). If ``\textsf{Load TNT file}'' is pressed, a TrackNTrace settings file (MATLAB's \texttt{*.mat} file format, files end on \texttt{\_TNT}) can be selected, which loads all settings from a previous run, also starting the main GUI.
 
 \subsection*{Main GUI (fig. \ref{fig:flowdiagram}.2)}
 In the main GUI all processing settings are adjusted. On first startup it always shows the settings for the first movie in the list. The current settings can be saved to a file or previously saved settings loaded via the \textsf{Save Settings} and \textsf{Load settings} buttons on the top. Below the current file's name is displayed (hovering reveals full path). The main part of the GUI is designed for four processing steps:
 \begin{enumerate}
  \item \textbf{Correcting raw data:} Measurements can be corrected for dark currents and camera artifacts. Algorithms based on quantitative analysis of photon signals (e.g. maximum-likelihood estimation, MLE) require subsequent conversion of analogue-digital-converter counts to photon numbers.
  \item \textbf{Detecting candidates:} Potential sources of signal above the background noise are identified in each frame to obtain rough estimates of emitter positions with pixel precision. %This step is critical as misses or false detections cannot be distinguished from true events lateer.
-  \item \textbf{Position refinement:} Each candidate's position estimate is refined wtih sub-pixel accuracy and additional information (background strength, brightness, dipole orientation, etc.) extracted. Commonly, this involves fitting a representation of the microscope's PSF to a subsection of the frame.
+  \item \textbf{Position refinement:} Each candidate's position estimate is refined with sub-pixel accuracy and additional information (background strength, brightness, dipole orientation, etc.) extracted. Commonly, this involves fitting a representation of the microscope's PSF to a subsection of the frame.
     \item \textbf{Tracking:} Positions separated in time are connected frame-by-frame to form trajectories. High particle density, intersecting tracks, and re-appearing, previously lost emitters are the main obstacles to overcome during this stage.
 \end{enumerate}
 
 The first part corresponds to the \textsf{General options} panel, where the following elements can be adjusted:
 \begin{itemize}[leftmargin=3.5cm]
-\item[Output folder] Folder where the TNT output file is saved. The filename is always derived from the movies name with an additional timestamp and the ending \texttt{\_TNT}. For example: the movie ``\texttt{data.tif}'' output could become ``\texttt{data\_2016-m03-d14-13h15\_TNT.mat}''. If \textsf{Same as movie} is checked, the output will be right next to the movie. Otherwise press \textsf{Select} to open a file dialogue where you can select a folder (or simply type one into the field directly). Leaving the field empty saves in the current MATLAB location.
-\item[Dark movie] Select a movie taken with the exact same camera settings used in your experiment but with the shutter closed. This movie is used to correct for non-isotropic camera sensitivity, dead pixels and other artifacts according to [1].
-\item[Frame interval] Select the first and the last movie frame for processing. Anything not in this interval will be discarded. If \textsf{Last frame} is higher than the movie size or set to \textsf{Inf}, the whole movie is processed, starting at \textsf{First frame}.
-\item[Photon conversion]  If checked, the movie frames are converted from ADC counts to photons before they are handed to the plugins for processing. The conversion formula is
+\item[\textsf{Output folder}] Folder where the TNT output file is saved. The filename is always derived from the movies name with an additional timestamp and the ending \texttt{\_TNT}. For example: the output of a movie ``\texttt{data.tif}'' could become ``\texttt{data\_2016-m03-d14-13h15\_TNT.mat}''. If \textsf{Same as movie} is checked, the output will be right next to the movie. Otherwise press \textsf{Select} to open a file dialogue where you can select a folder (or simply type one into the field directly). Leaving the field empty saves in the current MATLAB location.
+\item[\textsf{Dark movie}] Select a movie taken with the exact same camera settings used in your experiment but with the shutter closed. This movie is used to correct for non-isotropic camera sensitivity, dead pixels and other artifacts according to [1].
+\item[\textsf{Frame interval}] Select the first and the last movie frame for processing. Anything not in this interval will be discarded. If \textsf{Last frame} is higher than the movie size or set to \textsf{Inf}, the whole movie is processed, starting at \textsf{First frame}.
+\item[\textsf{Photon conversion}] If checked, the movie frames are converted from ADC counts to photons before they are handed to the plugins for processing. The conversion formula is
 \begin{align}
 I_{\texttt{phot}} = (I_{\texttt{ADC}}-\texttt{Bias})\times\texttt{Sensitivity}/\texttt{Gain}.
 \end{align}
-A conversion of this type is only meaningful for EMCCD cameras. The values for \texttt{Bias}, \texttt{Sensitivity} and \texttt{Gain} should be available in the cameras performance sheet.
+A conversion of this type is only meaningful for EMCCD cameras. The values for \texttt{Bias}, \texttt{Sensitivity} and \texttt{Gain} should be available in the camera's performance sheet.
 \end{itemize}
 
-The center part houses the plugins for steps 2-4, where the plugin for each step is selected using a popup menu. The [ \textsf{?} ] button besides these menues shows an explanation of the currently selected plugin. Tracking (step 4) can optionally be disabled/enabled, the other two steps are always carried out. That said, the \texttt{Use candidate data} plugin for step 3 simply copies the data from step 2 and converts it to the right output format. As each plugins inputs are different, we will not explain the plugins here, but rely on their explanation and their tooltip.\\
+The lower part houses the plugins for steps 2-4, where the plugin for each step is selected using a popup menu. The [ \textsf{?} ] button besides these menus shows an explanation of the currently selected plugin. Tracking (step 4) can optionally be disabled/enabled, the other two steps are always carried out. That said, the \texttt{Use candidate data} plugin for step 3 simply copies the data from step 2 and converts it to the right output format. As each plugin's inputs are different, we will not explain the plugins here, but rely on their explanation and their tooltip.\\
 
-At the bottom left part of the GUI the preview button is placed, which starts the visualizer (see below) for the frame interval specified by   \textsf{First frame} and \textsf{Last frame} to the right of the button. This visualization is one of TrackNTrace's core features, making data analysis and parameter optimization much easier. The bottom right button either switches to the settings of the next movie in the list (displays ``\textsf{Next movie}) or starts processing all movies (displays ``\textsf{START processing}''). If all movies are alike, the ``\textsf{Use settings for all following}'' button applies the current movie's settings to all yet unadjusted movies in the list and starts the processing directly.
+At the bottom left part of the GUI the preview button is placed, which starts the visualizer (see below) for the frame interval specified by   \textsf{First frame} and \textsf{Last frame} to the right of the button. This visualization is one of TrackNTrace's core features, making data analysis and parameter optimization much easier. The bottom right button either switches to the settings of the next movie in the list (displays ``\textsf{Next movie}) or starts processing all movies (displays ``\textsf{START processing}''). If all movies are alike, the ``\textsf{Use settings for all following}'' button applies the current movie's settings to all yet unadjusted movies in the list and starts the processing directly.\\[10pt]
 
 \subsection*{Preview/Visualizer (fig. \ref{fig:flowdiagram}.3)}
-The visualizer shows the data acquired from steps 2 through 4 (if available). Aside from its use by \texttt{RunTrackNTrace.m}, the visualizer can also be started directly by executing \texttt{TNTvisualizer.m} (check the file for the different input options). This is useful for viewing data from previous runs or even just tif movies.  In the top right the type of data to display can be selected. If a data point is selected with the mouse, all corresponding output parameters from the plugin that computed it are shown. The counter in the top left shows the current / maximum frame. Different modes can show different options at the bottom of the player.  \newline 
+The visualizer shows the data acquired from steps 2 through 4 (if available). Aside from its use by \texttt{RunTrackNTrace.m}, the visualizer can also be started directly by executing \texttt{TNTvisualizer.m} (check the file for the different input options). This is useful for viewing data from previous runs or even just Tif movies. In the top right the type of data to display can be selected. If a data point is selected with the mouse, all corresponding output parameters from the plugin that computed it are shown. The counter in the top left shows the current/maximum frame. Different modes can show different options at the bottom of the player.
 
-\textsf{Player options}
+\paragraph{Player options}
 \begin{itemize}[leftmargin=3cm]
-\item[FPS] The frames per second (speed) the movie is played back with when \textsf{Play} is pressed.
-\item[B/W] Black / white colormap for displaying the movie.
-\item[Adj. contrast] Shows a popup menu which allows manually changing the contrast.
-\item[Autocontrast] The contrast is chosen automatically with a method chosen from the popup menu to the right. Similar to the popular \texttt{imageJ} software, holding the ``shift'' key during playback continously adjusts the contrast.
+\item[\textsf{FPS}] The frames per second (speed) the movie is played back with when \textsf{Play} is pressed.
+\item[\textsf{B/W}] Black/white colormap for displaying the movie.
+\item[\textsf{Adj. contrast}] Shows a popup menu which allows manually changing the contrast.
+\item[\textsf{Autocontrast}] The contrast is chosen automatically with a method chosen from the popup menu to the right. Similar to the popular \texttt{ImageJ} software, holding the \texttt{Shift} key during playback continously adjusts the contrast.
 \item[] Currently included methods are: \\\hspace*{0.35cm}Spots: Emphasize highest 25\% intensity values.\\\hspace*{0.35cm}Min/Max: Contrast spans all values.\\\hspace*{0.35cm}98\% range: Cuts the lower and upper 1\% of intensities. 
-\newline
 \end{itemize} 
 
-
-\textsf{Histogram options (unavailable in \textsf{Movie} mode)}
+\paragraph{Histogram options (unavailable in \textsf{Movie} mode)}
 \begin{itemize}[leftmargin=3cm]
-\item[Bins] Number of bins the histogram is computed for.
-\item[Value] Parameter to histogram. What is available depends on the plugin that computed the current mode's data.
-\item[Cut to X \%] Cuts (100-X)/2 \% of data from the lower and upper tails of the distribution before computing the histogram. 
-\item[Show] Computes and displays the histogram.
-\newline
+\item[\textsf{Bins}] Number of bins the histogram is computed for.
+\item[\textsf{Value}] Parameter to histogram. What is available depends on the plugin that computed the current mode's data.
+\item[\textsf{Cut to X \%}] Cuts (100-X)/2 \% of data from the lower and upper tails of the distribution before computing the histogram. 
+\item[\textsf{Show}] Computes and displays the histogram.
 \end{itemize}
 
-\textsf{Tracking related (only \textsf{Tracking} mode)}
+\paragraph{Tracking related (only \textsf{Tracking} mode)}
 \begin{itemize}[leftmargin=3.5cm]
-\item[Traj. Lifetime] Number of frames a trajectory is visible after its detection.
-\item[Show last X frames] Shows only the past X frames of each trajectory.
-\item[\# Colors] Number of colors the trajectories are displayed in. 
+\item[\textsf{Traj. Lifetime}] Number of frames a trajectory is visible after its detection.
+\item[\textsf{Show last X frames}] Shows only the past X frames of each trajectory.
+\item[\textsf{\# Colors}] Number of colors the trajectories are displayed in. 
 \end{itemize}
 
 \clearpage
@@ -283,57 +234,64 @@ All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the form
 \centering
 \caption*{\textbf{TrackNTrace data structures}}
 \label{tab:datastruct}
-\begin{tabular}{p{.25\textwidth} p{.7\textwidth}}
+\begin{tabular}{p{.22\textwidth} p{.73\textwidth}}
 \toprule
 \multicolumn{1}{c}{Variable name} & \multicolumn{1}{c}{Description}\\ \midrule
 \texttt{filename\_movie} & String containing full path of movie file. \\[5pt]
 \texttt{dark\_img} & 2D double array containing correction image to be added to each movie frame. \\[5pt]
-\texttt{movieSize} & 1x3 matrix saving the size of the movie [rowPixel, colPixel, nrFrames] \\[5pt]
-\texttt{firstFrame\_lastFrame} & 1x2 matrix [first frame, last frame] saving the first and last processed frame of the movie. This is important if only parts of a movie were read in and processed. \\[5pt]
+\texttt{movieSize} & $1\times3$ matrix saving the size of the movie [rowPixel, colPixel, nrFrames] \\[5pt]
+\texttt{firstFrame\_lastFrame} & $1\times2$ matrix [first frame, last frame] saving the first and last processed frame of the movie. This is important if only parts of a movie were read in and processed. \\[5pt]
 \texttt{globalOptions} & Struct of general options variables set by the GUI. \\[5pt]
-\texttt{candidateOptions} & Struct of fitting options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
+\texttt{candidateOptions} & Struct of candidate options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
 \texttt{fittingOptions} & Struct of fitting options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
 \texttt{trackingOptions} & Struct of tracking plugin parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
-\texttt{candidateData} & $n\times 1$ cell array of fitted positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique candidate fit and the column order is $\mu_x$, $\mu_y$These columns are mandatory for the fitting to work. Plugins can output extra data.\\
-\texttt{fittingData} & $n\times 1$ cell array of fitted positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique fit and the column order according to the model PSF is $\mu_x$, $\mu_y$, $\mu_z$, Amplitude, Background. These five columns are mandatory for most trackers to work correctly in step 4. Plugins can output extra data.\\
-\texttt{trackingData} & 2D double array, list of trajectories with columns  [id,frame,xpos,ypos,zpos] + additional columns. Every trajectory is given an id, starting at 1, after which the list is sorted. Frame number starts with 1.\\
+\texttt{candidateData} & $n\times 1$ cell array of candidate positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique candidate fit and the column order is $\mu_x$, $\mu_y$. These columns are mandatory for the fitting to work. Plugins can output extra data.\\
+\texttt{fittingData} & $n\times 1$ cell array of fitted positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique fit and the column order according to the model PSF is $\mu_x$, $\mu_y$, $\mu_z$, $A$, $B$ (amplitude, background). These five columns are mandatory for most trackers to work correctly in step 4. Plugins can output extra data.\\
+\texttt{trackingData} & 2D double array, list of trajectories with columns  [id,frame,$\mu_x$,$\mu_y$,$mu_z$] + additional columns. Every trajectory is given an id, starting at 1, after which the list is sorted. Frame number starts with 1.\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\clearpage
 
 \section{How plugins are written}\label{sec:howto_plugins}
 This section explains how plugins are added to the TrackNTrace framework. A plugin is defined as a function in a single file named ``\texttt{plugin\_NAME.m}'' inside the \texttt{plugins} subfolder of the TrackNTrace root directory. The plugin name displayed in the GUI is not taken from the filename but defined inside the file.\\
 
 The function inside the file returns a TNTplugin object. In the simplest case, the file content looks like this:
-\begin{verbatim}
+\begin{lstlisting}[style=Matlab-editor]
 function [plugin] = plugin_NAME()
-    ... % define name, type, outParamDescription
+ ... % define name, type, outParamDescription
 
-    plugin = TNTplugin(name, type, @mainFunc, outParamDescription);
+plugin = TNTplugin(name, type, @mainFuncNAME, outParamDescription);
 end
 
-function output = mainFunc(img, options, currentFrame) % Input depends on plugin type
-  ... % implement algorithm
+function output = mainFuncNAME(img, options, currentFrame) 
+% Input depends on plugin type implement algorithm
 end
-\end{verbatim}
+\end{lstlisting}
 
 While the four parameters used in the constructor are mandatory for every plugin, there are additional parameters that can be set optionally after the object is constructed. Here is a complete list:
 
-\begin{tabular}{p{.25 \textwidth} p{.7\textwidth}}
- \toprule \multicolumn{2}{c}{TNTplugin properties} \\  \midrule
+\begin{table}[!h]
+\centering
+\caption*{\textbf{TNTplugin properties}}
+\begin{tabular}{p{.25\textwidth} p{.7\textwidth}}
+\toprule
+\multicolumn{1}{c}{Property} & \multicolumn{1}{c}{Description}\\ \midrule
   \texttt{name} & Plugin name as displayed by the GUI. \\
   \texttt{type} & Integer, type of plugin. 1: Candidate detection, 2: Spot fitting, 3: Tracking \\
   \texttt{mainFunc} & Handle to main function the plugin implementing the actual algorithm. For type 1 and 2 this is called by TrackNTrace in a loop for each individual frame of the input movie. The interface (output/input) of this function depends on the plugin type and must match the TrackNTrace specification (see below). \\
-  \texttt{outParamDescription} &  Cell array of strings with description / name of all output parameters (columns) of the plugin \\
- \texttt{info} & Description of the plugin itself. Should describe the method and the general way how to use it. Supports sprintf modifiers directly (e.g. \textbackslash{} n for newline). \\
+  \texttt{outParamDescription} &  Cell array of strings with description/name of all output parameters (columns) of the plugin \\
+ \texttt{info} & Description of the plugin itself. Should describe the method and the general way how to use it. Supports \texttt{sprintf} modifiers directly (e.g. \texttt{\textbackslash n} for new line). \\
   \texttt{initFunc} &  Initialization function which is called once before the main is first executed. \\
   \texttt{postFunc} & Post-processing function which is called after the main function is last executed. \\
-  \texttt{useParallelProcessing}&  Boolean. If false, TrackNTrace does not parallelize this plugins main function on a frame-by-frame basis for type 1\&2 plugins. Useful if the main function itself is parallelized (e.g. a compiled multithreaded mex file) or if global information is needed (e.g. access to multiple frames of the movie).\\
+  \texttt{useParallelProcessing}&  Boolean. If false, TrackNTrace does not parallelize this plugins main function on a frame-by-frame basis for type 1/2 plugins. Useful if the main function itself is parallelized (e.g. a compiled multithreaded mex file) or if global information is needed (e.g. access to multiple frames of the movie).\\
   \bottomrule
 \end{tabular}\\
+\end{table}
 
 Parameters which can be adjusted by the GUI are defined by calling the \texttt{add\_param(par\_name, par\_type, par\_settings, par\_tooltip )} function of the newly created plugin instance. Lets look at the ``RadialSymmetry'' fitting plugin as an example:
-\begin{verbatim}
+\begin{lstlisting}[style=Matlab-editor]
 function [plugin] = plugin_RadialSymmetry()
 
 name = 'Radial symmetry';
@@ -358,7 +316,7 @@ plugin.add_param('estimateWidth',...
     true,...
     'Estimate particle width.');
 end
-\end{verbatim}
+\end{lstlisting}
  
 As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugins main function via a struct called \texttt{`options'}, e.g. \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\_settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\{default value, lower bound, upper bound\} }. The complete list of parameter types and needed settings is: \\
 
@@ -376,31 +334,31 @@ As you can see, this plugin has two parameters of different types which will be 
 The last parameter type \texttt{filechooser} combines an edit field which displays a file path with a button to select files of a given ending from the filesystem. The fourth parameter of the \texttt{add\_param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports sprintf modifier [e.g. \textbackslash{}n for newline]). \\
 
 The last thing to know about plugin creation is how the different plugin functions \texttt{mainFunc},\texttt{initFunc} and \texttt{postFunc} must be implemented. The interfaces for \texttt{initFunc} and \texttt{postFunc} are identical for all types of plugins (but the type of \texttt{data} depends on the plugin type, of course. See Sec.~\ref{sec:datastructures}):
-\begin{verbatim}
+\begin{lstlisting}[style=Matlab-editor]
    function [options] = initFunc(options)
    function [data, options] = postFunc(data, options)
-\end{verbatim}
+\end{lstlisting}
 The \texttt{initFunc} can alter the options or add data to it before the main function is executed. This is useful for example for precomputing masks for filter steps or checking input parameter correcness. The \texttt{postFunc} function can be used to postprocess the data before it is saved and also add arbitrary information to the options.\\
 
  The \texttt{mainFunc} functions has  a different interface for every plugin type and must look like this:
-\begin{verbatim}
- % For type 1 (candidate detection)
-  function [candidates_frame_i] = func(img, candidateOptions, i)
+\begin{lstlisting}[style=Matlab-editor]
+% For type 1 (candidate detection)
+function [candidates_frame_i] = func(img, candidateOptions, i)
   
- % For type 2 (fitting)
-  function [fits_frame_i]= func(img, candidateData_frame_i, fittingOptions, i)
+% For type 2 (fitting)
+function [fits_frame_i]= func(img, candidateData_frame_i, fittingOptions, i)
   
-  % For type 3(tracking)
-  function [trackingData] = func(fittingData, trackingOptions);
-        OR
-  function [trackingData, trackingOptions] = func(fittingData,trackingOptions);
-\end{verbatim}
+% For type 3(tracking)
+function [trackingData] = func(fittingData, trackingOptions);
+        %OR
+function [trackingData, trackingOptions] = func(fittingData,trackingOptions);
+\end{lstlisting}
 As the \texttt{mainFunc} for type 1\&2 plugins is called frame-by-frame but tracking is called for all acquired data at once, the second tracking function interface is just for convenience so that no post processing function is needed if you want to save something to the \texttt{trackingOptions}. \\
 
 If needed plugin function can access external data via global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{fittingOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\_movie} and \texttt{imgCorrection}. For example, the \texttt{TNT NearestNeighbor} plugin uses global access to  \texttt{fittingOptions} to copy the \texttt{outParamDescription} of all \texttt{fittingData} columns that are not needed for the tracking. The use of global variables inside type 1\&2 plugin functions should be kept to a minimum though, as functions with global variables can not be frame-by-frame parallelized by TNT, resulting in a possibly slower execution time. Also note that, for memory reasons, the global \texttt{movie} variable gives access to the 16-bit input movie without photon conversion, regardless of the TrackNTrace settings. If you want to correct frames inside your functions using the photon conversion settings of the GUI, use the following function call:
-\begin{verbatim}
+\begin{lstlisting}[style=Matlab-editor]
   [correctedStack] = correctMovie(movieStack)
-\end{verbatim}
+\end{lstlisting}
 
 \section{How TrackNTrace works}\label{sec:in-depth}
 After storing all options, reading in the movie and, if applicable, a closed shutter movie for correction, the fitting routine starts. First, the movie frame is cleaned up by adding a correction image obtained from the closed shutter movie as described in [1] and then converted to a photon count image if possible. Then, the respective candidate search function is called for the respective frame and the result is passed to the fit function. Depending on the settings, candidate search is carried out in each frame or only once for the first (or last) frame or an average image of the first few (or last few) frames. In the latter case, fit results from the frame before are passed to the fit function in the next iteration. \\
@@ -419,7 +377,7 @@ Here, $\mathrm{erfc}$ is the complementary error function. Note that $x$- and $y
 \begin{align*}
 \min_\theta (-\log\mathcal{L}) = \min_\theta (I_\mathrm{theo}(\theta) - I_\mathrm{exp} \ln I_\mathrm{theo}(\theta))
 \end{align*}
-All optimization steps rely on the \texttt{ceres-solver} library, an open-source optimization library written in \CC by Google Inc. We chose ceres for its very high performance, great customizability and the possibility of calculating all necessary first-order derivatives by using automatic differentiation which does not require user input and is therefore more robust. The Matlab implementation by Simon Christoph Stein is available on the Matlab file exchange where you can also find all necessary files and instructions for building {TrackNTrace}:  \texttt{http://www.mathworks.com/matlabcentral/fileexchange/52417-fast-gaussian-point-spread-\\function-fitting--mex-}\\[10pt]
+All optimization steps rely on the \texttt{ceres-solver} library, an open-source optimization library written in \CC by Google Inc. We chose ceres for its very high performance, great customizability and the possibility of calculating all necessary first-order derivatives by using automatic differentiation which does not require user input and is therefore more robust. The MATLAB implementation by Simon Christoph Stein is available on the MATLAB file exchange where you can also find all necessary files and instructions for building {TrackNTrace}:  \texttt{http://www.mathworks.com/MATLABcentral/fileexchange/52417-fast-gaussian-point-spread-\\function-fitting--mex-}\\[10pt]
 % FIXME \url did not break the url properly, even after trying different options/packages for 20 minutes.. (latex, *rolleyes*)
  After fitting is finished and if tracking is enabled, the result array is converted to a format suitable for the chosen tracker and passed to the tracking routine. Currently there are two options available: u-Track [3], and a custom, highly efficient nearest-neighbor tracker written in \CC. Depending on the tracker, the time complexity of particle linking is at least quadratic in the number of particles, linear in the number of frames and quadratic or even exponential in the number of gap frames. In u-Track's case, splitting the movie into several parts can be much faster than processing all positions in a single batch. In such situations, particles within and directly after such a border or split frame are tracked again to try to re-link trajectory segments artificially cut in half by splitting the movie. Gap frames cannot be accounted for in this case, therefore, caution is advised when using larger gap values and splitting numbers together.\\
 For every tracker, the end result is an array containing all trajectories with recorded frame number, and respective $xy$- position and amplitude. Every trajectory has a unique id to facilitate post-processing. \\
@@ -430,7 +388,7 @@ While all tracking algorithms are handled more or less the same, u-Track is an e
 
 \section{References}
 \begin{itemize}
-\item [{[1]}]  Hirsch M, Wareham RJ, Martin-Fernandez ML, Hobson MP, Rolfe DJ: A Stochastic Model for Electron Multiplication Charge-Coupled Devices – From Theory to Practice. PLoS ONE 8(1), 2012.
+\item [{[1]}]  Hirsch M, Wareham RJ, Martin-Fernandez ML, Hobson MP, Rolfe DJ: A Stochastic Model for Electron Multiplication Charge-Coupled Devices {--} From Theory to Practice. PLoS ONE 8(1), 2012.
 \item [{[2]}] Mortensen, KI, Churchman SL, Spudich, JA, Flyvbjerg H: Optimized localization analysis for single-molecule tracking and super-resolution microscopy. Nature Methods 7, 377 {--} 381, 2010.
 \item [{[3]}] Jaqaman K et al: Robust single-particle tracking in live-cell time-lapse sequences. Nature Methods 5, 695 {--} 702, 2008.
 
