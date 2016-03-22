@@ -29,7 +29,7 @@
 \usepackage[babel]{csquotes}
 
 
-\usepackage{matlab-prettifier}
+\usepackage[framed]{matlab-prettifier}
 
 
 \usepackage[
@@ -260,12 +260,14 @@ This section explains how plugins are added to the TrackNTrace framework. A plug
 The function inside the file returns a TNTplugin object. In the simplest case, the file content looks like this:
 \begin{lstlisting}[style=Matlab-editor]
 function [plugin] = plugin_NAME()
- ... % define name, type, outParamDescription
-
-plugin = TNTplugin(name, type, @mainFuncNAME, outParamDescription);
+name = 'Default name';
+type = 2; %1 for candidate, 2 for refinement, 3 for tracking
+mainFunc =  @arbitraryName_main;
+outParamDescription = {'OutputVariableName1';'OutputVariableName2'};
+plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 end
 
-function output = mainFuncNAME(img, options, currentFrame) 
+function [output] = arbitraryName_main(img, options, currentFrame) 
 % Input depends on plugin type implement algorithm
 end
 \end{lstlisting}
@@ -290,22 +292,20 @@ While the four parameters used in the constructor are mandatory for every plugin
 \end{tabular}\\
 \end{table}
 
-Parameters which can be adjusted by the GUI are defined by calling the \texttt{add\_param(par\_name, par\_type, par\_settings, par\_tooltip )} function of the newly created plugin instance. Lets look at the ``RadialSymmetry'' fitting plugin as an example:
+Parameters which can be adjusted by the GUI are defined by calling the \texttt{add\_param(par\_name, par\_type, par\_settings, par\_tooltip )} function of the newly created plugin instance. Let's look at the ``RadialSymmetry'' fitting plugin as an example:
 \begin{lstlisting}[style=Matlab-editor]
 function [plugin] = plugin_RadialSymmetry()
-
 name = 'Radial symmetry';
 type = 2;
-mainFunc =  @fitParticles_radialsymmetry;
+mainFunc =  @refinePositions_radialSymmetry;
 outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
 
 % Create the plugin
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
-% Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = ['Particle localization by radial symmetry centers.', ...
-                ' Algorithm published in Parthasarathy, NatMet 2012(9).'];
-
+% Description of plugin
+plugin.info = ['Particle localization by radial symmetry centers. \n', ...
+               'Algorithm published in Parthasarathy, NatMet 2012(9).'];
 % Add parameters
 plugin.add_param('PSFSigma',...
     'float',...
@@ -318,29 +318,29 @@ plugin.add_param('estimateWidth',...
 end
 \end{lstlisting}
  
-As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugins main function via a struct called \texttt{`options'}, e.g. \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\_settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\{default value, lower bound, upper bound\} }. The complete list of parameter types and needed settings is: \\
+As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugins main function via a struct called \texttt{options}, e.g. \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\_settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\{default value, lower bound, upper bound\} }. The complete list of parameter types and needed settings is: \\
 
 \begin{tabular}{cl}
 \toprule \texttt{type} & \texttt{par\_settings} \\ \midrule
-  \texttt{'float'}  &Cell array \{defaultValue, lowerBound, upperBound\}\\
-   \texttt{'int'}    &Cell array \{defaultValue, lowerBound, upperBound\}\\
-   \texttt{'bool'}   &The default value true/false\\
-   \texttt{'string'} & The default value (a string)\\
-   \texttt{'list'}  & A cell array of strings with possible choices for 'list' (first entry is default)\\
-   \texttt{'filechooser'} &A cell array of strings \{'default directory','file ending filter'\}\\
+  \texttt{\textquotesingle float\textquotesingle}  &Cell array \{defaultValue, lowerBound, upperBound\}\\
+   \texttt{\textquotesingle int\textquotesingle}    &Cell array \{defaultValue, lowerBound, upperBound\}\\
+   \texttt{\textquotesingle bool\textquotesingle}   &The default value true/false\\
+   \texttt{\textquotesingle string\textquotesingle} & The default value (a string)\\
+   \texttt{\textquotesingle list\textquotesingle}  & A cell array of strings with possible choices for 'list' (first entry is default)\\
+   \texttt{\textquotesingle filechooser\textquotesingle} &A cell array of strings \{'default directory','file ending filter'\}\\
    \bottomrule
 \end{tabular} \\
 
-The last parameter type \texttt{filechooser} combines an edit field which displays a file path with a button to select files of a given ending from the filesystem. The fourth parameter of the \texttt{add\_param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports sprintf modifier [e.g. \textbackslash{}n for newline]). \\
+The last parameter type \texttt{filechooser} combines an edit field which displays a file path with a button to select files of a given ending from the filesystem. The fourth parameter of the \texttt{add\_param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports \texttt{sprintf} modifier, e.g. \texttt{\textbackslash{}n} for new line). \\
 
-The last thing to know about plugin creation is how the different plugin functions \texttt{mainFunc},\texttt{initFunc} and \texttt{postFunc} must be implemented. The interfaces for \texttt{initFunc} and \texttt{postFunc} are identical for all types of plugins (but the type of \texttt{data} depends on the plugin type, of course. See Sec.~\ref{sec:datastructures}):
+The last thing to know about plugin creation is how the different plugin functions \texttt{mainFunc}, \texttt{initFunc}, and \texttt{postFunc} must be implemented. The interfaces for \texttt{initFunc} and \texttt{postFunc} are identical for all types of plugins (but the type of \texttt{data} depends on the plugin type, of course. See Sec.~\ref{sec:datastructures}):
 \begin{lstlisting}[style=Matlab-editor]
-   function [options] = initFunc(options)
-   function [data, options] = postFunc(data, options)
+function [options] = initFunc(options)
+function [data, options] = postFunc(data, options)
 \end{lstlisting}
-The \texttt{initFunc} can alter the options or add data to it before the main function is executed. This is useful for example for precomputing masks for filter steps or checking input parameter correcness. The \texttt{postFunc} function can be used to postprocess the data before it is saved and also add arbitrary information to the options.\\
+The \texttt{initFunc} can alter the options or add data to it before the main function is executed. This is useful for example for precomputing masks for filter steps or checking input parameter correctness. The \texttt{postFunc} function can be used to post-process the data before it is saved and also add arbitrary information to the options.\\
 
- The \texttt{mainFunc} functions has  a different interface for every plugin type and must look like this:
+ The \texttt{mainFunc} functions has  a different interface for every plugin type and must look like this (variable names can be changed, but not their order):
 \begin{lstlisting}[style=Matlab-editor]
 % For type 1 (candidate detection)
 function [candidates_frame_i] = func(img, candidateOptions, i)
@@ -353,12 +353,17 @@ function [trackingData] = func(fittingData, trackingOptions);
         %OR
 function [trackingData, trackingOptions] = func(fittingData,trackingOptions);
 \end{lstlisting}
-As the \texttt{mainFunc} for type 1\&2 plugins is called frame-by-frame but tracking is called for all acquired data at once, the second tracking function interface is just for convenience so that no post processing function is needed if you want to save something to the \texttt{trackingOptions}. \\
+As the \texttt{mainFunc} for type 1/2 plugins is called frame-by-frame but tracking is called for all acquired data at once, the second tracking function interface is just for convenience so that no post processing function is needed if you want to save something to the \texttt{trackingOptions}. \\
 
-If needed plugin function can access external data via global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{fittingOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\_movie} and \texttt{imgCorrection}. For example, the \texttt{TNT NearestNeighbor} plugin uses global access to  \texttt{fittingOptions} to copy the \texttt{outParamDescription} of all \texttt{fittingData} columns that are not needed for the tracking. The use of global variables inside type 1\&2 plugin functions should be kept to a minimum though, as functions with global variables can not be frame-by-frame parallelized by TNT, resulting in a possibly slower execution time. Also note that, for memory reasons, the global \texttt{movie} variable gives access to the 16-bit input movie without photon conversion, regardless of the TrackNTrace settings. If you want to correct frames inside your functions using the photon conversion settings of the GUI, use the following function call:
+If needed, plugin functions can access external data via global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{fittingOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\_movie} and \texttt{imgCorrection}. For example, the \texttt{TNT NearestNeighbor} plugin uses global access to  \texttt{fittingOptions} to copy the \texttt{outParamDescription} of all \texttt{fittingData} columns that are not needed for the tracking. The use of global variables inside type 1/2 plugin functions should be kept to a minimum though, as functions with global variables can not be frame-by-frame parallelized by TNT, resulting in a possibly slower execution time. Also note that, for memory reasons, the global \texttt{movie} variable gives access to the 16-bit input movie without photon conversion, regardless of the TrackNTrace settings. If you want to correct frames inside your functions using the photon conversion settings of the GUI, use the following function call:
+
 \begin{lstlisting}[style=Matlab-editor]
-  [correctedStack] = correctMovie(movieStack)
+[correctedStack] = correctMovie(movieStack)
 \end{lstlisting}
+
+A concise demonstration of all of these features is shown in \texttt{plugins\textbackslash pluginDemo.m}. 
+
+\clearpage
 
 \section{How TrackNTrace works}\label{sec:in-depth}
 After storing all options, reading in the movie and, if applicable, a closed shutter movie for correction, the fitting routine starts. First, the movie frame is cleaned up by adding a correction image obtained from the closed shutter movie as described in [1] and then converted to a photon count image if possible. Then, the respective candidate search function is called for the respective frame and the result is passed to the fit function. Depending on the settings, candidate search is carried out in each frame or only once for the first (or last) frame or an average image of the first few (or last few) frames. In the latter case, fit results from the frame before are passed to the fit function in the next iteration. \\
@@ -377,14 +382,13 @@ Here, $\mathrm{erfc}$ is the complementary error function. Note that $x$- and $y
 \begin{align*}
 \min_\theta (-\log\mathcal{L}) = \min_\theta (I_\mathrm{theo}(\theta) - I_\mathrm{exp} \ln I_\mathrm{theo}(\theta))
 \end{align*}
-All optimization steps rely on the \texttt{ceres-solver} library, an open-source optimization library written in \CC by Google Inc. We chose ceres for its very high performance, great customizability and the possibility of calculating all necessary first-order derivatives by using automatic differentiation which does not require user input and is therefore more robust. The MATLAB implementation by Simon Christoph Stein is available on the MATLAB file exchange where you can also find all necessary files and instructions for building {TrackNTrace}:  \texttt{http://www.mathworks.com/MATLABcentral/fileexchange/52417-fast-gaussian-point-spread-\\function-fitting--mex-}\\[10pt]
+All optimization steps rely on the \texttt{ceres-solver} library, an open-source optimization library written in \CC by Google Inc. We chose ceres for its very high performance, great customizability and the possibility of calculating all necessary first-order derivatives by using automatic differentiation which does not require user input and is therefore more robust. The MATLAB implementation by Simon Christoph Stein is available on the MATLAB file exchange where you can also find all necessary files and instructions for building {TrackNTrace}:  \href{http://www.mathworks.com/matlabcentral/fileexchange/52417-fast-gaussian-point-spread-function-fitting--mex-}{http://www.mathworks.com/matlabcentral/fileexchange/52417-fast-gaussian-point-spread-function-fitting--mex-}\\[10pt]
 % FIXME \url did not break the url properly, even after trying different options/packages for 20 minutes.. (latex, *rolleyes*)
  After fitting is finished and if tracking is enabled, the result array is converted to a format suitable for the chosen tracker and passed to the tracking routine. Currently there are two options available: u-Track [3], and a custom, highly efficient nearest-neighbor tracker written in \CC. Depending on the tracker, the time complexity of particle linking is at least quadratic in the number of particles, linear in the number of frames and quadratic or even exponential in the number of gap frames. In u-Track's case, splitting the movie into several parts can be much faster than processing all positions in a single batch. In such situations, particles within and directly after such a border or split frame are tracked again to try to re-link trajectory segments artificially cut in half by splitting the movie. Gap frames cannot be accounted for in this case, therefore, caution is advised when using larger gap values and splitting numbers together.\\
 For every tracker, the end result is an array containing all trajectories with recorded frame number, and respective $xy$- position and amplitude. Every trajectory has a unique id to facilitate post-processing. \\
 While all tracking algorithms are handled more or less the same, u-Track is an exception. u-Track can handle very difficult scenarios such as Brownian-directional motion-switching, particle merging and splitting and provides a large number of user-input variables for this. These options are all hidden in the \texttt{parseUtrackOptions.m} file and are only meant to be changed by an experienced user. Caution is advised.
 
-
-
+\clearpage
 
 \section{References}
 \begin{itemize}
