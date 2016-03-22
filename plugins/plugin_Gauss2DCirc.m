@@ -24,7 +24,7 @@ plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 plugin.initFunc = @fitParticles_gauss2dcirc_init;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Refine candidate positions by assuming a Gaussian PSF and finding the center by matrix inversion/linear regression using gauss2dcirc. \n\nThe algorithm was published in ''Anthony, S.M. & Granick, S. Image analysis with rapid and accurate two-dimensional Gaussian fitting. Langmuir 25, 8152–8160 (2009)''.';
+plugin.info = 'Refine candidate positions by assuming a Gaussian PSF and finding the center by matrix inversion/linear regression using gauss2dcirc. \n\nThe algorithm was published in ''Anthony, S.M. & Granick, S. Image analysis with rapid and accurate two-dimensional Gaussian fitting. Langmuir 25, 8152-8160 (2009)''.';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO

@@ -21,7 +21,7 @@ outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'width'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Refine candidate positions by determining radial symmetry centers. \n\nThe algorithm assumes that all emitters are radially symmetric and determines their center by analytically without fitting. It is as precise (and slightly faster than) the TNT fitter but lacks a parameter output which allows traightforward determination of PSF size and photon yield. \n\nThe full algorithm was developed and published by Parthasarathy, NatMet 9(7), 724-726 (2012), doi:10.1038/nmeth.2071';
+plugin.info = 'Refine candidate positions by determining radial symmetry centers. \n\nThe algorithm assumes that all emitters are radially symmetric and determines their center by analytically without fitting. It is as precise the TNT fitter but lacks a parameter output which allows traightforward determination of PSF size and photon yield. \n\nThe full algorithm was developed and published by Parthasarathy, NatMet 9(7), 724-726 (2012), doi:10.1038/nmeth.2071';
 
 % Add parameters
 % read comments of function TNTplugin/add_param for HOWTO
