@@ -1,3 +1,20 @@
+% TrackNTrace: A simple and extendable MATLAB framework for single-molecule localization and tracking
+%
+%     Copyright (C) 2016  Jan Thiart, jthiart@phys.uni-goettingen.de
+% 
+%     This program is free software: you can redistribute it and/or modify
+%     it under the terms of the GNU General Public License as published by
+%     the Free Software Foundation, either version 3 of the License, or
+%     (at your option) any later version.
+% 
+%     This program is distributed in the hope that it will be useful,
+%     but WITHOUT ANY WARRANTY; without even the implied warranty of
+%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%     GNU General Public License for more details.
+% 
+%     You should have received a copy of the GNU General Public License
+%     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+%
 function [img_out] = filterImageGeneral(img,filterKernel,isSeparable,shape)
 % [IMG_OUT] = filterImageGeneral(IMG,KERNEL,SEPARABLE,SHAPE)
 % Filter a 2D image with a 1D or 2D filter using conv2.

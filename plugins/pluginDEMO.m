@@ -1,4 +1,4 @@
-function [plugin] = plugin_default()
+function [plugin] = pluginDEMO()
 
 %    -------------- Definition of plugin --------------
 
