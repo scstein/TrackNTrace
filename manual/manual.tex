@@ -146,11 +146,11 @@ Please also note: TrackNTrace currently can only handle single-channel, $\mathrm
 \tableofcontents \clearpage
 
 \section{Installation}\label{sec:install}
-TrackNTrace is available via a version-controlled git repository at \url{link/to/git/repo}. The first step is not necessary if git is already installed on your system.
+TrackNTrace is available via a version-controlled git repository at \url{https://github.com/scstein/TrackNTrace}. The first step is not necessary if git is already installed on your system.
 \subsection{Windows}
 \begin{enumerate}
 \item Download and install git which is available at \url{http://git-scm.com}.
-\item Open a git bash and clone the repository via \texttt{git clone link/to/repo} .
+\item Open a git bash in your MATLAB folder and clone the repository via the command \\ \texttt{git clone https://github.com/scstein/TrackNTrace.git} .
 \item Install the Visual Studio 2012 \CC~Redistributable (x64). This can either be found in the TrackNTrace folder \texttt{external\textbackslash vcredist\textunderscore x64.exe} or downloaded from the Microsoft website \href{https://www.microsoft.com/en-us/download/details.aspx?id=30679}{here}.
 \item Open MATLAB, move to the TrackNTrace folder, and execute \texttt{RunTrackNTrace}.
 \end{enumerate}
@@ -158,7 +158,7 @@ TrackNTrace is available via a version-controlled git repository at \url{link/to
 \subsection{Linux (tested with Kubuntu 14.4)}
 \begin{enumerate}
 \item Install git it via your package manager (e.g. \texttt{sudo apt get install git}).
-\item Open a terminal in your home folder and clone the repository via \texttt{git clone link/to/repo} .
+\item Open a terminal in your home folder and clone the repository via the command \\ \texttt{git clone https://github.com/scstein/TrackNTrace.git} .
 \item Open MATLAB, move to the TrackNTrace folder, and execute \texttt{RunTrackNTrace}.
 \item Depending on your MATLAB version, TrackNTrace might run without the need for additional configuration.\\
 MATLAB in Linux comes with its own \CC~standard library, which might be too old and not compatible with the shared libraries used by ceres. As MATLAB loads its own STL before the system libraries (by setting \texttt{LD\textunderscore LIBRARY\textunderscore PATH} to a MATLAB library directory) this will result  in failures when the mex file (shared library) is called. If you encounter invalid mex files while executing the program or runtime linking errors try setting the \texttt{LD\_PRELOAD} environment variable to the directory with your system libraries (where \texttt{libstdc++} and \texttt{libgfortran} are located; try either the \texttt{locate} command or \texttt{find/ -name} to find them) before starting MATLAB. If you still encounter problems, consider installing the ceres dependencies (see \url{http://ceres-solver.org/building.html}, Linux).
@@ -260,9 +260,9 @@ All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the form
 \clearpage
 
 \section{How to write a TrackNTrace plugin}\label{sec:howto_plugins}
-\subsection{Plugin header}
 This section explains how plugins are added to the TrackNTrace framework, with a concise demonstration of all features shown in \texttt{plugins/pluginDemo.m}. A plugin is defined as a function in a single file named ``\texttt{plugin\_NAME.m}'' inside the \texttt{plugins} subfolder of the TrackNTrace root directory. 
 
+\subsection{Plugin header}
 The function inside the file returns a \texttt{TNTplugin} object. In the simplest case, the file content looks like this:
 \begin{lstlisting}[style=Matlab-editor]
 function [plugin] = plugin_NAME()
@@ -277,13 +277,12 @@ function [output] = arbitraryName_main(img, options, currentFrame)
 % Actual algorithm implemented here
 end
 \end{lstlisting}
-
 While the four parameters used in the constructor are mandatory for every plugin, there are additional parameters that can be set optionally after the object is constructed. Here is a complete list:
 
 \begin{table}[!h]
 \centering
 \caption*{\textbf{TNTplugin properties}}
-\begin{tabular}{p{.25\textwidth} p{.7\textwidth}}
+\begin{tabular}{p{.235\textwidth} p{.71\textwidth}}
 \toprule
 \multicolumn{1}{c}{Property} & \multicolumn{1}{c}{Description}\\ \midrule
   \texttt{name} & Plugin name as displayed by the GUI. \\
@@ -324,7 +323,7 @@ plugin.add_param('estimateWidth',...
 end
 \end{lstlisting}
  
-As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugins main function via a struct (\texttt{candidateOptions}, \texttt{refinementOptions}, \texttt{trackingOptions}) given as an input parameter. This means \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\textunderscore settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\string{defaultValue, lowerBound, upperBound\string}}. The complete list of parameter types and needed settings is: 
+As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugin's main function via a struct (\texttt{candidateOptions}, \texttt{refinementOptions}, \texttt{trackingOptions}) given as an input parameter. This means \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\textunderscore settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\string{defaultValue, lowerBound, upperBound\string}}. The complete list of parameter types and needed settings is: 
 \begin{table}[!h]
 \centering
 \begin{tabular}{p{0.135\textwidth} p{0.59\textwidth} p{0.185\textwidth}}
