@@ -213,7 +213,7 @@ The visualizer shows the data acquired from steps 2 through 4 (if available). As
 \item[\textsf{FPS}] The frames per second (speed) the movie is played back with when \textsf{Play} is pressed.
 \item[\textsf{B/W}] Black/white colormap for displaying the movie.
 \item[\textsf{Adj. contrast}] Shows a popup menu which allows manually changing the contrast.
-\item[\textsf{Autocontrast}] The contrast is chosen automatically with a method chosen from the popup menu to the right. Similar to the popular \texttt{ImageJ} software, holding the \texttt{Shift} key during playback continously adjusts the contrast.
+\item[\textsf{Autocontrast}] The contrast is chosen automatically with a method chosen from the popup menu to the right. Similar to the popular \texttt{ImageJ} software, holding the \textsf{Shift} key during playback continously adjusts the contrast.
 \item[] Currently included methods are: \\\hspace*{0.35cm}Spots: Emphasize highest 25\% intensity values.\\\hspace*{0.35cm}Min/Max: Contrast spans all values.\\\hspace*{0.35cm}98\% range: Cuts the lower and upper 1\% of intensities. 
 \end{itemize} 
 
@@ -261,13 +261,13 @@ All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the form
 
 \section{How to write a TrackNTrace plugin}\label{sec:howto_plugins}
 \subsection{Plugin header}
-This section explains how plugins are added to the TrackNTrace framework, with a concise demonstration of all features shown in \texttt{plugins\textbackslash pluginDemo.m}. A plugin is defined as a function in a single file named ``\texttt{plugin\_NAME.m}'' inside the \texttt{plugins} subfolder of the TrackNTrace root directory. 
+This section explains how plugins are added to the TrackNTrace framework, with a concise demonstration of all features shown in \texttt{plugins/pluginDemo.m}. A plugin is defined as a function in a single file named ``\texttt{plugin\_NAME.m}'' inside the \texttt{plugins} subfolder of the TrackNTrace root directory. 
 
 The function inside the file returns a \texttt{TNTplugin} object. In the simplest case, the file content looks like this:
 \begin{lstlisting}[style=Matlab-editor]
 function [plugin] = plugin_NAME()
 name = 'Some candidate plugin';
-type = 2; %1 for candidate, 2 for refinement, 3 for tracking
+type = 1; %1 for candidate, 2 for refinement, 3 for tracking
 mainFunc = @arbitraryName_main;
 outParamDescription = {'OutputVariableName1'; 'OutputVariableName2'};
 plugin = TNTplugin(name, type, mainFunc, outParamDescription);
@@ -324,7 +324,7 @@ plugin.add_param('estimateWidth',...
 end
 \end{lstlisting}
  
-As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugins main function via a struct called \texttt{options}, e.g. \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\textunderscore settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\string{default value, lower bound, upper bound\string}}. The complete list of parameter types and needed settings is: 
+As you can see, this plugin has two parameters of different types which will be visible in the GUI. Parameters are accessible for the plugins main function via a struct (\texttt{candidateOptions}, \texttt{refinementOptions}, \texttt{trackingOptions}) given as an input parameter. This means \texttt{PSFSigma} can be used inside the function as \texttt{options.PSFSigma}. Eventual whitespaces are replaced with underscores and dots within the parameter name are removed. Different parameters need different \texttt{par\textunderscore settings} as the third input. For example, the \texttt{bool} type parameter takes only the default value, while \texttt{float} type parameters need \texttt{\string{defaultValue, lowerBound, upperBound\string}}. The complete list of parameter types and needed settings is: 
 \begin{table}[!h]
 \centering
 \begin{tabular}{p{0.135\textwidth} p{0.59\textwidth} p{0.185\textwidth}}
