@@ -1,4 +1,4 @@
-function [plugin] = plugin_default()
+function [plugin] = pluginDEMO()
 
 %    -------------- Definition of plugin --------------
 
@@ -7,7 +7,7 @@ name = 'Default name';
 
 % Type of plugin (integer)
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = INSERT_CORRECT_NUMBER;
 
@@ -65,7 +65,7 @@ end
 function [outputData] = arbitraryName_main(img,inputData,inputOptions,currentFrame)
 
 % This is the main function which is called inside the main frame loop (for
-% candidate search and fitting) or as the main tracking function (for
+% candidate search and refinement/fitting) or as the main tracking function (for
 % tracking).
 
 % img is the 2D image of the current movie (accessed by the global variable
@@ -77,15 +77,15 @@ function [outputData] = arbitraryName_main(img,inputData,inputOptions,currentFra
 % arbitrary number of additional columns. x and y correspond to column and
 % row pixel, respectively.
 
-% In case of fitting, inputData is the row array of [x,y] positions
+% In case of refinement/fitting, inputData is the row array of [x,y] positions
 % (additional columns are possible but x and y are the first two) returned
-% by the candidate plugin, inputOptions is the fittingOptions struct, and
+% by the candidate plugin, inputOptions is the refinementOptions struct, and
 % outputData is a 2D row array of particle data which MUST contain at least
 % columns for x,y,z positions (put z=0 if 3D fitting does not happen), and
 % possibly amplitude (or intensity), and background.
 
 % In case of tracking, img and currentFrame are not available. inputData is
-% a cell array of the outputData from the fitting stage with one cell per
+% a cell array of the outputData from the refinement stage with one cell per
 % frame, inputOptions is the trackingOptions struct. outputData is expected
 % to be a 2D row array with columns [Track-ID,Frame,x,y,z,[additional]].
 % Both the id and the frame start at 1 as usual.
@@ -95,12 +95,12 @@ function [outputData] = arbitraryName_main(img,inputData,inputOptions,currentFra
 % 
 % global globalOptions 
 % global candidateOptions 
-% global fittingOptions 
+% global refinementOptions 
 % global trackingOptions 
 % global movie 
 % global imgCorrection
 % 
-% That means, if your main fitting function, for example, which is called
+% That means, if your main refinement function, for example, which is called
 % for every frame, would need adjacent frames for better precision, you can
 % access the movie (the current frame is given by currentFrame), correct it
 % (movie_corrected = correctMovie(movie(:,:,[frames_to_process])) ), and
@@ -112,8 +112,8 @@ end
 
 function [optionsStruct] = arbitraryName_init(optionsStruct)
 
-% This function is called before the main loop starts, i.e. fittingOptions
-% = arbitraryName_init(fittingOptions). You can process all options from
+% This function is called before the main loop starts, i.e. refinementOptions
+% = arbitraryName_init(refinementOptions). You can process all options from
 % the GUI here and store additional derived ones here since you can't 
 % access anything inside the GUI.
 % 

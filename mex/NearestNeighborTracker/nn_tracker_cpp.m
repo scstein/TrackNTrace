@@ -34,7 +34,9 @@ function [ tracks ] = nn_tracker_cpp(  Localizations, varargin)
 
 % Make sure logicals are passed as correct datatype
 %
-% C++ implementation is written using the nanoflann library. Licensing see below.
+% C++ implementation is unter the FreeBSD license and uses the
+% nanoflann library, which is licensed under the BSD license (see below).
+% 
 
 if numel(varargin) == 6
     varargin{6} = logical(varargin{6});

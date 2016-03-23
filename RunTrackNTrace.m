@@ -1,3 +1,21 @@
+% TrackNTrace: A simple and extendable MATLAB framework for single-molecule localization and tracking
+%
+%     Copyright (C) 2016  Simon Christoph Stein, scstein@phys.uni-goettingen.de
+%     Copyright (C) 2016  Jan Thiart, jthiart@phys.uni-goettingen.de
+% 
+%     This program is free software: you can redistribute it and/or modify
+%     it under the terms of the GNU General Public License as published by
+%     the Free Software Foundation, either version 3 of the License, or
+%     (at your option) any later version.
+% 
+%     This program is distributed in the hope that it will be useful,
+%     but WITHOUT ANY WARRANTY; without even the implied warranty of
+%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%     GNU General Public License for more details.
+% 
+%     You should have received a copy of the GNU General Public License
+%     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+%
 function RunTrackNTrace()
 % Run this function to start the TrackNTrace application.
 
@@ -6,7 +24,7 @@ clearGlobals(); % Clear global variables used by TNT
 % Global variables accessible by plugins
 global globalOptions;
 global candidateOptions
-global fittingOptions
+global refinementOptions
 global trackingOptions
 global movie;
 global filename_movie;
@@ -38,10 +56,10 @@ if TNToptions.enableParallelProcessing
 end
 
 %% Startup (loading input data information)
-[movie_list, globalOptions, candidateOptions_loaded,fittingOptions_loaded,trackingOptions_loaded, ...
-    candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI();
+[movie_list, globalOptions, candidateOptions_loaded,refinementOptions_loaded,trackingOptions_loaded, ...
+    candidateData_loaded, refinementData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI();
 candidateOptions = candidateOptions_loaded;
-fittingOptions = fittingOptions_loaded;
+refinementOptions = refinementOptions_loaded;
 trackingOptions = trackingOptions_loaded;
 
 if(isempty(globalOptions))
@@ -63,11 +81,11 @@ else
     GUIinputs.outputFolder = outputPath_loaded;
 end
 GUIinputs.candidateOptions_loaded = candidateOptions_loaded;
-GUIinputs.fittingOptions_loaded = fittingOptions_loaded;
+GUIinputs.refinementOptions_loaded = refinementOptions_loaded;
 GUIinputs.show_candidateData_fromFile_cbx = ~isempty(candidateData_loaded);
-GUIinputs.show_fittingData_fromFile_cbx = (GUIinputs.show_candidateData_fromFile_cbx && ~isempty(fittingData_loaded)); % candidateData must always be there
+GUIinputs.show_refinementData_fromFile_cbx = (GUIinputs.show_candidateData_fromFile_cbx && ~isempty(refinementData_loaded)); % candidateData must always be there
 GUIinputs.use_loaded_candidateData = true;
-GUIinputs.use_loaded_fittingData = true;
+GUIinputs.use_loaded_refinementData = true;
 GUIinputs.firstFrame_lastFrame_loaded = firstFrame_lastFrame_loaded;
 
 % Calculate default dark image if given in default options
@@ -115,14 +133,14 @@ for iMovie=1:numel(movie_list)
         % Give file to adjust settings for to GUI
         GUIinputs.filename_movie = filename_movie;
         
-        [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+        [globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIinputs);
         % Save output folder settings
         GUIinputs.outputFolderSameAsMovie = GUIreturns.outputFolderSameAsMovie;
         GUIinputs.outputFolder = GUIreturns.outputFolder;
         
         % Save use loaded data settings
         GUIinputs.use_loaded_candidateData = GUIreturns.use_loaded_candidateData;
-        GUIinputs.use_loaded_fittingData = GUIreturns.use_loaded_fittingData;
+        GUIinputs.use_loaded_refinementData = GUIreturns.use_loaded_refinementData;
         
         GUIinputs.showStartupInformation = false; % Only show this on first startup
         if GUIreturns.userExit;
@@ -150,14 +168,14 @@ for iMovie=1:numel(movie_list)
             filename_dark_movie = globalOptions.filename_dark_movie;
             while true
                 if not(first_run)
-                    [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs);
+                    [globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIinputs);
                     % Save output folder settings
                     GUIinputs.outputFolderSameAsMovie = GUIreturns.outputFolderSameAsMovie;
                     GUIinputs.outputFolder = GUIreturns.outputFolder;
                     
                     % Save use loaded data settings
                     GUIinputs.use_loaded_candidateData = GUIreturns.use_loaded_candidateData;
-                    GUIinputs.use_loaded_fittingData = GUIreturns.use_loaded_fittingData;
+                    GUIinputs.use_loaded_refinementData = GUIreturns.use_loaded_refinementData;
                     
                     if GUIreturns.userExit;
                         userExitFunc();
@@ -185,9 +203,9 @@ for iMovie=1:numel(movie_list)
                 
                 % IF: this is the first run perform all steps. ELSE: Reuse unchanged data from the last run
                 if first_run
-                    [candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img);
+                    [candidateData_preview,refinementData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img);
                 else
-                    [candidateData_preview,fittingData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img, candidateData_preview, fittingData_preview, trackingData_preview, previewOptions, GUIreturns);
+                    [candidateData_preview,refinementData_preview, trackingData_preview, previewOptions] = runPreview(movie,dark_img, candidateData_preview, refinementData_preview, trackingData_preview, previewOptions, GUIreturns);
                 end
                 first_run = false;
             end
@@ -229,19 +247,19 @@ for iMovie=1:numel(movie_list)
     end
     
     % Should loaded candidateData be used?
-    if(GUIreturns.use_loaded_fittingData)
-        fittingOptions =  fittingOptions_loaded;
-        struct_helper.fittingData = fittingData_loaded;
+    if(GUIreturns.use_loaded_refinementData)
+        refinementOptions =  refinementOptions_loaded;
+        struct_helper.refinementData = refinementData_loaded;
     end
     
-    save(filename_TNTdata,'filename_movie','globalOptions','candidateOptions','fittingOptions','dark_img');
+    save(filename_TNTdata,'filename_movie','globalOptions','candidateOptions','refinementOptions','dark_img');
     if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
         save(filename_TNTdata,'trackingOptions','-append');
     end
     
     % Append loaded data and movieSize + firstFrame_lastFrame so that movie
     % must not be loaded to do tracking
-    if(GUIreturns.use_loaded_candidateData || GUIreturns.use_loaded_fittingData)
+    if(GUIreturns.use_loaded_candidateData || GUIreturns.use_loaded_refinementData)
         struct_helper.movieSize = movieSize_loaded;
         struct_helper.firstFrame_lastFrame = firstFrame_lastFrame_loaded;
         save(filename_TNTdata,'-append','-struct','struct_helper');
@@ -250,7 +268,7 @@ for iMovie=1:numel(movie_list)
     if not(GUIreturns.useSettingsForAll || TNToptions.rememberSettingsForNextMovie)
         globalOptions    = [];
         candidateOptions = [];
-        fittingOptions   = [];
+        refinementOptions   = [];
         trackingOptions  = [];
     else
         dark_img_def = dark_img;
@@ -258,12 +276,12 @@ for iMovie=1:numel(movie_list)
 end
 clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions
 
-%% Candidate detection and fitting for every movie
+%% Candidate detection and refinement for every movie
 for iMovie=1:numel(list_filenames_TNTdata)
     filename_TNTdata = list_filenames_TNTdata{iMovie};
     load(filename_TNTdata,'-mat');
         
-    if  not(exist('candidateData','var') && exist('fittingData','var'))
+    if  not(exist('candidateData','var') && exist('refinementData','var'))
         % Read movie
         if iMovie==1 || ~strcmp(filename_movie,filename_movie_last_loop)
             movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
@@ -277,21 +295,21 @@ for iMovie=1:numel(list_filenames_TNTdata)
         else
             fprintf('######\nTNT: Using loaded candidateData for processing.\n');
         end
-        if not(exist('fittingData','var'))
+        if not(exist('refinementData','var'))
             fprintf('######\nTNT: Refining positions in movie %s.\n',filename_movie);
-            [fittingData, fittingOptions] = fitParticles(movie, dark_img, globalOptions, fittingOptions, candidateData);
+            [refinementData, refinementOptions] = fitParticles(movie, dark_img, globalOptions, refinementOptions, candidateData);
         else
-            fprintf('######\nTNT: Using loaded fittingData for processing.\n');
+            fprintf('######\nTNT: Using loaded refinementData for processing.\n');
         end
 
         % Save positions, movieSize, and index of first and last frame processed
         firstFrame_lastFrame = [globalOptions.firstFrame,  globalOptions.firstFrame + size(movie,3)-1];  %#ok<NASGU> % Note: lastFrame could have been set to 'inf', now we synchronize with the correct number
         movieSize = size(movie); %#ok<NASGU> % Save size of movie (nice to have)
     else
-        fprintf('######\nTNT: Using loaded candidateData & fittingData for processing.\n');
+        fprintf('######\nTNT: Using loaded candidateData & refinementData for processing.\n');
     end
     
-    save(filename_TNTdata,'candidateData','fittingData','globalOptions','candidateOptions','fittingOptions','movieSize','firstFrame_lastFrame','-append');
+    save(filename_TNTdata,'candidateData','refinementData','globalOptions','candidateOptions','refinementOptions','movieSize','firstFrame_lastFrame','-append');
     clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions globalOptions filename_movie_last_loop
 end
 
@@ -305,11 +323,11 @@ for iMovie=1:numel(list_filenames_TNTdata)
     end
     
     % Load options and data needed for processing
-    load(list_filenames_TNTdata{iMovie},'trackingOptions','fittingData','filename_movie');
+    load(list_filenames_TNTdata{iMovie},'trackingOptions','refinementData','filename_movie');
     
     % Compute trajectories
     fprintf('######\nTNT: Tracking particles in movie %s.\n',filename_movie);
-    [trackingData, trackingOptions] = trackParticles(fittingData,trackingOptions); %#ok<ASGLU>
+    [trackingData, trackingOptions] = trackParticles(refinementData,trackingOptions); %#ok<ASGLU>
     
     %Save trajectories
     save(list_filenames_TNTdata{iMovie},'trackingData','trackingOptions','-append');
@@ -357,7 +375,7 @@ clearGlobals();
 
 % Clear all global variables
     function clearGlobals()
-        clear global globalOptions candidateOptions fittingOptions trackingOptions movie imgCorrection parallelProcessingAvailable filename_movie;
+        clear global globalOptions candidateOptions refinementOptions trackingOptions movie imgCorrection parallelProcessingAvailable filename_movie;
     end
 end
 

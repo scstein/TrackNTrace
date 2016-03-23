@@ -7,7 +7,7 @@ name = 'TNT Fitter';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 2;
 
@@ -60,7 +60,7 @@ end
 
 %   -------------- User functions --------------
 
-function [fittingData] = refinePositions_psfFitCeres(img,candidatePos,options,currentFrame)
+function [refinementData] = refinePositions_psfFitCeres(img,candidatePos,options,currentFrame)
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input
 % and output variables.
@@ -76,7 +76,7 @@ function [fittingData] = refinePositions_psfFitCeres(img,candidatePos,options,cu
 %     options: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     fittingData: 1x1 cell of 2D double array of fitted parameters
+%     refinementData: 1x1 cell of 2D double array of fitted parameters
 %     [x,y,z,A,B,[other parameters]]. Other parameters can be q1, q2, q3
 %     (refer to locateParticles.m or to TrackNTrace manual for more
 %     information). q_i will be calculated back to sigma_x,sigma_y,
@@ -86,7 +86,7 @@ function [fittingData] = refinePositions_psfFitCeres(img,candidatePos,options,cu
 
 [params] = psfFit_Image( img, candidatePos.',options.varsToFit,options.usePixelIntegratedFit,options.useMLE,options.halfw,options.PSFsigma);
 params = [params(1:2,:);zeros(1,size(params,2));params(3:end,:)]; %adding z = 0
-fittingData = params(1:end-1,params(end,:)==1).';
+refinementData = params(1:end-1,params(end,:)==1).';
 
 end
 
@@ -214,32 +214,32 @@ end
 end
 
 
-function [fittingOptions] = refinePositions_psfFitCeres_consolidateOptions(fittingOptions)
+function [refinementOptions] = refinePositions_psfFitCeres_consolidateOptions(refinementOptions)
 %initializer function
 % plugin.add_param('fitType',...
 %     'list',...
 %     {'[x,y,A,BG]', '[x,y,A,BG,s]','[x,y,A,BG,sx,sy], [x,y,A,BG,sx,sy,angle]'},...
 
-if ~isempty(fittingOptions.astigmaticCalibrationFile)
-    cal_struct = load(fittingOptions.astigmaticCalibrationFile,'calibrationData');
+if ~isempty(refinementOptions.astigmaticCalibrationFile)
+    cal_struct = load(refinementOptions.astigmaticCalibrationFile,'calibrationData');
     if isfield(cal_struct,'calibrationData')
-        fittingOptions.calibrationData = cal_struct.calibrationData;
-        fittingOptions.fitType = '[x,y,A,BG,sx,sy]';
+        refinementOptions.calibrationData = cal_struct.calibrationData;
+        refinementOptions.fitType = '[x,y,A,BG,sx,sy]';
     else
-        error('%s is not a valid calibration file. Aborting.',fittingOptions.astigmaticCalibrationFile);
+        error('%s is not a valid calibration file. Aborting.',refinementOptions.astigmaticCalibrationFile);
     end
 end
 
 global globalOptions
 
-if ~globalOptions.usePhotonConversion && fittingOptions.useMLE
+if ~globalOptions.usePhotonConversion && refinementOptions.useMLE
     warning off backtrace
     warning('MLE fitting strictly requires photon conversion!');
     warning on backtrace
 end
 
 
-switch fittingOptions.fitType
+switch refinementOptions.fitType
     case '[x,y,A,BG]'
         varsToFit = [ones(4,1);zeros(3,1)];
     case '[x,y,A,BG,s]'
@@ -256,8 +256,8 @@ switch fittingOptions.fitType
 end
 
 if varsToFit(7) == 1 %fit angle?
-    if fittingOptions.usePixelIntegratedFit
-        fittingOptions.usePixelIntegratedFit = false;
+    if refinementOptions.usePixelIntegratedFit
+        refinementOptions.usePixelIntegratedFit = false;
         warning off backtrace
         warning(sprintf('Fitting a rotation angle is not possible while using pixel-integrated Gaussian model. \nSwitching to sampled Gaussian.'));
         warning on backtrace
@@ -266,19 +266,19 @@ end
 
 %always fit x,y,A,BG, determine if one has to fit sigma_x,
 %sigma_y,theta_rot
-fittingOptions.halfw = round(3*fittingOptions.PSFsigma);
-fittingOptions.varsToFit = varsToFit;
+refinementOptions.halfw = round(3*refinementOptions.PSFsigma);
+refinementOptions.varsToFit = varsToFit;
 
 % updating parameter description
 switch sum(varsToFit(5:end))
     case 0 % Sigma not fitted
-        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma'};
+        refinementOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma'};
     case 1
-        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma'};
+        refinementOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma'};
     case 2
-        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'};
+        refinementOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'};
     case 3
-        fittingOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'; 'angle [°]'};
+        refinementOptions.outParamDescription = {'x';'y';'z';'Amp (Peak)'; 'Background'; 'sigma_x'; 'sigma_y'; 'angle [°]'};
     otherwise
         warning('TNT fitter init func: Unknown case');
 end
@@ -286,10 +286,10 @@ end
 end %consolidateOptions
 
 
-function [fittingData,fittingOptions] = refinePositions_psfFitCeres_calculateZ(fittingData,fittingOptions)
+function [refinementData,refinementOptions] = refinePositions_psfFitCeres_calculateZ(refinementData,refinementOptions)
 % If astigmatic imaging was performed, the axial position is
 % extrapolated from the calibration file. The axial position is given in
-% pixels (z in nm = z*fittingOptions.calibrationData.zPixel).
+% pixels (z in nm = z*refinementOptions.calibrationData.zPixel).
 %     
 % The rotation angle is associated with the axis of the largest eigenvalue
 % given by [-pi/4:pi/4]. Therefore, an elliptic Gaussian with its major
@@ -301,43 +301,43 @@ function [fittingData,fittingOptions] = refinePositions_psfFitCeres_calculateZ(f
 % A positive angle corresponds to a counter-clockwise rotation
 % (mathematically positive).
 
-calibrationFileExists = isfield(fittingOptions,'calibrationData');
-emptyFrames = cellfun('isempty',fittingData);
+calibrationFileExists = isfield(refinementOptions,'calibrationData');
+emptyFrames = cellfun('isempty',refinementData);
 
-if ~calibrationFileExists && sum(fittingOptions.varsToFit(end-1:end))==0
-    fittingData(~emptyFrames) = cellfun(@(var) var(:,1:6),fittingData(~emptyFrames),'UniformOutput',false);
+if ~calibrationFileExists && sum(refinementOptions.varsToFit(end-1:end))==0
+    refinementData(~emptyFrames) = cellfun(@(var) var(:,1:6),refinementData(~emptyFrames),'UniformOutput',false);
     return
 end
 
 
 % Do we have to calculate z or correct the angle?
-for iFrame = 1:numel(fittingData)
+for iFrame = 1:numel(refinementData)
     if emptyFrames(iFrame)
         continue
     end
     
-    fittingData_frame = fittingData{iFrame};
-    if fittingOptions.varsToFit(end)
-        sigma_x = fittingData_frame(:,6);
-        sigma_y = fittingData_frame(:,7);
-        angle = fittingData_frame(:,8);
+    refinementData_frame = refinementData{iFrame};
+    if refinementOptions.varsToFit(end)
+        sigma_x = refinementData_frame(:,6);
+        sigma_y = refinementData_frame(:,7);
+        angle = refinementData_frame(:,8);
         
         % if the angle is 0 or very close to 0, calculating sigma will fail
         idxFaultyValues = (angle == 0 | sum(isnan([sigma_x,sigma_y]),2)>0);
         
-        fittingData_frame(idxFaultyValues,:) = [];
+        refinementData_frame(idxFaultyValues,:) = [];
     end
     
     if calibrationFileExists
-        fittingData_frame(:,3) = interp1(fittingOptions.calibrationData.aspectRatioSigmaSmooth(:,2),...
-            fittingOptions.calibrationData.aspectRatioSigmaSmooth(:,1),...
-            fittingData_frame(:,6)./fittingData_frame(:,7),'linear','extrap')-repmat(fittingOptions.calibrationData.zMidpoint,size(fittingData_frame,1),1);
+        refinementData_frame(:,3) = interp1(refinementOptions.calibrationData.aspectRatioSigmaSmooth(:,2),...
+            refinementOptions.calibrationData.aspectRatioSigmaSmooth(:,1),...
+            refinementData_frame(:,6)./refinementData_frame(:,7),'linear','extrap')-repmat(refinementOptions.calibrationData.zMidpoint,size(refinementData_frame,1),1);
         %we have sigma_x/sigma_y(z) curve -> interpolate from inverse function
         %alternative: evaluate polynom and find minimum of curve difference
-        fittingData_frame = fittingData_frame(:,1:7); %angle not fitted when determining z
+        refinementData_frame = refinementData_frame(:,1:7); %angle not fitted when determining z
     end
     
-    fittingData{iFrame} = fittingData_frame;
+    refinementData{iFrame} = refinementData_frame;
 end
 
 

@@ -25,7 +25,7 @@ function [ candidateData, candidateOptions ] = findCandidateParticles( movieStac
 %        KxP double array, where P is the number of model parameters
 %        and K is the maximum amount of particles in the respective frame. 
 %        Each row represents a unique candidate fit and the column order is 
-%        [x, y]. These columns are mandatory for the fitting to work. 
+%        [x, y]. These columns are mandatory for the refinement to work. 
 %        Plugins can output extra data.
 %     used in later fitParticles routine.
 %
