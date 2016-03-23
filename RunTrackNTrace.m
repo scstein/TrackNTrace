@@ -41,17 +41,47 @@ fprintf('Starting Track''N''Trace.\n')
 global parallelProcessingAvailable
 parallelProcessingAvailable = false;
 
+MATLAB_2013b_or_newer = false;
+% Check MATLAB version
+MATLABversion = strsplit(version,'.');
+if(str2double(MATLABversion(1))>=8 && str2double(MATLABversion(2))>=2) % matlabpool -> parpool in MATLAB 2013b (8.2.x) and later
+    MATLAB_2013b_or_newer = true; 
+end
+
+
 if TNToptions.enableParallelProcessing
-    try
-        nrRunningWorkers = matlabpool('size');
-        if(nrRunningWorkers == 0);
-            matlabpool('open','local');
+    if MATLAB_2013b_or_newer
+        try
+            p = gcp('nocreate');
+            if isempty(p)
+                nrRunningWorkers = 0;
+            else
+                nrRunningWorkers = p.NumWorkers;
+            end
+            
+            if(nrRunningWorkers == 0);
+                parpool('local');
+                p = gcp('nocreate');
+                nrRunningWorkers = p.NumWorkers;
+            end
+            parallelProcessingAvailable = true;
+            fprintf('TNT: Parallel processing available (%i workers).\n', nrRunningWorkers)
+        catch
+            parallelProcessingAvailable = false;
+            fprintf('TNT: Parallel processing unavailable.\n')
         end
-        parallelProcessingAvailable = true;
-        fprintf('TNT: Parallel processing available (%i workers).\n', matlabpool('size'))
-    catch
-        parallelProcessingAvailable = false;
-        fprintf('TNT: Parallel processing unavailable.\n')
+    else      
+        try
+            nrRunningWorkers = matlabpool('size');
+            if(nrRunningWorkers == 0);
+                matlabpool('open','local');
+            end
+            parallelProcessingAvailable = true;
+            fprintf('TNT: Parallel processing available (%i workers).\n', matlabpool('size'))
+        catch
+            parallelProcessingAvailable = false;
+            fprintf('TNT: Parallel processing unavailable.\n')
+        end
     end
 end
 

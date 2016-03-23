@@ -126,6 +126,7 @@ end
 
 % -- Preparing the GUI --
 h_main = openfig(['subfun',filesep,'TNTvisualizer_Layout.fig'],'new','invisible');
+set(h_main,'Renderer','painters');
 set(h_main,'handleVisibility','on'); % Make figure visible to Matlab (might not be the case)
 set(h_main,'CloseRequestFcn',@onAppClose); % Executed on closing for cleanup
 set(h_main,'Toolbar','figure');   % Add toolbar needed for zooming
@@ -404,15 +405,20 @@ end
     % Custom function for datacursor which shows data relevant to the
     % current mode when clicking the currently plotted data.
     function txt = modeSpecificDatatipFunction(~,event_obj)
+       
         % Customizes text of data tips
         pos = get(event_obj,'Position');
         graphObjHandle = get(event_obj,'Target'); % The target object (line/image) of the cursor
-        I = get(event_obj, 'DataIndex');
         
-        if(numel(I) == 1) % Plotted position is selected
+        if(isgraphics(graphObjHandle,'image')) % Image is selected
+            txt = {['X: ',num2str(pos(1))],...
+                   ['Y: ',num2str(pos(2))],...
+                   ['Intensity: ', num2str(movie(pos(2),pos(1),frame))]};
+        else % Plotted position is selected
+            I = get(event_obj, 'DataIndex');
             txt = {};
             switch mode
-                case 'movie'
+                case 'movie' % -> Image is selected handled above
                 case 'candidate'
                     % Plot all parameters available for selected datapoint in the datacursor window
                     for iPar=1:numel(candidateParams)
@@ -436,10 +442,6 @@ end
                 otherwise
                     error('Unsupported mode ''%s'' for datatip function.',mode)
             end
-        elseif (numel(I) == 2) % Image is selected
-            txt = {['X: ',num2str(pos(1))],...
-                ['Y: ',num2str(pos(2))],...
-                ['Intensity: ', num2str(movie(I(2),I(1),frame))]};
         end
     end
 
@@ -637,7 +639,7 @@ end
                     % We use the next free linehandle. If there is no
                     % free handle left, we create a new one on the fly.
                     if (handleNr>numel(linehandles) || linehandles(handleNr) == -1)
-                        linehandles(handleNr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.--','Color',track_colors(iTr,:),'Linewidth',2);
+                        linehandles(handleNr) = plot(cell_traj{iTr}(mask_toPlot, 2), cell_traj{iTr}(mask_toPlot, 3), '.-','Color',track_colors(iTr,:),'Linewidth',1);
                         linehandleNr_to_TrackNr(handleNr) = iTr;
                         handleNr = handleNr+1;
                     else
@@ -667,8 +669,16 @@ end
         end
         if strcmp(get(h_all.timer, 'Running'), 'off')
             start(h_all.timer);
+            
+            % Disable datatip during playback (otherwise MATLAB tries to
+            % put a datatip on the continously updated movie frame, which
+            % can lead to errors).
+            set(dcm_obj,'Enable','off'); 
         else
             stop(h_all.timer);
+            
+            % Enable datatip
+            set(dcm_obj,'Enable','on'); 
         end
     end
 
@@ -684,11 +694,11 @@ end
         axes(h_all.axes);
         currImg = movie(:,:,frame);
         zImg = [min(currImg(:)), max(currImg(:))];
-        zl = [max(zImg(1),zl(1)), min(zImg(2),zl(2))];
+        zl = double([max(zImg(1),zl(1)), min(zImg(2),zl(2))]);
         caxis(zl);
         
         % Show contrast dialog, update color axis
-        him = imcontrast;
+        him = imcontrast(h_all.axes);
         uiwait(him);
         zl = caxis;
         
@@ -1235,6 +1245,7 @@ function addPathsVisualizer()
     [path,~,~] = fileparts(fullPathToThisFile);
     addpath(genpath([path,filesep,'subfun']));
     addpath(genpath([path,filesep,'external']));
+    addpath(genpath([path,filesep,'helper']));
 end
 
 % Function that cuts data from upper and lower tails of the distribution
