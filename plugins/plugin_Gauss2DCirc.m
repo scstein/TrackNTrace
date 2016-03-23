@@ -7,7 +7,7 @@ name = 'Gauss-2D-Circ';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 2;
 
@@ -40,7 +40,7 @@ plugin.add_param('backgroundNoiseLevel',...
 end
 
 
-function [fittingData] = fitParticles_gauss2dcirc(img,candidatePos,options,currentFrame)
+function [refinementData] = fitParticles_gauss2dcirc(img,candidatePos,options,currentFrame)
 % Wrapper function for gauss2dcirc function (see below). Refer to tooltips
 % above and to gauss2dcirc help to obtain information on input and output
 % variables. gauss2dcirc.m was released as part of the following
@@ -59,10 +59,10 @@ function [fittingData] = fitParticles_gauss2dcirc(img,candidatePos,options,curre
 %     options: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     fittingData: 1x1 cell of 2D double array of fitted parameters
+%     refinementData: 1x1 cell of 2D double array of fitted parameters
 %     [x,y,z,A,B,particle width]. 
 
-fittingData = zeros(size(candidatePos,1),6);
+refinementData = zeros(size(candidatePos,1),6);
 [x_mesh,y_mesh] = meshgrid(1:size(img,1),1:size(img,2));
 
 
@@ -72,16 +72,16 @@ for iCand = 1:size(candidatePos,1)
     idx_y = max(1,candPos(2)-options.windowHalfSize):min(size(img,1),candPos(2)+options.windowHalfSize);
     
     [xc,yc,Amp,width] = gauss2dcirc(img(idx_y,idx_x),x_mesh(idx_y,idx_x),y_mesh(idx_y,idx_x),options.backgroundNoiseLevel);
-    fittingData(iCand,:) = [xc,yc,0,Amp,0,width];
+    refinementData(iCand,:) = [xc,yc,0,Amp,0,width];
 end
-fittingData = fittingData(fittingData(:,1)>0,:);
+refinementData = refinementData(refinementData(:,1)>0,:);
 
 end
 
 
-function [fittingOptions] = fitParticles_gauss2dcirc_init(fittingOptions)
+function [refinementOptions] = fitParticles_gauss2dcirc_init(refinementOptions)
 
-fittingOptions.windowHalfSize = ceil(3*fittingOptions.PSFSigma);
+refinementOptions.windowHalfSize = ceil(3*refinementOptions.PSFSigma);
 
 end
 

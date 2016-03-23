@@ -16,8 +16,8 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [trackingData, trackingOptions] = trackParticles(fittingData,trackingOptions)
-% trajData = trackParticles(fittingData,trackingOptions)
+function [trackingData, trackingOptions] = trackParticles(refinementData,trackingOptions)
+% trajData = trackParticles(refinementData,trackingOptions)
 % This function handles particle positions within movies obtained by the
 % TrackNTrace routine "locateParticles" and passes them to a particle
 % tracking plugin to obtain trajectories.
@@ -26,7 +26,7 @@ function [trackingData, trackingOptions] = trackParticles(fittingData,trackingOp
 % respective tracking plugin.
 %
 % INPUT:
-%     fittingData: Cell array of particle positions to track. Refer to
+%     refinementData: Cell array of particle positions to track. Refer to
 %     locateParticles or TrackNTrace manual for details.
 %
 %     trackingOptions: Struct of input paramter options for tracking
@@ -50,9 +50,9 @@ end
 % Execute the tracking function
 switch nargout(trackingOptions.mainFunc)
     case 1 % Only tracking data assigned during call
-        trackingData = trackingOptions.mainFunc(fittingData,trackingOptions);
+        trackingData = trackingOptions.mainFunc(refinementData,trackingOptions);
     case 2 % Tracking data assigned + options changed
-        [trackingData, trackingOptions] = trackingOptions.mainFunc(fittingData,trackingOptions);
+        [trackingData, trackingOptions] = trackingOptions.mainFunc(refinementData,trackingOptions);
     otherwise
         warning('Too many output arguments in mainFunc of tracking plugin ''%s''. Ignoring additional outputs', trackingOptions.plugin_name);
 end

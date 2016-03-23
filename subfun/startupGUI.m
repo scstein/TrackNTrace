@@ -15,7 +15,7 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [filename_movies, globalOptions, candidateOptions,fittingOptions,trackingOptions, candidateData_loaded, fittingData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI()
+function [filename_movies, globalOptions, candidateOptions,refinementOptions,trackingOptions, candidateData_loaded, refinementData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI()
 % TrackNTrace startup GUI. Here the input (movies/TNT data file) can be
 % selected when RunTrackNTrace.m is called.
 %
@@ -28,11 +28,11 @@ GUIreturns.userExit = false;
 
 globalOptions = [];
 candidateOptions = [];
-fittingOptions = [];
+refinementOptions = [];
 trackingOptions = [];
 
 candidateData_loaded = [];
-fittingData_loaded = [];
+refinementData_loaded = [];
 movieSize_loaded = [];
 firstFrame_lastFrame_loaded = [];
 outputPath_loaded = -1;
@@ -70,19 +70,19 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
         warning off
-        allOptions = load([path,infile],'globalOptions', 'candidateOptions','fittingOptions','trackingOptions','filename_movie','candidateData','fittingData','movieSize','firstFrame_lastFrame');
+        allOptions = load([path,infile],'globalOptions', 'candidateOptions','refinementOptions','trackingOptions','filename_movie','candidateData','refinementData','movieSize','firstFrame_lastFrame');
         warning on
         globalOptions   = allOptions.globalOptions;
         candidateOptions = allOptions.candidateOptions;
-        fittingOptions   = allOptions.fittingOptions;
+        refinementOptions   = allOptions.refinementOptions;
         if isfield(allOptions,'trackingOptions')
             trackingOptions  = allOptions.trackingOptions;
         end
         if isfield(allOptions,'candidateData')
             candidateData_loaded  = allOptions.candidateData;
         end
-        if isfield(allOptions,'fittingData')
-            fittingData_loaded  = allOptions.fittingData;
+        if isfield(allOptions,'refinementData')
+            refinementData_loaded  = allOptions.refinementData;
         end
         if isfield(allOptions,'movieSize')
             movieSize_loaded  = allOptions.movieSize;

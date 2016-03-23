@@ -35,7 +35,7 @@ TNToptions.closeMatlabpoolOnExit = false;
 TNToptions.rememberSettingsForNextMovie = true; % If this is set to true, settings for the current movie are used as default for the next when pressing continue.
 
 TNToptions.defaultCandidatePlugin = 'Cross correlation';
-TNToptions.defaultFittingPlugin = 'TNT Fitter';
+TNToptions.defaultRefinementPlugin = 'TNT Fitter';
 TNToptions.defaultTrackingPlugin = 'TNT NearestNeighbor';
 
 % General Options of the GUI

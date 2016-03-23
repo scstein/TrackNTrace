@@ -7,7 +7,7 @@ name = 'Use candidate data';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 2;
 
@@ -31,23 +31,23 @@ end
 
 %   -------------- User functions --------------
 
-function fittingOptions = updateOutParamDescription(fittingOptions)
+function refinementOptions = updateOutParamDescription(refinementOptions)
 global candidateOptions % Needed as we drag along names specified here
 if(numel(candidateOptions.outParamDescription)>2)
-    fittingOptions.outParamDescription = [candidateOptions.outParamDescription(1:2); 'z'; candidateOptions.outParamDescription(3:end)];
+    refinementOptions.outParamDescription = [candidateOptions.outParamDescription(1:2); 'z'; candidateOptions.outParamDescription(3:end)];
 else
-    fittingOptions.outParamDescription = [candidateOptions.outParamDescription(1:2); 'z'];
+    refinementOptions.outParamDescription = [candidateOptions.outParamDescription(1:2); 'z'];
 end
 end
 
 
-function [fitData] = convert_candidateData(img,candidatePos,options,currentFrame)
+function [refinementData] = convert_candidateData(img,candidatePos,options,currentFrame)
 % We extend the candidate data with the z position column to adhere to TNT specifications of fitting data.
 % All additional columns are simply copied.
 if(size(candidatePos,2)>2)
-    fitData = [candidatePos(:,1:2),zeros(size(candidatePos,1),1),candidatePos(:,3:end)]; %adding z = 0
+    refinementData = [candidatePos(:,1:2),zeros(size(candidatePos,1),1),candidatePos(:,3:end)]; %adding z = 0
 else
-    fitData = [candidatePos(:,1:2),zeros(size(candidatePos,1),1)]; %adding z = 0
+    refinementData = [candidatePos(:,1:2),zeros(size(candidatePos,1),1)]; %adding z = 0
 end
 
 end

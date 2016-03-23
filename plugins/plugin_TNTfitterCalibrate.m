@@ -7,7 +7,7 @@ name = 'TNT z-Calibration';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 2;
 
@@ -54,7 +54,7 @@ end
 
 %   -------------- User functions --------------
 
-function [fittingData] = refinePositions_psfFitCeres_calibrate(img,candidatePos,options,currentFrame)
+function [refinementData] = refinePositions_psfFitCeres_calibrate(img,candidatePos,options,currentFrame)
 % Wrapper function for psfFit_Image function (see below). Refer to
 % tooltips above and to psfFit_Image help to obtain information on input
 % and output variables.
@@ -70,7 +70,7 @@ function [fittingData] = refinePositions_psfFitCeres_calibrate(img,candidatePos,
 %     options: Struct of input parameters provided by GUI.
 %     
 % OUTPUT:
-%     fittingData: 2D double array of fitted parameters
+%     refinementData: 2D double array of fitted parameters
 %     [x,y,A,B,sigma_x,sigma_y] used for creating calibration
 %     file. Refer to locateParticles.m or to TrackNTrace manual for more
 %     information.
@@ -78,14 +78,14 @@ function [fittingData] = refinePositions_psfFitCeres_calibrate(img,candidatePos,
 
 
 [params] = psfFit_Image( img, candidatePos.',options.varsToFit,options.usePixelIntegratedFit,options.useMLE,options.halfw,options.PSFsigma);
-fittingData = params(1:end-2,params(end,:)==1).'; %delete exitflag, don't save angle
+refinementData = params(1:end-2,params(end,:)==1).'; %delete exitflag, don't save angle
 
 end
 
-function [fittingOptions] = refinePositions_psfFitCeres_consolidateOptions(fittingOptions)
+function [refinementOptions] = refinePositions_psfFitCeres_consolidateOptions(refinementOptions)
 
-fittingOptions.varsToFit = [ones(6,1);0]; %don't fit angle
-fittingOptions.halfw = ceil(3*fittingOptions.PSFsigma);
+refinementOptions.varsToFit = [ones(6,1);0]; %don't fit angle
+refinementOptions.halfw = ceil(3*refinementOptions.PSFsigma);
 
 end
 
@@ -212,7 +212,7 @@ end
 end
 
 
-function [fittingData,fittingOptions] = refinePositions_psfFitCeres_createCalibrationTable(fittingData,fittingOptions)
+function [refinementData,refinementOptions] = refinePositions_psfFitCeres_createCalibrationTable(refinementData,refinementOptions)
 % This function creates a calibration Table [z,sigma_x/sigma_y] from an
 % astigmatic calibration movie where a number of diffraction-limited
 % fluorescent emitters was recorded at different axial positions with a
@@ -235,12 +235,12 @@ function [fittingData,fittingOptions] = refinePositions_psfFitCeres_createCalibr
 % post-processing function
 global filename_movie
 
-nrFrames = size(fittingData,1);
-emptyFrames = cellfun('isempty',fittingData);
+nrFrames = size(refinementData,1);
+emptyFrames = cellfun('isempty',refinementData);
 
 % calculate aspect ratio vs z pixel
 sigma_xy = NaN(nrFrames,2);
-sigma_values = vertcat(cellfun(@(var) [mean(var(:,5),1),mean(var(:,6),1)],fittingData(~emptyFrames),'UniformOutput',false));
+sigma_values = vertcat(cellfun(@(var) [mean(var(:,5),1),mean(var(:,6),1)],refinementData(~emptyFrames),'UniformOutput',false));
 sigma_xy(~emptyFrames,:) = vertcat(sigma_values{:});
 aspectRatioSigma = sigma_xy(:,1)./sigma_xy(:,2); %simga_x/sigma_y, empty frames show as NaN
 
@@ -276,7 +276,7 @@ endIdx = idx_ends(idx_lengths == max(idx_lengths));
 calibrationData.aspectRatioSigma = aspectRatioSigma;
 calibrationData.aspectRatioSigmaSmooth = [smooth_interval(startIdx:endIdx),polyval(p,smooth_interval(startIdx:endIdx))];
 calibrationData.sigmaTable = sigma_xy;
-calibrationData.zPixel = fittingOptions.zInterval;
+calibrationData.zPixel = refinementOptions.zInterval;
 calibrationData.polynomFunc = p;
 calibrationData.zMidpoint = z_root;
 

@@ -15,7 +15,7 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile, candidateParams, fittingData, fittingParams, trackingData, trackingParams, FPS, is_blocking, firstFrame)
+function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile, candidateParams, refinementData, refinementParams, trackingData, trackingParams, FPS, is_blocking, firstFrame)
 % Visualizer for movies and TrackNTrace results.
 %
 % COMMON USAGEs: 
@@ -37,7 +37,7 @@ function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile,
 %    (x) [~,movie] = TNTvisualizer(PathToMovie, PathToTNTfile); 
 %        Same as above, but movie is loaded from disk first.
 
-% [ Full USAGE: [GUIhandle, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile, candidateParams, fittingData, fittingParams, trackingData, trackingParams, FPS, is_blocking, firstFrame) ]
+% [ Full USAGE: [GUIhandle, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile, candidateParams, refinementData, refinementParams, trackingData, trackingParams, FPS, is_blocking, firstFrame) ]
 %
 % Input:
 %   movieOrTNTfile: 
@@ -54,14 +54,14 @@ function [h_main, movie] = TNTvisualizer(movieOrTNTfile, candidateDataOrTNTfile,
 %   candidateParams:
 %     1D cell array with (2+PC) strings containing the names of the parameters
 %     (columns of each cell) of candidateData (above).
-%   fittingData: 
+%   refinementData: 
 %     1D cell array, where cell{F} is a 2D matrix with dimensions
 %     N(F)x(3+PF) saving the data of frame F. N(F) is the number
 %     of fitted emitters detected in frame F and the columns are 
 %     'x','y','z' position plus PF arbitrary additional parameters.
-%   fittingParams:
+%   refinementParams:
 %     1D cell array with (3+PF) strings containing the names of the parameters
-%     (columns of each cell) of fittingData (above).
+%     (columns of each cell) of refinementData (above).
 %   trackingData: 
 %     2D matrix with dimensions Nx(5+PT). N is the number of all positions
 %     tracked positions. The columns are 'TrackID','frame','x','y','z'
@@ -143,10 +143,10 @@ set(dcm_obj,'Enable','on');
 % -- Setup and input parsing --
 % These variables are accessed/modified across different functions of the GUI
 allFramesCandidateData = []; % Computed on demand for histogram plots
-allFramesFitData = []; % Computed on demand for histogram plots
+allFramesRefinementData = []; % Computed on demand for histogram plots
 
 use_bw = false; % Is visualization black/white or colored?
-mode = 'movie'; % 'movie' 'candidate'/'fitting'/'tracking'
+mode = 'movie'; % 'movie' 'candidate'/'refinement'/'tracking'
 traj_lifetime = 0; % Trajectories are kept for display for traj_lifetime after the particles last appearance
 nr_track_colors = 20; % Size of colorpool to color tracks
 traj_displayLength = inf; % Tracking data is displayed for the last traj_displayLength frames only (with respect to the current frame).
@@ -172,7 +172,7 @@ set(h_main,'visible','on');
 % Buttons
 set(h_all.button_movieMode,'Callback', {@callback_changeMode,'movie'});
 set(h_all.button_candidateMode,'Callback', {@callback_changeMode,'candidate'});
-set(h_all.button_fittingMode,'Callback', {@callback_changeMode,'fitting'});
+set(h_all.button_refinementMode,'Callback', {@callback_changeMode,'refinement'});
 set(h_all.button_trackingMode,'Callback', {@callback_changeMode,'tracking'});
 
 set(h_all.but_play,'Callback',@playCallback);
@@ -201,7 +201,7 @@ set(h_all.popup_distribution, 'String', 'No data');
 
 %  -- Candidate UI elements --
 
-%  -- Fitting UI elements --
+%  -- Refinement UI elements --
 
 %  -- Tracking UI elements --
 set(h_all.edit_lifetime,'String',sprintf('%i',traj_lifetime), 'Callback', @callback_TrajLifetime);
@@ -250,7 +250,7 @@ caxis(zl);
 
 updateTopText();
 
-% -- Change into the right mode (candidate/fitting/tracking) --
+% -- Change into the right mode (candidate/refinement/tracking) --
 callback_changeMode();
 
 % For is_blocking==true we stop scripts/functions
@@ -264,7 +264,7 @@ end
 % --- Nested Functions ---
 
 
-% Change visualizer into the chosen mode 'movie' 'candidate','fitting','tracking'
+% Change visualizer into the chosen mode 'movie' 'candidate','refinement','tracking'
 % and display its relevant content.
 % If "modus" input is given, the mode is set to "modus". Its
 % implemented this way to use one callback for all buttons selecting the modes.
@@ -284,7 +284,7 @@ end
         %Reset button colors
         set(h_all.button_movieMode,'BackgroundColor', DEFAULT_COLOR);
         set(h_all.button_candidateMode,'BackgroundColor', DEFAULT_COLOR);
-        set(h_all.button_fittingMode,'BackgroundColor', DEFAULT_COLOR);
+        set(h_all.button_refinementMode,'BackgroundColor', DEFAULT_COLOR);
         set(h_all.button_trackingMode,'BackgroundColor', DEFAULT_COLOR);
         
         % Set all mode specific panels invisible
@@ -309,10 +309,10 @@ end
                 set(h_all.button_candidateMode,'BackgroundColor', SELECTED_COLOR);
                 set(h_all.popup_distribution, 'String', candidateParams);
                 set(h_all.panel_histogram,'Visible','on');
-            case 'fitting'
+            case 'refinement'
                 set(dcm_obj,'UpdateFcn',{@modeSpecificDatatipFunction});
-                set(h_all.button_fittingMode,'BackgroundColor', SELECTED_COLOR);
-                set(h_all.popup_distribution, 'String', fittingParams);
+                set(h_all.button_refinementMode,'BackgroundColor', SELECTED_COLOR);
+                set(h_all.popup_distribution, 'String', refinementParams);
                 set(h_all.panel_histogram,'Visible','on');
             case 'tracking'
                 initializeLinehandles(); %Initializes all needed line handles, if this is uncommented, linehandles are created on the fly
@@ -362,7 +362,7 @@ end
             case 'candidate'
                 set(h_all.panel_histogram,'Units',units);
                 pos = get(h_all.panel_histogram,'Position');
-            case 'fitting'
+            case 'refinement'
                 set(h_all.panel_histogram,'Units',units);
                 pos = get(h_all.panel_histogram,'Position');
             case 'tracking'
@@ -418,10 +418,10 @@ end
                     for iPar=1:numel(candidateParams)
                         txt = [txt, {[candidateParams{iPar},': ', num2str(candidateData{frame}(I,iPar))]}]; %#ok<AGROW>
                     end
-                case 'fitting'
+                case 'refinement'
                     % Plot all parameters available for selected datapoint in the datacursor window
-                    for iPar=1:numel(fittingParams)
-                        txt = [txt, {[fittingParams{iPar},': ', num2str(fittingData{frame}(I,iPar))]}]; %#ok<AGROW>
+                    for iPar=1:numel(refinementParams)
+                        txt = [txt, {[refinementParams{iPar},': ', num2str(refinementData{frame}(I,iPar))]}]; %#ok<AGROW>
                     end
                 case 'tracking'
                     handleNr = linehandles==graphObjHandle; % Find lineobject for the selected point
@@ -608,8 +608,8 @@ end
                 hold off;
                 
                 
-            case 'fitting'
-                if(isempty(fittingData{iF}));
+            case 'refinement'
+                if(isempty(refinementData{iF}));
                     if dothandle_fit ~= -1 % Skip uninitialized handles (must be drawn once)
                         set(dothandle_fit,'xdata',[],'ydata',[]);
                     end
@@ -619,9 +619,9 @@ end
                 % Plot markers of fitted positions
                 hold on;
                 if dothandle_fit == -1 % Draw unitialized handles
-                    dothandle_fit = plot(fittingData{iF}(:,1), fittingData{iF}(:,2), 'o','Color',marker_color,'MarkerSize',5,'MarkerFaceColor', marker_fill_color ,'Linewidth',1);
+                    dothandle_fit = plot(refinementData{iF}(:,1), refinementData{iF}(:,2), 'o','Color',marker_color,'MarkerSize',5,'MarkerFaceColor', marker_fill_color ,'Linewidth',1);
                 else % For initialized handles set their data (MUCH faster than plot)
-                    set(dothandle_fit,'xdata',fittingData{iF}(:,1),'ydata',fittingData{iF}(:,2));
+                    set(dothandle_fit,'xdata',refinementData{iF}(:,1),'ydata',refinementData{iF}(:,2));
                 end
                 hold off;
                 
@@ -745,14 +745,14 @@ end
                     allFramesCandidateData = vertcat(candidateData{:});
                 end
                 rangedHist(allFramesCandidateData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
-                xlabel(fittingParams{selected_parameter});
-            case 'fitting'
+                xlabel(refinementParams{selected_parameter});
+            case 'refinement'
                 % Save concatenated data of all frames (done only once)
-                if(isempty(allFramesFitData))
-                    allFramesFitData = vertcat(fittingData{:});
+                if(isempty(allFramesRefinementData))
+                    allFramesRefinementData = vertcat(refinementData{:});
                 end
-                rangedHist(allFramesFitData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
-                xlabel(fittingParams{selected_parameter});
+                rangedHist(allFramesRefinementData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
+                xlabel(refinementParams{selected_parameter});
             case 'tracking'
                 rangedHist(trackingData(:,selected_parameter), getNum(h_all.edit_distributionBins),dataRange);
                 xlabel(trackingParams{selected_parameter});
@@ -886,10 +886,10 @@ end
             candidateParams = {};
         end
         if num_argin<4
-            fittingData = [];
+            refinementData = [];
         end
         if num_argin<5
-            fittingParams = {};
+            refinementParams = {};
         end
         if num_argin<6
             trackingData = [];
@@ -989,16 +989,16 @@ end
             candidateParams = {};
         end
         
-        % Is fitting data available?
-        if isempty(fittingData)
-            set(h_all.button_fittingMode,'Enable','off');
+        % Is refinement data available?
+        if isempty(refinementData)
+            set(h_all.button_refinementMode,'Enable','off');
         else
-            fittingParams = checkParameterDescription(fittingData, fittingParams);
-            mode = 'fitting';
+            refinementParams = checkParameterDescription(refinementData, refinementParams);
+            mode = 'refinement';
         end
         
-        if isempty(fittingParams)
-            fittingParams = {};
+        if isempty(refinementParams)
+            refinementParams = {};
         end
         
         % Is tracking data available?
@@ -1050,11 +1050,11 @@ end
             candidateData = {};
             candidateParams = {};
         end
-        if(isfield(TNTdata,'fittingData'))
-            fittingData = TNTdata.fittingData;
-            fittingParams = TNTdata.fittingOptions.outParamDescription;
+        if(isfield(TNTdata,'refinementData'))
+            refinementData = TNTdata.refinementData;
+            refinementParams = TNTdata.refinementOptions.outParamDescription;
         else
-            fittingData = {};
+            refinementData = {};
         end
         if(isfield(TNTdata,'trackingData'))
             trackingData = TNTdata.trackingData;

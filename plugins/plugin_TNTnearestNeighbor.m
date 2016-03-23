@@ -7,7 +7,7 @@ name = 'TNT NearestNeighbor';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 3;
 
@@ -56,13 +56,13 @@ end
 
 %   -------------- User functions --------------
 
-function [trackingData, options] = trackParticles_nearestNeighbor(fittingData,options)
+function [trackingData, options] = trackParticles_nearestNeighbor(refinementData,options)
 % Wrapper function for nearest neighbor C++ tracker (see below). Refer to
 % tooltips above and to nn_tracker_cpp help to obtain information on input
 % and output variables.
 %
 % INPUT:
-%     fittingData: Cell array of localizations created by locateParticles.m
+%     refinementData: Cell array of localizations created by locateParticles.m
 %     Refer to that function or to TrackNTrace manual for more information.
 %
 %     options: Struct of input parameters provided by GUI.
@@ -73,9 +73,9 @@ function [trackingData, options] = trackParticles_nearestNeighbor(fittingData,op
 %     manual for more information.
 
 
-% convert fittingData cell array to tracker input format
-nrFrames = size(fittingData,1);
-nrPosInFrame = cellfun('size',fittingData,1);
+% convert refinementData cell array to tracker input format
+nrFrames = size(refinementData,1);
+nrPosInFrame = cellfun('size',refinementData,1);
 
 % builds a vector with the frame number for every position
 % e.g. [1,1,1,2,2,3,3,3,3] for 3 particles in frame 1, 2 p. in fr. 2, 4 p. in fr. 3 etc.
@@ -83,14 +83,14 @@ frameVec = arrayfun( @(val,nr) repmat(val,nr,1), [1:nrFrames].',nrPosInFrame,'Un
 frameVec = vertcat(frameVec{:});
 
 % build a matrix with the frame number attached to each localization
-pos = [frameVec, vertcat(fittingData{:})].';
+pos = [frameVec, vertcat(refinementData{:})].';
 
 % call main function
 trackingData = nn_tracker_cpp(pos,options.minSegLength,options.maxTrackRadius,options.maxGapRadius,options.maxFrameGap,options.minTrajLength,options.verbose).';
 
 % Set name of output variables
-global fittingOptions % Needed as we drag along names specified here
-options.outParamDescription = ['Track-ID'; 'Frame'; fittingOptions.outParamDescription(:)];
+global refinementOptions % Needed as we drag along names specified here
+options.outParamDescription = ['Track-ID'; 'Frame'; refinementOptions.outParamDescription(:)];
 
 end
 

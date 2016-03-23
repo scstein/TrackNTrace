@@ -7,7 +7,7 @@ name = 'Radial symmetry';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 2;
 
@@ -37,7 +37,7 @@ plugin.add_param('estimateWidth',...
 end
 
 
-function [fitData] = refinePositions_radialSymmetry(img,candidatePos,options,currentFrame)
+function [refinementData] = refinePositions_radialSymmetry(img,candidatePos,options,currentFrame)
 % Wrapper function for radialcenter function (see below). Refer to tooltips
 % above and to radialcenter help to obtain information on input and output
 % variables. radialcenter.m was released as part of the following
@@ -58,23 +58,23 @@ function [fitData] = refinePositions_radialSymmetry(img,candidatePos,options,cur
 %     options: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     fitData: 1x1 cell of 2D double array of fitted parameters
+%     refinementData: 1x1 cell of 2D double array of fitted parameters
 %     [x,y,z,A,B,[other parameters]]. Other parameters can be particle
 %     width.
 
 halfw = ceil(3*options.PSFSigma);
-fitData = zeros(size(candidatePos,1),5+options.estimateWidth);
+refinementData = zeros(size(candidatePos,1),5+options.estimateWidth);
 
 for iCand = 1:size(candidatePos,1)
     pos = candidatePos(iCand,1:2);
     idx_x = max(1,pos(1)-halfw):min(size(img,2),pos(1)+halfw);
     idx_y = max(1,pos(2)-halfw):min(size(img,1),pos(2)+halfw);
     [xc,yc,bg,sigma] = radialcenter(img(idx_y,idx_x),options.estimateWidth);
-    fitData(iCand,:) = [xc+idx_x(1)-1,yc(1)+idx_y(1)-1,0,img(round(yc+idx_y(1))-1,round(xc(1)+idx_x(1))-1),bg,sigma]; %[x,y,z=0,amp,bg,sigma]
+    refinementData(iCand,:) = [xc+idx_x(1)-1,yc(1)+idx_y(1)-1,0,img(round(yc+idx_y(1))-1,round(xc(1)+idx_x(1))-1),bg,sigma]; %[x,y,z=0,amp,bg,sigma]
     % radialcenter puts middle of middle pixel of fit window at N+1,N+1
 end
 
-fitData = fitData(fitData(:,1)>0,:);
+refinementData = refinementData(refinementData(:,1)>0,:);
 
 end
 

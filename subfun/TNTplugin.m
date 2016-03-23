@@ -96,7 +96,7 @@ classdef TNTplugin < handle % Inherit from handle class
             
             switch type
                 case 1 % Candidate method
-                case 2 % Fitting method
+                case 2 % Refinement/fitting method
                 case 3 % Tracking method
                 otherwise
                     error('Invalid plugin type ''%i'' when constructing plugin ''%s''', type, name);
@@ -111,7 +111,7 @@ classdef TNTplugin < handle % Inherit from handle class
                 switch type
                     case 1 % Candidate method
                         obj.outParamDescription = {'x','y'};
-                    case 2 % Fitting method
+                    case 2 % Refinement/fitting method
                         obj.outParamDescription = {'x','y','z','Amplitude','Background'};
                     case 3 % Tracking method
                         obj.outParamDescription = {'Track','Frame','x','y','z'};

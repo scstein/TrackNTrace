@@ -16,8 +16,8 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, globalOptions, fittingOptions, candidateData)
-% [ fittingData ] = locateParticles( movieStack, darkImage, globalOptions, fittingOptions, candidateData)
+function [ refinementData, refinementOptions ] = fitParticles( movieStack, darkImage, globalOptions, refinementOptions, candidateData)
+% [ refinementData ] = locateParticles( movieStack, darkImage, globalOptions, refinementOptions, candidateData)
 % Find locations of bright spots in an image, in this case a movie of
 % fluorescent molecules, and fit a Gaussian distribution to these spots to
 % obtain position, amplitude, background level and standard deviation.
@@ -34,7 +34,7 @@ function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, 
 %     globalOptions: struct of input options for this function, se
 %     setDefaultOptions or TrackNTrace manual for details.
 %
-%     fittingOptions: struct of input options used to fit localization
+%     refinementOptions: struct of input options used to fit localization
 %     candidates. See respective plugin function for details.
 %
 %     candidateData: Nx1 cell array of candidate positions where 
@@ -42,12 +42,12 @@ function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, 
 %        KxP double array, where P is the number of model parameters
 %        and K is the maximum amount of particles in the respective frame. 
 %        Each row represents a unique candidate fit and the column order is 
-%        [x, y]. These columns are mandatory for the fitting to work. 
+%        [x, y]. These columns are mandatory for the refinement to work. 
 %        Plugins can output extra data.
 %
 %
 % OUTPUT:
-%     fittingData: Nx1 cell array of fitted positions where N is
+%     refinementData: Nx1 cell array of fitted positions where N is
 %        the number of analyzed frames. Each cell contains a KxP
 %       double array, where P is the number of model parameters and K
 %        is the maximum amount of particles in the respective frame. 
@@ -56,7 +56,7 @@ function [ fittingData, fittingOptions ] = fitParticles( movieStack, darkImage, 
 %        These five columns are mandatory for most trackers to work correctly
 %        in the next step. Plugins can output extra data.
 %
-%     fittingOptions: see above
+%     refinementOptions: see above
 
 global imgCorrection;
 global parallelProcessingAvailable
@@ -74,27 +74,27 @@ if ~isempty(darkImage) %if correction image is provided, do it
 end
 
 nrFrames = size(movieStack,3);
-fittingData = cell(nrFrames,1);
+refinementData = cell(nrFrames,1);
 
 %Call plugins init function
-if ~isempty(fittingOptions.initFunc)
-    fittingOptions = fittingOptions.initFunc(fittingOptions);
+if ~isempty(refinementOptions.initFunc)
+    refinementOptions = refinementOptions.initFunc(refinementOptions);
 end
 
 
 % Try parallel processing of plugins main function
 parallelProcessing_Failed = false;
-if parallelProcessingAvailable && fittingOptions.useParallelProcessing
+if parallelProcessingAvailable && refinementOptions.useParallelProcessing
     try      
         imgCorrectionLocal = imgCorrection; % Need a copy for parallel processing
         
-        fprintf('TNT: Fitting candidates using parallel processing (Frame by Frame).\n');
+        fprintf('TNT: Refining candidates using parallel processing (Frame by Frame).\n');
         startTime = tic;        
         parfor iFrame = 1:nrFrames
             img = correctMovie_Parallel(movieStack(:,:,iFrame), globalOptions, imgCorrectionLocal);
             nrCandidates = size(candidateData{iFrame},1);
             if nrCandidates>0
-                fittingData(iFrame) = {fittingOptions.mainFunc(img,candidateData{iFrame},fittingOptions,iFrame)};
+                refinementData(iFrame) = {refinementOptions.mainFunc(img,candidateData{iFrame},refinementOptions,iFrame)};
             end
         end
         totalTime = toc(startTime);
@@ -108,11 +108,11 @@ if parallelProcessingAvailable && fittingOptions.useParallelProcessing
 end
 
 % Standard serial processing of plugins main function
-if not(parallelProcessingAvailable) || not(fittingOptions.useParallelProcessing) || parallelProcessing_Failed
-    if parallelProcessingAvailable && not(fittingOptions.useParallelProcessing)
-        fprintf('TNT: Fitting candidates (parallel processing disabled by plugin).\n');
+if not(parallelProcessingAvailable) || not(refinementOptions.useParallelProcessing) || parallelProcessing_Failed
+    if parallelProcessingAvailable && not(refinementOptions.useParallelProcessing)
+        fprintf('TNT: Refining candidates (parallel processing disabled by plugin).\n');
     else
-        fprintf('TNT: Fitting candidates.\n');
+        fprintf('TNT: Refining candidates.\n');
     end
     
     msgAccumulator = ''; % Needed for rewindable command line printing (rewPrintf subfunction)
@@ -128,7 +128,7 @@ if not(parallelProcessingAvailable) || not(fittingOptions.useParallelProcessing)
         if( (elapsedTime-lastElapsedTime) > 0.5)
             rewindMessages();
             rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(elapsedTime/iFrame*(nrFrames-iFrame),60)))
-            rewPrintf('TNT: Fitting frame %i/%i\n',iFrame,nrFrames)
+            rewPrintf('TNT: Refining/fitting frame %i/%i\n',iFrame,nrFrames)
             
             lastElapsedTime = elapsedTime;
         end
@@ -137,7 +137,7 @@ if not(parallelProcessingAvailable) || not(fittingOptions.useParallelProcessing)
         
         nrCandidates = size(candidateData{iFrame},1);
         if nrCandidates>0
-            fittingData(iFrame) = {fittingOptions.mainFunc(img,candidateData{iFrame},fittingOptions,iFrame)};
+            refinementData(iFrame) = {refinementOptions.mainFunc(img,candidateData{iFrame},refinementOptions,iFrame)};
         end
     end
     rewindMessages();
@@ -146,15 +146,15 @@ end
 
 
 % Call plugins post-processing function
-if ~isempty(fittingOptions.postFunc)
-    [fittingData,fittingOptions] = fittingOptions.postFunc(fittingData,fittingOptions);
+if ~isempty(refinementOptions.postFunc)
+    [refinementData,refinementOptions] = refinementOptions.postFunc(refinementData,refinementOptions);
 end
 
-fprintf('TNT: Fitting done.\n');
+fprintf('TNT: Refinement done.\n');
 
 
 % Verify the outParamDescription, make it fit to the data if neccessary
-fittingOptions = verifyOutParamDescription(fittingData, fittingOptions);
+refinementOptions = verifyOutParamDescription(refinementData, refinementOptions);
 
     function rewPrintf(msg, varargin)
         % Rewindable message printing: Print msg and cache it.

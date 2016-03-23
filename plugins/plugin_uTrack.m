@@ -6,7 +6,7 @@ name = 'u-Track';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 3;
 
@@ -54,7 +54,7 @@ end
 
 %   -------------- User functions --------------
 
-function [trackingData] = trackParticles_uTrack(fittingData,options)
+function [trackingData] = trackParticles_uTrack(refinementData,options)
 % Wrapper function for u-Track (see below). Refer to tooltips above, to
 % parseUtrackOptions function and to u-Track manual to obtain information
 % on input and output variables.
@@ -65,7 +65,7 @@ function [trackingData] = trackParticles_uTrack(fittingData,options)
 % To install, extract all files into 'external' folder
 %
 % INPUT:
-%     fittingData: Cell array of localizations created by locateParticles.m
+%     refinementData: Cell array of localizations created by locateParticles.m
 %     Refer to that function or to TrackNTrace manual for more information.
 %
 %     options: Struct of input parameters provided by GUI.
@@ -76,9 +76,9 @@ function [trackingData] = trackParticles_uTrack(fittingData,options)
 %     manual for more information.
 
 
-% convert fittingData cell array to adjust to tracker function input
+% convert refinementData cell array to adjust to tracker function input
 
-nrFrames = size(fittingData,1);
+nrFrames = size(refinementData,1);
 if nrFrames<200
     options.splitMovieIntervals=1; %no need to split small movies
 end
@@ -87,8 +87,8 @@ pos = repmat(struct('xCoord',[],'yCoord',[],'zCoord',[],'amp',[],'sigma',[]),nrF
 
 
 for iFrame=1:nrFrames
-    if(isempty(fittingData{iFrame})); continue; end; % Jump empty frames
-    pos_frame_now = fittingData{iFrame};
+    if(isempty(refinementData{iFrame})); continue; end; % Jump empty frames
+    pos_frame_now = refinementData{iFrame};
     valid_pos = pos_frame_now(:,1)>=0; %error flag is 1?
     nCand = sum(valid_pos);
     pos_frame_now(pos_frame_now==0) = 1e-6; %this is a dirty hack for particles which run out of the frame
