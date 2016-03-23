@@ -11,15 +11,14 @@ A publication introducing the TrackNTrace framework is currently in review.
 
 ## Licensing
 --------------
-(See License.txt for more information)
 
 If not stated otherwise, all files part of TrackNTrace are under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 You can find a copy of the license at <http://www.gnu.org/licenses/>.
 
 If not stated otherwise, the following copyright applies:
- Copyright (C) 2016  Simon Christoph Stein, scstein@phys.uni-goettingen.de
- Copyright (C) 2016  Jan Thiart, jthiart@phys.uni-goettingen.de
+ Copyright (C) 2016  Simon Christoph Stein, scstein (at) phys.uni-goettingen.de
+ Copyright (C) 2016  Jan Thiart, jthiart (at) phys.uni-goettingen.de
 
 Plugin files/(sub)functions (mostly in the plugins subfolder) might come with their own license.
 
@@ -47,5 +46,6 @@ TrackNTrace uses variety of external programs / modules:
 	License see 3) below
 * "FastPsfFitting" and "NearestNeighborTracker",
     Copyright (c) 2016 Simon Christoph Stein and Jan Thiart,
-    Free BSD license (see 1) below))
-
+    Free BSD license
+	
+See the "License.txt" file for more information.
