@@ -125,7 +125,7 @@ pdfkeywords={}]
 \vspace*{-30pt}\textbf{written for MATLAB by Simon Christoph Stein and Jan Thiart}\\ [20pt]
 TrackNTrace is a fast, easy-to-use MATLAB framework for single molecule localization, tracking and super-resolution applications. The purpose of this software is to facilitate development, distribution, and comparison of methods in the community by providing an easily extendable, plugin-based system and combining it with an easy-to-use graphical user interface (GUI). This GUI incorporates possibilities for quick inspection of localization and tracking results, giving direct feedback of the quality achieved with the chosen algorithms and parameter values, as well as possible errors, a feature neglected in most software packages available. The plugin system greatly simplifies adapting and tailoring methods towards any research problem's individual requirements. We provide a set of plugins implementing state-of-the-art methods together with the basic program, alongside tools for common post-processing steps such as STORM image generation, or drift correction. TrackNTrace should be useful to anyone who seeks to combine the speed of established software packages such as rapidSTORM or QuickPALM with the simplicity and direct modifiablity of MATLAB, especially when further post-processing is also done in MATLAB.\\
   
-In general, TrackNTrace reads a movie file, corrects for camera artifacts if applicable and obtains a rough guess of all possible positions of bright spots in every image. These position candidates then serve as the basis for a fitting routine which refines these candidates, obtaining position, amplitude and local background. Finally, these fit results are then returned to a particle tracking algorithm which tries to link particles close in time and space to form trajectories.\\[10pt]
+In general, TrackNTrace reads a movie file, corrects for camera artifacts if applicable and obtains a rough guess of all possible positions of bright spots in every image. These position candidates then serve as the basis for another routine which refines these candidates, obtaining position, amplitude and local background. Finally, these results are then returned to a particle tracking algorithm which tries to link particles close in time and space to form trajectories.\\[10pt]
 This manual will first provide all necessary steps for installation (section~\ref{sec:install}) and explain how to use the GUI (section~\ref{sec:overview}). 
 %Some in-depth information about the operation of TrackNTrace is provided in section~\ref{sec:in-depth}.
 \begin{table}[!h]
@@ -248,10 +248,10 @@ All results obtained by TrackNTrace are saved in a \texttt{mat}-file in the form
 \texttt{firstFrame\textunderscore lastFrame} & $1\times2$ matrix [first frame, last frame] saving the first and last processed frame of the movie. This is important if only parts of a movie were read in and processed. \\[5pt]
 \texttt{globalOptions} & Struct of general options variables set by the GUI. \\[5pt]
 \texttt{candidateOptions} & Struct of candidate options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
-\texttt{fittingOptions} & Struct of fitting options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
+\texttt{refinementOptions} & Struct of refinement options parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
 \texttt{trackingOptions} & Struct of tracking plugin parameters. Also contains the used plugins name and a parameter description for all output columns in \texttt{outParamDescription}. \\[5pt]
-\texttt{candidateData} & $n\times 1$ cell array of candidate positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique candidate fit and the column order is $\mu_x$, $\mu_y$. These columns are mandatory for the fitting to work. Plugins can output extra data.\\
-\texttt{fittingData} & $n\times 1$ cell array of fitted positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique fit and the column order according to the model PSF is $\mu_x$, $\mu_y$, $\mu_z$, $A$, $B$ (amplitude, background). These five columns are mandatory for most trackers to work correctly in step 4. Plugins can output extra data.\\
+\texttt{candidateData} & $n\times 1$ cell array of candidate positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique candidate fit and the column order is $\mu_x$, $\mu_y$. These columns are mandatory for the refinement to work. Plugins can output extra data.\\
+\texttt{refinementData} & $n\times 1$ cell array of refined positions where $n$ is the number of analyzed frames. Each cell contains a $k\times p$ double array, where $p$ is the number of model parameters and $k$ is the maximum amount of particles in the respective frame. Each row represents a unique fit and the column order according to the model PSF is $\mu_x$, $\mu_y$, $\mu_z$, $A$, $B$ (amplitude, background). These five columns are mandatory for most trackers to work correctly in step 4. Plugins can output extra data.\\
 \texttt{trackingData} & 2D double array, list of trajectories with columns  [id,frame,$\mu_x$,$\mu_y$,$mu_z$] + additional columns. Every trajectory is given an id, starting at 1, after which the list is sorted. Frame number starts with 1.\\
 \bottomrule
 \end{tabular}
@@ -287,7 +287,7 @@ While the four parameters used in the constructor are mandatory for every plugin
 \toprule
 \multicolumn{1}{c}{Property} & \multicolumn{1}{c}{Description}\\ \midrule
   \texttt{name} & Plugin name as displayed by the GUI. \\
-  \texttt{type} & Integer, type of plugin. 1: Candidate detection, 2: Spot fitting, 3: Tracking \\
+  \texttt{type} & Integer, type of plugin. 1: Candidate detection, 2: Refinement, 3: Tracking \\
   \texttt{mainFunc} & Handle to main function the plugin implementing the actual algorithm. For type 1 and 2 this is called by TrackNTrace in a loop for each individual frame of the input movie. The interface (output/input) of this function depends on the plugin type and must match the TrackNTrace specification (see below). \\
   \texttt{outParamDescription} &  Cell array of strings with description/name of all output parameters (columns) of the plugin \\
  \texttt{info} & Description of the plugin itself. Should describe the method and the general way how to use it. Supports \texttt{sprintf} modifiers directly (e.g. \texttt{\textbackslash n} for new line). \\
@@ -298,7 +298,7 @@ While the four parameters used in the constructor are mandatory for every plugin
 \end{tabular}\\
 \end{table}
 
-Parameters which can be adjusted by the GUI are defined by calling the \texttt{add\textunderscore param(par\textunderscore name, par\textunderscore type, par\textunderscore settings, par\textunderscore tooltip )} function of the newly created plugin instance. Let's look at the ``RadialSymmetry'' fitting plugin as an example:
+Parameters which can be adjusted by the GUI are defined by calling the \texttt{add\textunderscore param(par\textunderscore name, par\textunderscore type, par\textunderscore settings, par\textunderscore tooltip )} function of the newly created plugin instance. Let's look at the ``RadialSymmetry'' refinement plugin as an example:
 \begin{lstlisting}[style=Matlab-editor]
 function [plugin] = plugin_RadialSymmetry()
 name = 'Radial symmetry';
@@ -353,15 +353,15 @@ function [candidates_frame_i] = mainFuncName(img, candidateOptions, i)
 end
   
 % Type 2, fitting/refinement
-function [fits_frame_i]= mainFuncName(img, candidates_frame_i, fittingOptions, i)
-%Refine candidate positions candidates_frame_i in 'i'-th frame 'img' of the processed frame interval using the options struct fittingOptions, and return a 2D position array fits_frame_i with at least five columns for x,y and z position, an intensity and a background value, one row per fitted candidate
+function [fits_frame_i]= mainFuncName(img, candidates_frame_i, refinementOptions, i)
+%Refine candidate positions candidates_frame_i in 'i'-th frame 'img' of the processed frame interval using the options struct refinementOptions, and return a 2D position array fits_frame_i with at least five columns for x,y and z position, an intensity and a background value, one row per fitted candidate
 end
 
 % Type 3, tracking
-function [trackingData] = mainFuncName(fittingData, trackingOptions);
+function [trackingData] = mainFuncName(refinementData, trackingOptions);
         %OR
-function [trackingData, trackingOptions] = mainFuncName(fittingData,trackingOptions);
-%Track the positions in the cell array fittingData (cells of 2D arrays fits_frame) using the options struct trackingOptions and return a 2D array trackingData which should have at least the columns [track_id,frame,x,y,z]. Optionally also return trackingOptions
+function [trackingData, trackingOptions] = mainFuncName(refinementData,trackingOptions);
+%Track the positions in the cell array refinementData (cells of 2D arrays fits_frame) using the options struct trackingOptions and return a 2D array trackingData which should have at least the columns [track_id,frame,x,y,z]. Optionally also return trackingOptions
 end
 \end{lstlisting}
 Note that all variable names are arbitrary, however, their usage/order, their output structure, and their number has to match the above specifications. If your plugin cannot provide some output, e.g. a $z$-position or a background value, use 0 instead. 
@@ -380,10 +380,10 @@ function [options] = initFuncName(options)
 
 function [data, options] = postFuncName(data, options)
 \end{lstlisting}
-The \texttt{initFunc} can alter the \texttt{options} struct or add parameters to it before the main function is executed. This is useful for example for pre-computing masks for filter steps, creating lookup tables, or checking input parameter correctness. The \texttt{postFunc} function can be used to post-process \texttt{data} before it is saved and also add arbitrary information to \texttt{options}. Note that \texttt{data} (either \texttt{candidateData}, \texttt{fittingData}, or \texttt{trackingData}) depends on the plugin type, see Sec.~\ref{sec:datastructures}). 
+The \texttt{initFunc} can alter the \texttt{options} struct or add parameters to it before the main function is executed. This is useful for example for pre-computing masks for filter steps, creating lookup tables, or checking input parameter correctness. The \texttt{postFunc} function can be used to post-process \texttt{data} before it is saved and also add arbitrary information to \texttt{options}. Note that \texttt{data} (either \texttt{candidateData}, \texttt{refinementData}, or \texttt{trackingData}) depends on the plugin type, see Sec.~\ref{sec:datastructures}). 
 
 \subsection{Global variables and parallelization}
-If needed, plugin functions can access external data not available to them via a function call by using global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{fittingOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\textunderscore movie} and \texttt{imgCorrection} as defined in Sec.~\ref{sec:datastructures}. They could be used as such:
+If needed, plugin functions can access external data not available to them via a function call by using global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{refinementOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\textunderscore movie} and \texttt{imgCorrection} as defined in Sec.~\ref{sec:datastructures}. They could be used as such:
 \begin{lstlisting}[style=Matlab-editor]
 function [output] = fittingFun(img, options, currentFrame)
 global globalOptions;
@@ -397,7 +397,7 @@ end
 
 end
 \end{lstlisting}
-For example, the \texttt{TNT NearestNeighbor} plugin uses global access to \texttt{fittingOptions} to copy the variable \texttt{outParamDescription} of all \texttt{fittingData} columns that are not needed for the tracking. 
+For example, the \texttt{TNT NearestNeighbor} plugin uses global access to \texttt{refinementOptions} to copy the variable \texttt{outParamDescription} of all \texttt{refinementData} columns that are not needed for the tracking. 
 
 Please note: The use of global variables inside type 1/2 plugin functions should be avoided, as functions with global variables can not be frame-by-frame parallelized by TNT, resulting in a possibly much slower execution time. Also note that, for memory reasons, the global \texttt{movie} variable gives access to the 16-bit input movie without photon conversion, regardless of the TrackNTrace settings. If your function both relies on having access to more than the current movie frame and needs a corrected and/or photon-converted movie, use the \texttt{correctMovie} function as in the following example:
 \begin{lstlisting}[style=Matlab-editor]
