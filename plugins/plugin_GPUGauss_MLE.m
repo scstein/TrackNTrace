@@ -7,7 +7,7 @@ name = 'GPU-Gauss MLE';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 2;
 
@@ -45,7 +45,7 @@ plugin.add_param('Iterations',...
 end
 
 
-function [fitData] = refinePositions_gpugaussmle(img,candidatePos,options,currentFrame)
+function [refinementData] = refinePositions_gpugaussmle(img,candidatePos,options,currentFrame)
 % Wrapper function for gaussmlev2 function (see below). Refer to tooltips
 % above and to gaussmlev2 help to obtain information on input and output
 % variables. gaussmlev2.m was released as part of the following
@@ -67,11 +67,11 @@ function [fitData] = refinePositions_gpugaussmle(img,candidatePos,options,curren
 %     options: Struct of input parameters provided by GUI.
 %
 % OUTPUT:
-%     fitData: 1x1 cell of 2D double array of fitted parameters
+%     refinementData: 1x1 cell of 2D double array of fitted parameters
 %     [x,y,z,A,B,[other parameters]]. Other parameters can be PSF standard
 %     deviation, both in x and y.
 
-fitData = zeros(size(candidatePos,1),5+options.nrParam);
+refinementData = zeros(size(candidatePos,1),5+options.nrParam);
 
 for iCand = 1:size(candidatePos,1)
     pos = candidatePos(iCand,1:2);
@@ -81,15 +81,15 @@ for iCand = 1:size(candidatePos,1)
         continue; %gaussmlev2 cannot deal with asymmetric fit windows
     end
     [param,~,~]=gaussmlev2(single(img(idx_y,idx_x)),options.PSFSigma,options.Iterations,options.fitType,options.functionName); %[x,y,z,A,BG,[rest params]]
-    fitData(iCand,:) = [param(1:2)+[idx_x(1),idx_y(1)],0,param(3:end)]; %correct position relative to fit window, middle of first pixel is [0,0]
+    refinementData(iCand,:) = [param(1:2)+[idx_x(1),idx_y(1)],0,param(3:end)]; %correct position relative to fit window, middle of first pixel is [0,0]
 end
 
-fitData = fitData(fitData(:,1)>0,:);
+refinementData = refinementData(refinementData(:,1)>0,:);
 
 end
 
 
-function [fittingOptions] = refinePositions_gpugaussinit(fittingOptions)
+function [refinementOptions] = refinePositions_gpugaussinit(refinementOptions)
 global globalOptions
 
 if ~globalOptions.usePhotonConversion
@@ -98,8 +98,8 @@ if ~globalOptions.usePhotonConversion
     warning on backtrace
 end
 
-fittingOptions.halfWindowSize = min(10,ceil(3*fittingOptions.PSFSigma));
-switch fittingOptions.fitType
+refinementOptions.halfWindowSize = min(10,ceil(3*refinementOptions.PSFSigma));
+switch refinementOptions.fitType
     case '[x,y,N,BG]'
         fitType = 1;
         nrParam = 0;
@@ -111,9 +111,9 @@ switch fittingOptions.fitType
         nrParam = 2;
 end
 
-fittingOptions.fitType = fitType;
-fittingOptions.nrParam = nrParam;
-fittingOptions.outParamDescription = fittingOptions.outParamDescription(1:5+nrParam);
+refinementOptions.fitType = fitType;
+refinementOptions.nrParam = nrParam;
+refinementOptions.outParamDescription = refinementOptions.outParamDescription(1:5+nrParam);
 
 functions = {'gaussmlev2_cuda50','gaussmlev2_cuda42','gaussmlev2_cuda40',...
     'gaussmlev2_c_thread','gaussmlev2_c','gaussmlev2_matlab'};
@@ -137,7 +137,7 @@ for iFun = 1:numel(functions)
     
     try
         feval(functionName,z,1.0,2,1);
-        fittingOptions.functionName = functionName;
+        refinementOptions.functionName = functionName;
         return
     catch 
         error_message = 'No working functions found. Check your MATLAB installation.';

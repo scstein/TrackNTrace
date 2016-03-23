@@ -1,4 +1,21 @@
-function [globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,fittingOptions,trackingOptions, GUIinputs)
+% TrackNTrace: A simple and extendable MATLAB framework for single-molecule localization and tracking
+%
+%     Copyright (C) 2016  Simon Christoph Stein, scstein@phys.uni-goettingen.de
+% 
+%     This program is free software: you can redistribute it and/or modify
+%     it under the terms of the GNU General Public License as published by
+%     the Free Software Foundation, either version 3 of the License, or
+%     (at your option) any later version.
+% 
+%     This program is distributed in the hope that it will be useful,
+%     but WITHOUT ANY WARRANTY; without even the implied warranty of
+%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%     GNU General Public License for more details.
+% 
+%     You should have received a copy of the GNU General Public License
+%     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+%
+function [globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIinputs)
 % TrackNTrace main GUI. Here plugins can be selected, their options 
 % adjusted. This GUI is used for this management only, while the overall
 % program flow is handled by RunTrackNTrace.m
@@ -16,7 +33,7 @@ GUIreturns.useSettingsForAll = false;
 GUIreturns.userExit = false;
 GUIreturns.globalOptionsChanged = false;
 GUIreturns.candidateOptionsChanged = false;
-GUIreturns.fittingOptionsChanged = false;
+GUIreturns.refinementOptionsChanged = false;
 GUIreturns.trackingOptionsChanged  = false;
 GUIreturns.previewIntervalChanged = false;
 GUIreturns.previewMode = false;
@@ -26,7 +43,7 @@ GUIreturns.outputFolder = [];
 % Save options at startup (to check later if options changed)
 globalOptions_atStartup = globalOptions;
 candidateOptions_atStartup = candidateOptions;
-fittingOptions_atStartup = fittingOptions;
+refinementOptions_atStartup = refinementOptions;
 trackingOptions_atStartup = trackingOptions;
 
 
@@ -88,13 +105,13 @@ else
  set(h_all.cbx_candidate_loaded, 'Visible', 'off');
 end
 
-% % Fitting plugin
-set(h_all.popup_fittingMethod, 'Callback', @callback_updatePlugins);
-set(h_all.cbx_fitting_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
-if(GUIinputs.show_fittingData_fromFile_cbx)
- set(h_all.cbx_fitting_loaded, 'Value', GUIinputs.use_loaded_fittingData);
+% % Refinement plugin
+set(h_all.popup_refinementMethod, 'Callback', @callback_updatePlugins);
+set(h_all.cbx_refinement_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
+if(GUIinputs.show_refinementData_fromFile_cbx)
+ set(h_all.cbx_refinement_loaded, 'Value', GUIinputs.use_loaded_refinementData);
 else
- set(h_all.cbx_fitting_loaded, 'Visible', 'off');
+ set(h_all.cbx_refinement_loaded, 'Visible', 'off');
 end
 
 % % Tracking plugin
@@ -104,7 +121,7 @@ set(h_all.popup_trackingMethod, 'Callback', @callback_updatePlugins);
 
 % % Help buttons
 set(h_all.button_candidateHelp, 'Callback', @callback_helpButtons);
-set(h_all.button_fittingHelp, 'Callback', @callback_helpButtons);
+set(h_all.button_refinementHelp, 'Callback', @callback_helpButtons);
 set(h_all.button_trackingHelp, 'Callback', @callback_helpButtons);
 
 % % Elements at bottom of GUI
@@ -127,19 +144,19 @@ end
 
 % % Container for plugins
 candidate_plugins = [];
-fitting_plugins = [];
+refinement_plugins = [];
 tracking_plugins = [];
 
 % Save last selected plugin per category
 selected_candidate_plugin = -1;
-selected_fitting_plugin = -1;
+selected_refinement_plugin = -1;
 selected_tracking_plugin = -1;
 
 % Load the plugins
 if GUIinputs.showStartupInformation % Show warnings only on startup
     fprintf('TNT: Loading plugins ...\n')
     loadPlugins();
-    fprintf('TNT: Successfully imported %i plugins (%i candidate detection, %i fitting, %i tracking).\n',numel(candidate_plugins)+numel(fitting_plugins)+numel(tracking_plugins),numel(candidate_plugins),numel(fitting_plugins),numel(tracking_plugins));
+    fprintf('TNT: Successfully imported %i plugins (%i candidate detection, %i refinement, %i tracking).\n',numel(candidate_plugins)+numel(refinement_plugins)+numel(tracking_plugins),numel(candidate_plugins),numel(refinement_plugins),numel(tracking_plugins));
 else
     warning off;
     loadPlugins();
@@ -173,11 +190,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
                 plugin = plugin_constructor();
                 
                 switch plugin.type
-                    case 1 % Candidate method
+                    case 1 % Candidate search
                         candidate_plugins = [candidate_plugins, plugin];
-                    case 2 % Fitting method
-                        fitting_plugins  = [fitting_plugins, plugin];
-                    case 3 % Tracking method
+                    case 2 % Refinement/fitting
+                        refinement_plugins  = [refinement_plugins, plugin];
+                    case 3 % Tracking
                         tracking_plugins = [tracking_plugins, plugin];
                     otherwise
                         warning('Detected unknown plugin of type %i',plugin.type);
@@ -188,14 +205,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         found_candidate_plugin = numel(candidate_plugins)>0;
-        found_fitting_plugin = numel(fitting_plugins)>0;
+        found_refinement_plugin = numel(refinement_plugins)>0;
         found_tracking_plugin = numel(tracking_plugins)>0;
         
         if not(found_candidate_plugin)
             error('No candidate detection plugin detected.');
         end
-        if not(found_fitting_plugin)
-            error('No fitting plugin detected.');
+        if not(found_refinement_plugin)
+            error('No refinement plugin detected.');
         end
         if not(found_tracking_plugin)
             error('No tracking plugin detected.')
@@ -203,11 +220,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         % Set popup choices
         set(h_all.popup_candidateMethod, 'String', {candidate_plugins(:).name});
-        set(h_all.popup_fittingMethod, 'String', {fitting_plugins(:).name});
+        set(h_all.popup_refinementMethod, 'String', {refinement_plugins(:).name});
         set(h_all.popup_trackingMethod, 'String', {tracking_plugins(:).name});
     end
 
-% Select plugins based on the current candidateOptions, fittingOptions,
+% Select plugins based on the current candidateOptions, refinementOptions,
 % trackingOptions. After selection, the plugin panels are constructed
     function selectPluginsBasedOnOptions()
         
@@ -238,30 +255,30 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             end
         end
         
-        % Fitting
-        if ~isempty(fittingOptions)
-            selected_fitting_plugin = -1;
+        % Refinement
+        if ~isempty(refinementOptions)
+            selected_refinement_plugin = -1;
             % Search for a loaded plugin with the same name
-            for iPlug = 1:numel(fitting_plugins)
-                if strcmp(fittingOptions.plugin_name,fitting_plugins(iPlug).name)
-                    selected_fitting_plugin = iPlug;
+            for iPlug = 1:numel(refinement_plugins)
+                if strcmp(refinementOptions.plugin_name,refinement_plugins(iPlug).name)
+                    selected_refinement_plugin = iPlug;
                 end
             end
             
-            if selected_fitting_plugin < 0
-                error('Plugin ''%s'' not found.',fittingOptions.plugin_name) ;
+            if selected_refinement_plugin < 0
+                error('Plugin ''%s'' not found.',refinementOptions.plugin_name) ;
             end
         else
             % Select the default plugin if it is found
-            default_plugin_index = strfind({fitting_plugins(:).name},GUIinputs.TNToptions.defaultFittingPlugin);
+            default_plugin_index = strfind({refinement_plugins(:).name},GUIinputs.TNToptions.defaultRefinementPlugin);
             default_plugin_index = find(~cellfun(@isempty,default_plugin_index));
             if isempty(default_plugin_index)
                 warning off backtrace
-                warning('Default fitting plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultFittingPlugin);
+                warning('Default fitting plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultRefinementPlugin);
                 warning on backtrace
-                selected_fitting_plugin = 1;
+                selected_refinement_plugin = 1;
             else
-                selected_fitting_plugin = default_plugin_index;
+                selected_refinement_plugin = default_plugin_index;
             end
         end
         
@@ -294,17 +311,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         % Set popups to correct plugin name
         set(h_all.popup_candidateMethod, 'Value', selected_candidate_plugin);
-        set(h_all.popup_fittingMethod, 'Value', selected_fitting_plugin);
+        set(h_all.popup_refinementMethod, 'Value', selected_refinement_plugin);
         set(h_all.popup_trackingMethod, 'Value', selected_tracking_plugin);
         
         % Build panels by invoking the selected plugins function
         candidate_plugins( selected_candidate_plugin).setOptions(candidateOptions);
-        fitting_plugins( selected_fitting_plugin).setOptions(fittingOptions);
+        refinement_plugins( selected_refinement_plugin).setOptions(refinementOptions);
         tracking_plugins( selected_tracking_plugin).setOptions(trackingOptions);
         
         % Create the panels
         candidate_plugins( selected_candidate_plugin).createOptionsPanel(h_all.panel_candidate);
-        fitting_plugins( selected_fitting_plugin).createOptionsPanel(h_all.panel_fitting);
+        refinement_plugins( selected_refinement_plugin).createOptionsPanel(h_all.panel_fitting);
         tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
         
         updatePanelPositions();
@@ -364,11 +381,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             candidateOptions = GUIinputs.candidateOptions_loaded;
         end
         
-        if get(h_all.cbx_fitting_loaded, 'Value')
-            fittingOptions = GUIinputs.fittingOptions_loaded;
+        if get(h_all.cbx_refinement_loaded, 'Value')
+            refinementOptions = GUIinputs.refinementOptions_loaded;
         end
         
-        if get(h_all.cbx_candidate_loaded, 'Value') || get(h_all.cbx_fitting_loaded, 'Value')
+        if get(h_all.cbx_candidate_loaded, 'Value') || get(h_all.cbx_refinement_loaded, 'Value')
             % Update plugins
             selectPluginsBasedOnOptions();
             
@@ -391,22 +408,22 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         if get(h_all.cbx_candidate_loaded, 'Value')            
-            set(h_all.cbx_fitting_loaded,'Enable','on');
+            set(h_all.cbx_refinement_loaded,'Enable','on');
             set(h_all.popup_candidateMethod,'Enable','off');
             set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','off');
         else
-            set(h_all.cbx_fitting_loaded,'Enable','off');
+            set(h_all.cbx_refinement_loaded,'Enable','off');
             set(h_all.popup_candidateMethod,'Enable','on');
             set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','on');
         end
         
-        if get(h_all.cbx_fitting_loaded, 'Value')            
+        if get(h_all.cbx_refinement_loaded, 'Value')            
             set(h_all.cbx_candidate_loaded,'Enable','off');
-            set(h_all.popup_fittingMethod,'Enable','off');
+            set(h_all.popup_refinementMethod,'Enable','off');
             set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','off');
         else
             set(h_all.cbx_candidate_loaded,'Enable','on');
-            set(h_all.popup_fittingMethod,'Enable','on');
+            set(h_all.popup_refinementMethod,'Enable','on');
             set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','on');
         end
         
@@ -418,12 +435,12 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % the panel for the newly selected one.
     function callback_updatePlugins(hObj, event)
         selected_candidate_plugin =  get(h_all.popup_candidateMethod,'Value');
-        selected_fitting_plugin = get(h_all.popup_fittingMethod,'Value');
+        selected_refinement_plugin = get(h_all.popup_refinementMethod,'Value');
         selected_tracking_plugin = get(h_all.popup_trackingMethod,'Value');
         
         % Update panels to display currently selected plugin
         candidate_plugins( selected_candidate_plugin).createOptionsPanel(h_all.panel_candidate);
-        fitting_plugins( selected_fitting_plugin).createOptionsPanel(h_all.panel_fitting);
+        refinement_plugins( selected_refinement_plugin).createOptionsPanel(h_all.panel_fitting);
         tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
         
         updatePanelPositions();
@@ -443,7 +460,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % -- Spacings --
         units = 'pixels';
         TOPIC_SPACING = 39; % Spacing between topic panels (candidate/tracking etc)
-        ABOVE_PANEL_SPACING = 6.5; % Spacing topic panel and the UI elements above the panel (Fitting Method etc.)
+        ABOVE_PANEL_SPACING = 6.5; % Spacing topic panel and the UI elements above the panel (Refinement Method etc.)
         BUTTON_SPACING = 26; % Spacing between last panels and buttons at the bottom
         BOTTOM_SPACING = 9.75; % Spacing between buttons at the bottom and bottom of the GUI window        
         % -- -------- --
@@ -452,30 +469,30 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         panel_candidate_pos = get(h_all.panel_candidate,'Position');
         
         % Relative to candidate detection panel
-        set(h_all.label_fittingMethod, 'Units',units);
-        label_fittingMethod_pos = get(h_all.label_fittingMethod, 'Position');
-        label_fittingMethod_pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-label_fittingMethod_pos(4)/2;
-        set(h_all.label_fittingMethod, 'Position',label_fittingMethod_pos);
+        set(h_all.label_refinementMethod, 'Units',units);
+        label_refinementMethod_pos = get(h_all.label_refinementMethod, 'Position');
+        label_refinementMethod_pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-label_refinementMethod_pos(4)/2;
+        set(h_all.label_refinementMethod, 'Position',label_refinementMethod_pos);
         
-        set(h_all.popup_fittingMethod, 'Units',units);
-        pos = get(h_all.popup_fittingMethod, 'Position');
+        set(h_all.popup_refinementMethod, 'Units',units);
+        pos = get(h_all.popup_refinementMethod, 'Position');
         pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2;
-        set(h_all.popup_fittingMethod, 'Position',pos);
+        set(h_all.popup_refinementMethod, 'Position',pos);
         
-        set(h_all.button_fittingHelp, 'Units',units);
-        pos = get(h_all.button_fittingHelp, 'Position');
+        set(h_all.button_refinementHelp, 'Units',units);
+        pos = get(h_all.button_refinementHelp, 'Position');
         pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2 + 0.1; % Note the 0.1 is empirical and fits better
-        set(h_all.button_fittingHelp, 'Position',pos);
+        set(h_all.button_refinementHelp, 'Position',pos);
         
-        set(h_all.cbx_fitting_loaded, 'Units',units);
-        pos = get(h_all.cbx_fitting_loaded, 'Position');
+        set(h_all.cbx_refinement_loaded, 'Units',units);
+        pos = get(h_all.cbx_refinement_loaded, 'Position');
         pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2;
-        set(h_all.cbx_fitting_loaded, 'Position',pos);
+        set(h_all.cbx_refinement_loaded, 'Position',pos);
         
         % Relative to label_fitting_Method
         set(h_all.panel_fitting, 'Units',units);
         panel_fitting_pos = get(h_all.panel_fitting, 'Position');
-        panel_fitting_pos(2) = label_fittingMethod_pos(2)-ABOVE_PANEL_SPACING-panel_fitting_pos(4);
+        panel_fitting_pos(2) = label_refinementMethod_pos(2)-ABOVE_PANEL_SPACING-panel_fitting_pos(4);
         set(h_all.panel_fitting, 'Position',panel_fitting_pos);
         
         % Relative to fitting panel
@@ -587,7 +604,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if isfloat(outfile); return; end; % User clicked cancel
         
         outfile = [path,outfile];
-        save(outfile,'filename_movie','globalOptions', 'candidateOptions','fittingOptions');
+        save(outfile,'filename_movie','globalOptions', 'candidateOptions','refinementOptions');
         if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
             save(outfile,'trackingOptions','-append');
         end
@@ -606,11 +623,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
         warning off % We turn warnings off, as trackingOptions might not exist
-        allOptions = load([path,infile],'globalOptions', 'candidateOptions','fittingOptions','trackingOptions');
+        allOptions = load([path,infile],'globalOptions', 'candidateOptions','refinementOptions','trackingOptions');
         warning on
         globalOptions   = allOptions.globalOptions;
         candidateOptions = allOptions.candidateOptions;
-        fittingOptions   = allOptions.fittingOptions;
+        refinementOptions   = allOptions.refinementOptions;
         if isfield(allOptions,'trackingOptions')
             trackingOptions  = allOptions.trackingOptions;
         end
@@ -652,9 +669,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             case h_all.button_candidateHelp
                 name = candidate_plugins(selected_candidate_plugin).name;
                 msg = candidate_plugins(selected_candidate_plugin).info;
-            case h_all.button_fittingHelp
-                name = fitting_plugins(selected_fitting_plugin).name;
-                msg = fitting_plugins(selected_fitting_plugin).info;
+            case h_all.button_refinementHelp
+                name = refinement_plugins(selected_refinement_plugin).name;
+                msg = refinement_plugins(selected_refinement_plugin).info;
             case h_all.button_trackingHelp
                 name = tracking_plugins(selected_tracking_plugin).name;
                 msg = tracking_plugins(selected_tracking_plugin).info;
@@ -743,7 +760,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
     end
 
 % Set all UI fields based on the current value of the options structs
-% (globalOptions, candidateOptions, fittingOptions, trackingOptions)
+% (globalOptions, candidateOptions, refinementOptions, trackingOptions)
     function setGUIBasedOnOptions()
         % % General Options
         set(h_all.edit_darkMovie,'String', globalOptions.filename_dark_movie);
@@ -769,7 +786,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         callback_updateMainGUIstate();
     end
 
-% Set all options structs (globalOptions, candidateOptions, fittingOptions, trackingOptions)
+% Set all options structs (globalOptions, candidateOptions, refinementOptions, trackingOptions)
 % based on the current state of the uicontrols. Also checks which
 % options structs have changed compared to the startup values.
     function storeOptions()
@@ -790,17 +807,17 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         % Store options from plugins
         candidateOptions = candidate_plugins(selected_candidate_plugin).getOptions();
-        fittingOptions = fitting_plugins(selected_fitting_plugin).getOptions();
+        refinementOptions = refinement_plugins(selected_refinement_plugin).getOptions();
         trackingOptions = tracking_plugins(selected_tracking_plugin).getOptions();
         
         % Store if loaded data should be used
         GUIreturns.use_loaded_candidateData = get(h_all.cbx_candidate_loaded,'Value');
-        GUIreturns.use_loaded_fittingData = get(h_all.cbx_fitting_loaded,'Value');
+        GUIreturns.use_loaded_refinementData = get(h_all.cbx_refinement_loaded,'Value');
         
         %Check if options were changed compared to intial ones
         GUIreturns.globalOptionsChanged   = ~isequaln(globalOptions_atStartup, globalOptions);
         GUIreturns.candidateOptionsChanged = ~isequaln(candidateOptions_atStartup, candidateOptions);
-        GUIreturns.fittingOptionsChanged   = ~isequaln(fittingOptions_atStartup, fittingOptions);
+        GUIreturns.refinementOptionsChanged   = ~isequaln(refinementOptions_atStartup, refinementOptions);
         GUIreturns.trackingOptionsChanged  = ~isequaln(trackingOptions_atStartup, trackingOptions);
         %Check if preview window changed
         GUIreturns.previewIntervalChanged = (globalOptions_atStartup.firstFrameTesting ~= globalOptions.firstFrameTesting) || (globalOptions_atStartup.lastFrameTesting ~= globalOptions.lastFrameTesting);

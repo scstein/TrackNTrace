@@ -5,7 +5,7 @@ function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,hist
 % methods.
 % 
 % INPUT:
-%     inputData: Either fittingData (cell array) or trackingData(2D double
+%     inputData: Either refinementData (cell array) or trackingData(2D double
 %     array) which come out of TrackNTrace, OR TNT file name. In the latter
 %     case, trackingData is used if available.
 %     
@@ -126,35 +126,35 @@ minIntens = minIntens1; clear minIntens1;
 
 %% Filter data
 
-% Parse TNT data, either trackingData or fittingData
+% Parse TNT data, either trackingData or refinementData
 if ischar(inputData)
-    load(inputData,'trackingData','fittingData');
+    load(inputData,'trackingData','refinementData');
     if exist('trackingData','var');
-        fittingData = trackingData(:,3:end); %#ok<NODEF>
+        refinementData = trackingData(:,3:end); %#ok<NODEF>
         clear trackingData;
     else
-        fittingData = vertcat(fittingData{:}); %#ok<NODEF>
+        refinementData = vertcat(refinementData{:}); %#ok<NODEF>
     end
 else
     if iscell(inputData)
-        %... then it's fittingData
-        fittingData = vertcat(inputData{:});
+        %... then it's refinementData
+        refinementData = vertcat(inputData{:});
     else
-        fittingData = inputData(:,3:end);
+        refinementData = inputData(:,3:end);
     end
 end
 
 % Calculate localization precision if necessary
-pos = fittingData(:,1:2)-0.5; %shift to: upper left pixel center = (0.5,0.5)
+pos = refinementData(:,1:2)-0.5; %shift to: upper left pixel center = (0.5,0.5)
 if guessLocPrecision
     % !!locPrecision is given in pixels!!
-    if size(fittingData,2)<7
-        sigma_sq = fittingData(:,6).^2;
+    if size(refinementData,2)<7
+        sigma_sq = refinementData(:,6).^2;
     else
-        sigma_sq = mean(fittingData(:,6)+fittingData(:,7),2).^2;
+        sigma_sq = mean(refinementData(:,6)+refinementData(:,7),2).^2;
     end
-    N = fittingData(:,4).*2*pi.*sigma_sq; %total number of photons
-    tau = 2*pi*fittingData(:,5).*(sigma_sq+1/12)./N;
+    N = refinementData(:,4).*2*pi.*sigma_sq; %total number of photons
+    tau = 2*pi*refinementData(:,5).*(sigma_sq+1/12)./N;
     locPrecision = sqrt((sigma_sq+1/12)./N.*(1+4*tau+sqrt(2*tau./(1+4*tau)))); %Rieger et al, DOI 10.1002/cphc.201300711
 else
     if isempty(locPrecision)

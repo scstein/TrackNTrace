@@ -7,7 +7,7 @@ name = 'Image filtering';
 
 % Type of plugin.
 % 1: Candidate detection
-% 2: Spot fitting
+% 2: Spot refinement/fitting
 % 3: Tracking
 type = 1;
 
