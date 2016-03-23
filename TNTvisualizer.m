@@ -1234,6 +1234,7 @@ function addPathsVisualizer()
     fullPathToThisFile = mfilename('fullpath');
     [path,~,~] = fileparts(fullPathToThisFile);
     addpath(genpath([path,filesep,'subfun']));
+    addpath(genpath([path,filesep,'external']));
 end
 
 % Function that cuts data from upper and lower tails of the distribution
