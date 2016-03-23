@@ -331,16 +331,16 @@ As you can see, this plugin has two parameters of different types which will be 
 \toprule 
 \multicolumn{1}{c}{\texttt{par\textunderscore type}} & \multicolumn{1}{c}{\texttt{par\textunderscore settings}} & \multicolumn{1}{c}{Example} \\ \midrule
   \texttt{\textquotesingle float\textquotesingle}  &Double variable, \texttt{\string{defaultValue, lowerBound, upperBound\string}} & \verb|{1.3,0,inf}| \\
-   \texttt{\textquotesingle int\textquotesingle}    &Integer variable, \texttt{\string{defaultValue, lowerBound, upperBound\string}}& \verb|4,-10,10|\\
+   \texttt{\textquotesingle int\textquotesingle}    &Integer variable, \texttt{\string{defaultValue, lowerBound, upperBound\string}}& \verb|{4,-10,10}|\\
    \texttt{\textquotesingle bool\textquotesingle}   &Boolean variable, \texttt{defaultValue} & \texttt{true}\\
    \texttt{\textquotesingle string\textquotesingle} & String variable, \texttt{\textquotesingle defaultValue\textquotesingle} & \texttt{\textquotesingle @exp\textquotesingle} \\
-   \texttt{\textquotesingle list\textquotesingle}  &  Interactive list box, \texttt{\string{\textquotesingle defaultEntry\textquotesingle, \textquotesingle Entry2\textquotesingle,...\string}}   & \texttt{\string{\textquotesingle x\textquotesingle,\textquotesingle [x,y]]\textquotesingle\string}} \\
+   \texttt{\textquotesingle list\textquotesingle}  &  Interactive list box, \texttt{\string{\textquotesingle defaultEntry\textquotesingle, \textquotesingle Entry2\textquotesingle,...\string}}   & \texttt{\string{\textquotesingle x\textquotesingle,\textquotesingle [x,y]\textquotesingle\string}} \\
    \texttt{\textquotesingle filechooser\textquotesingle} & Interactive file chooser dialog \texttt{\string{\textquotesingle defaultDir\textquotesingle,\textquotesingle fileEnding\textquotesingle\string}} & \texttt{\string{\textquotesingle C:/Sci/\textquotesingle,\textquotesingle csv\textquotesingle\string}} \\
    \bottomrule
 \end{tabular}
 \end{table}
 
-The last parameter type \texttt{filechooser} combines an edit field which displays a file path with a button to select files of a given ending from the filesystem. The fourth parameter of the \texttt{add\textunderscore param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports \texttt{sprintf} modifier, e.g. \texttt{\textbackslash{}n} for new line). 
+The fourth parameter of the \texttt{add\textunderscore param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports \texttt{sprintf} modifiers, e.g. \texttt{\textbackslash{}n} for new line). 
 
 \subsection{Plugin body}
 A plugin must define a main function in \texttt{plugin.mainFunc}, which is called for every movie frame or all positions in the case of tracking. Unless explicitly forbidden, this process is parallelized using the parallelization toolbox.
@@ -349,12 +349,12 @@ The main functions have a different interface for every plugin type shown below:
 \begin{lstlisting}[style=Matlab-editor]
 % Type 1, candidate detection
 function [candidates_frame_i] = mainFuncName(img, candidateOptions, i)
-%Find candidates in frame img with the number i using the options struct candidateOptions, and return a 2D position array candidates_frame_i with at least two columns for x and y position, one row per candidate
+%Find candidates in 'i'-th frame 'img' of the processed frame interval using the options struct 'candidateOptions', and return a 2D position array candidates_frame_i with at least two columns for x and y position, one row per candidate
 end
   
 % Type 2, fitting/refinement
 function [fits_frame_i]= mainFuncName(img, candidates_frame_i, fittingOptions, i)
-%Refine candidate positions candidates_frame_i in frame img with the number i using the options struct fittingOptions, and return a 2D position array fits_frame_i with at least five columns for x,y and z position, an intensity and a background value, one row per fitted candidate
+%Refine candidate positions candidates_frame_i in 'i'-th frame 'img' of the processed frame interval using the options struct fittingOptions, and return a 2D position array fits_frame_i with at least five columns for x,y and z position, an intensity and a background value, one row per fitted candidate
 end
 
 % Type 3, tracking
@@ -380,7 +380,7 @@ function [options] = initFuncName(options)
 
 function [data, options] = postFuncName(data, options)
 \end{lstlisting}
-The \texttt{initFunc} can alter the \texttt{options} struct or add parameters to it before the main function is executed. This is useful for example for pre-computing masks for filter steps, creating lookup tables, or checking input parameter correctness. The \texttt{postFunc} function can be used to post-process \texttt{data} before it is saved and also add arbitrary information to \texttt{options}. Note that \texttt{data} (either\texttt{candidateData}, \texttt{fittingData}, or \texttt{trackingData}) depends on the plugin type, see Sec.~\ref{sec:datastructures}). 
+The \texttt{initFunc} can alter the \texttt{options} struct or add parameters to it before the main function is executed. This is useful for example for pre-computing masks for filter steps, creating lookup tables, or checking input parameter correctness. The \texttt{postFunc} function can be used to post-process \texttt{data} before it is saved and also add arbitrary information to \texttt{options}. Note that \texttt{data} (either \texttt{candidateData}, \texttt{fittingData}, or \texttt{trackingData}) depends on the plugin type, see Sec.~\ref{sec:datastructures}). 
 
 \subsection{Global variables and parallelization}
 If needed, plugin functions can access external data not available to them via a function call by using global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{fittingOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\textunderscore movie} and \texttt{imgCorrection} as defined in Sec.~\ref{sec:datastructures}. They could be used as such:
