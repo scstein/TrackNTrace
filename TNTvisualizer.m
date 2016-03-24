@@ -723,17 +723,25 @@ end
 
         switch selected_method
             case 1 % Focus on spots (upper quartil / 25% of data)
-                [~, centers] = rangedHist(double(currImg(:)), 100, 50);
-                zl = [centers(end), max(currImg(:))];
+                sortedIntensities = sort(currImg(:));                 
+                minIdx = round(0.75*numel(sortedIntensities));
+                if minIdx == 0; minIdx = 1; end;
+                minval = sortedIntensities( minIdx );
+                maxval = sortedIntensities( end );
             case 2 % Adjust contrast to match min/max intensity
-                zl = [min(currImg(:)), max(currImg(:))];
-            case 3 % 95% range of data (cut upper / lower tails)
-                [~, centers] = rangedHist(double(currImg(:)), 100, 98);
-                zl = [centers(1), centers(end)];                            
+                minval = min(currImg(:));
+                maxval = max(currImg(:));
+            case 3 % 98% range of data (cut upper / lower tails)
+                sortedIntensities = sort(currImg(:)); 
+                minIdx = round(0.01*numel(sortedIntensities));
+                if minIdx == 0; minIdx = 1; end;
+                minval = sortedIntensities( minIdx );
+                maxval = sortedIntensities( round(0.99*numel(sortedIntensities)));                        
             otherwise
                 error('Unknown autocontrast mode!')
         end
         
+        zl = double([minval, maxval]);        
         caxis(zl);
     end
 
@@ -1256,41 +1264,17 @@ if(percentOfData<100)
     lower_limit = (1-percentOfData/100)/2; % below this we throw away
     upper_limit = 1-(1-percentOfData/100)/2; % above this we throw away
     
-    % Increase histogram resolution until highest bin has at most 10% of the data
-    % This is neccessary to get a sufficiently good cumulative distribution function
-    currBins = nbins;
-    [freq,centers] = hist(data,currBins);
-    maxRelativeBinCount = max(freq)/numel(data);
-    % If there is only one unique value (e.g. PSF size), the method would
-    % fail, so we set the number of bins very small instead
-    if maxRelativeBinCount<1
-        while(maxRelativeBinCount>0.1)
-            currBins = currBins*2;
-            [freq,centers] = hist(data,currBins);
-            maxRelativeBinCount = max(freq)/numel(data);
-        end
-    else
-        nbins=3;
+    data = sort(data);
+    minIdx = round(lower_limit*numel(data));
+    if minIdx < 1
+       minIdx = 1; 
+    end
+    maxIdx = round(upper_limit*numel(data));
+    if maxIdx < 1
+       maxIdx = 1; 
     end
     
-    % Integrate to get cumulative density function
-    fraction = cumsum(freq)/sum(freq);
-    % Find lower cutoff
-    minIdx = find(fraction>lower_limit,1,'first')-1;
-    if minIdx == 0
-        minval = min(data);
-    else
-        minval = centers(minIdx);
-    end
-    % Find upper cutoff
-    maxIdx = find(fraction>upper_limit,1,'first');
-    if maxIdx == length(data)
-        maxval = max(data);
-    else
-        maxval = centers(maxIdx);
-    end
-    
-    data = data(data>=minval & data<=maxval);
+    data = data(minIdx:maxIdx);
 end
 
 freq = [];
