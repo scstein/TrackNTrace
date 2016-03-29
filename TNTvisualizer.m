@@ -1,6 +1,6 @@
 % TrackNTrace: A simple and extendable MATLAB framework for single-molecule localization and tracking
 %
-%     Copyright (C) 2016  Jan Thiart, jthiart@phys.uni-goettingen.de
+%     Copyright (C) 2016  Simon Christoph Stein, scstein@phys.uni-goettingen.de
 % 
 %     This program is free software: you can redistribute it and/or modify
 %     it under the terms of the GNU General Public License as published by
