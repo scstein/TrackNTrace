@@ -76,10 +76,14 @@ end
 nrFrames = size(movieStack,3);
 refinementData = cell(nrFrames,1);
 
+totalTime_start = tic;
+
+tic;
 %Call plugins init function
 if ~isempty(refinementOptions.initFunc)
     refinementOptions = refinementOptions.initFunc(refinementOptions);
 end
+initTime = toc;
 
 
 % Try parallel processing of plugins main function
@@ -88,8 +92,8 @@ if parallelProcessingAvailable && refinementOptions.useParallelProcessing
     try      
         imgCorrectionLocal = imgCorrection; % Need a copy for parallel processing
         
-        fprintf('TNT: Refining candidates using parallel processing (Frame by Frame).\n');
-        startTime = tic;        
+        fprintf('TNT: Refining candidates using ''%s'' (parallel processing).\n', refinementOptions.plugin_name);
+        mainTime_start = tic;        
         parfor iFrame = 1:nrFrames
             img = correctMovie_Parallel(movieStack(:,:,iFrame), globalOptions, imgCorrectionLocal);
             nrCandidates = size(candidateData{iFrame},1);
@@ -97,8 +101,7 @@ if parallelProcessingAvailable && refinementOptions.useParallelProcessing
                 refinementData(iFrame) = {refinementOptions.mainFunc(img,candidateData{iFrame},refinementOptions,iFrame)};
             end
         end
-        totalTime = toc(startTime);
-        fprintf('TNT: Time elapsed %im %is.\n',floor(totalTime/60), floor(mod(totalTime,60)));
+        mainTime = toc(mainTime_start);
     catch err
         warning off backtrace
         warning('Parallel execution failed. Switching to serial execution.\n Error: %s.',err.message);
@@ -110,27 +113,27 @@ end
 % Standard serial processing of plugins main function
 if not(parallelProcessingAvailable) || not(refinementOptions.useParallelProcessing) || parallelProcessing_Failed
     if parallelProcessingAvailable && not(refinementOptions.useParallelProcessing)
-        fprintf('TNT: Refining candidates (parallel processing disabled by plugin).\n');
+        fprintf('TNT: Refining candidates using ''%s'' (parallel processing disabled by plugin).\n', refinementOptions.plugin_name);
     else
         fprintf('TNT: Refining candidates.\n');
     end
     
     msgAccumulator = ''; % Needed for rewindable command line printing (rewPrintf subfunction)
-    startTime = tic;
-    elapsedTime = [];
+    mainTime_start = tic;
+    mainTime = [];
     lastElapsedTime = 0;
     
     
     for iFrame = 1:nrFrames %first frame has already been dealt with
-        elapsedTime = toc(startTime);
+        mainTime = toc(mainTime_start);
         
         % Output process every 0.5 seconds
-        if( (elapsedTime-lastElapsedTime) > 0.5)
+        if( (mainTime-lastElapsedTime) > 0.5)
             rewindMessages();
-            rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(elapsedTime/iFrame*(nrFrames-iFrame),60)))
+            rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(mainTime/60), floor(mod(mainTime,60)),  floor(mainTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(mainTime/iFrame*(nrFrames-iFrame),60)))
             rewPrintf('TNT: Refining/fitting frame %i/%i\n',iFrame,nrFrames)
             
-            lastElapsedTime = elapsedTime;
+            lastElapsedTime = mainTime;
         end
         
         img = correctMovie(movieStack(:,:,iFrame));
@@ -141,16 +144,19 @@ if not(parallelProcessingAvailable) || not(refinementOptions.useParallelProcessi
         end
     end
     rewindMessages();
-    rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(elapsedTime/60), floor(mod(elapsedTime,60)),  floor(elapsedTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(elapsedTime/iFrame*(nrFrames-iFrame),60)))
+    rewPrintf('TNT: Time elapsed %im %is - to go: %im %is\n', floor(mainTime/60), floor(mod(mainTime,60)),  floor(mainTime/iFrame*(nrFrames-iFrame)/60),  floor(mod(mainTime/iFrame*(nrFrames-iFrame),60)))
 end
 
 
 % Call plugins post-processing function
+tic;
 if ~isempty(refinementOptions.postFunc)
     [refinementData,refinementOptions] = refinementOptions.postFunc(refinementData,refinementOptions);
 end
+postTime = toc;
 
-fprintf('TNT: Refinement done.\n');
+totalTime = toc(totalTime_start);
+fprintf('TNT: Refinement took %im %is (init: %im %is, main: %im %is, post: %im %is).\n', floor(totalTime/60), floor(mod(totalTime,60)),floor(initTime/60), floor(mod(initTime,60)) ,floor(mainTime/60), floor(mod(mainTime,60)) ,floor(postTime/60), floor(mod(postTime,60)));
 
 
 % Verify the outParamDescription, make it fit to the data if neccessary

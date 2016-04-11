@@ -304,7 +304,6 @@ for iMovie=1:numel(movie_list)
         dark_img_def = dark_img;
     end
 end
-clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions
 
 %% Candidate detection and refinement for every movie
 for iMovie=1:numel(list_filenames_TNTdata)
@@ -340,7 +339,6 @@ for iMovie=1:numel(list_filenames_TNTdata)
     end
     
     save(filename_TNTdata,'candidateData','refinementData','globalOptions','candidateOptions','refinementOptions','movieSize','firstFrame_lastFrame','-append');
-    clearvars -except list_filenames_TNTdata parallelProcessingAvailable TNToptions globalOptions filename_movie_last_loop
 end
 
 %% Compute trajectories for every movie

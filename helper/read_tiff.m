@@ -45,6 +45,9 @@ end
 
 % Check if file is larger then 3.9GB
 fileinfo = dir(filename);
+if isempty(fileinfo)
+   error('Could not open file ''%s''', filename);
+end
 if( (fileinfo.bytes/(1024*1024*1024) ) > 3.9)
     warning off backtrace
     warning('Reading image file > 3.9GB. Switching to read_BigTiff (unstable).');

@@ -184,7 +184,12 @@ set(h_all.popup_autocontrast, 'TooltipString', sprintf('Algorithm used for autoc
 set(h_all.but_distribution,'Callback',@distributionCallback);
 
 % Slider
-set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(movie,3) 1/size(movie,3)],'Callback', @sliderCallback);
+if(size(movie,3)>1) 
+    set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(movie,3) 1/size(movie,3)],'Callback', @sliderCallback);
+else % For single images we disable slider and play button
+    set(h_all.slider,'Enable','off');
+    set(h_all.but_play,'Enable','off');
+end
 hLstn = addlistener(h_all.slider,'ContinuousValueChange',@updateSlider); %#ok<NASGU> % Add event listener for continous update of the shown slider value
 
 % Edit fields
@@ -949,6 +954,11 @@ end
                     warning off backtrace
                         TNTdata = load(movieOrTNTfile);
                     warning on backtrace
+                    % Add plugin path again (otherwise we loading a TNT
+                    % file gives warning that the function to the function
+                    % handles could not be found.
+                    addpath(genpath([path,filesep,'plugins']));
+                    
                     fprintf('Loading movie specified in TNT file..\n')
                     if(isfield(TNTdata,'firstFrame_lastFrame'))
                         firstFrame = TNTdata.firstFrame_lastFrame(1);
@@ -981,6 +991,10 @@ end
                 warning off backtrace
                     TNTdata = load(candidateDataOrTNTfile);
                 warning on backtrace
+                % Add plugin path again (otherwise we loading a TNT
+                % file gives warning that the function to the function
+                % handles could not be found.
+                addpath(genpath([path,filesep,'plugins']));
                 if(~isequal(size(movie), TNTdata.movieSize))
                    error('Input movie and given TNT file do not fit together! Movie size [%i,%i,%i], TNT file [%i,%i,%i].\n',size(movie),TNTdata.movieSize) 
                 end

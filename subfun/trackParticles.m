@@ -40,14 +40,19 @@ function [trackingData, trackingOptions] = trackParticles(refinementData,trackin
 % 
 %     trackingOptions: see above
 
-fprintf('Tracking particles using %s .. \n',trackingOptions.plugin_name);
+fprintf('TNT: Tracking particles using ''%s''. \n',trackingOptions.plugin_name);
+
+totalTime_start = tic;
 
 % Execute the initializing function
+tic;
 if ~isempty(trackingOptions.initFunc)
     trackingOptions = trackingOptions.initFunc(trackingOptions);
 end
+initTime = toc;
 
 % Execute the tracking function
+tic;
 switch nargout(trackingOptions.mainFunc)
     case 1 % Only tracking data assigned during call
         trackingData = trackingOptions.mainFunc(refinementData,trackingOptions);
@@ -56,13 +61,17 @@ switch nargout(trackingOptions.mainFunc)
     otherwise
         warning('Too many output arguments in mainFunc of tracking plugin ''%s''. Ignoring additional outputs', trackingOptions.plugin_name);
 end
+mainTime = toc;
 
 % Execute the post-processing function
+tic;
 if ~isempty(trackingOptions.postFunc)
     [trackingData,trackingOptions] = trackingOptions.postFunc(trackingData,trackingOptions);
 end
+postTime = toc;
 
-fprintf('\b done\n');
+totalTime = toc(totalTime_start);
+fprintf('TNT: Tracking took %im %is (init: %im %is, main: %im %is, post: %im %is).\n', floor(totalTime/60), floor(mod(totalTime,60)),floor(initTime/60), floor(mod(initTime,60)) ,floor(mainTime/60), floor(mod(mainTime,60)) ,floor(postTime/60), floor(mod(postTime,60)));
 
 % Verify the outParamDescription, make it fit to the data if neccessary
 trackingOptions = verifyOutParamDescription(trackingData, trackingOptions);

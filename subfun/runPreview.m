@@ -88,7 +88,7 @@ else % Reuse data where possible
         trackingOptions = previewOptions.trackingOptions;
     end    
 end
-
+fprintf('\n');
 
 %visualize all trajectories
 if globalOptions.enableTracking

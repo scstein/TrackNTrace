@@ -443,6 +443,30 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         refinement_plugins( selected_refinement_plugin).createOptionsPanel(h_all.panel_fitting);
         tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
         
+        % Disable candidate search / refinement panels if the box to use
+        % data loaded from a file is checked (the user should not be able
+        % to alter the parameters then.
+                if get(h_all.cbx_candidate_loaded, 'Value')            
+            set(h_all.cbx_refinement_loaded,'Enable','on');
+            set(h_all.popup_candidateMethod,'Enable','off');
+            set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','off');
+        else
+            set(h_all.cbx_refinement_loaded,'Enable','off');
+            set(h_all.popup_candidateMethod,'Enable','on');
+            set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','on');
+        end
+        
+        if get(h_all.cbx_refinement_loaded, 'Value')            
+            set(h_all.cbx_candidate_loaded,'Enable','off');
+            set(h_all.popup_refinementMethod,'Enable','off');
+            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','off');
+        else
+            set(h_all.cbx_candidate_loaded,'Enable','on');
+            set(h_all.popup_refinementMethod,'Enable','on');
+            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','on');
+        end
+        % --------------
+        
         updatePanelPositions();
         
         % Enable/disable tracking panel
@@ -603,7 +627,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         [outfile,path] = uiputfile('.mat');
         if isfloat(outfile); return; end; % User clicked cancel
         
-        outfile = [path,outfile];
+        [~,name,~] = fileparts(outfile); % Append _TNT to filename
+        outfile = [path,name,'_TNT.mat'];
         save(outfile,'filename_movie','globalOptions', 'candidateOptions','refinementOptions');
         if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
             save(outfile,'trackingOptions','-append');

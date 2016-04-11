@@ -46,10 +46,21 @@ classdef TNTplugin < handle % Inherit from handle class
 %
 % Function overview:
 %  - User callable functions -
+%   NOTE: As usual, omit the obj input parameters when calling object functions using instances.
+%
 %   function obj = TNTplugin(name, type, mainFunc, outParamDescription)
 %      : Constructor of the plugin object taking mandatory parameters as input
 %   function add_param(obj, par_name, par_type, par_settings, par_tooltip )
 %      : Add a paramter to this plugin, see description in the function code below.
+%   function newRow(obj)
+%      : Starts a new row in the GUI of the plugin
+%   function add_text(obj,text,horizontalAlignment, fontWeight,fontAngle,tooltip)
+%      : Add lines of text to the GUI. This can be used for descriptions or sections/headings
+%        (Paramters except text are optional / can be left empty)
+%        Possible horizontal alignment: left, center, right
+%        Possible font weights: normal, bold, light, demi
+%        Possible font angles: normal, italic, oblique
+%         
 %
 %  - Internal function used by TrackNTrace -
 %   function options = getOptions(obj)
@@ -153,7 +164,16 @@ classdef TNTplugin < handle % Inherit from handle class
             %   Use options.>NAME< within your plugins function to address these parameters
             %
             % par_type: Type of parameter
-            %   One of 'float', 'int', 'bool','string','list', 'filechooser'
+            %   One of 'float', 'int', 'bool','string','list','filechooser', 
+            %   Two special types: 
+            %     'newRow' -> sets new row in the gui. 
+            %        Do not use this type directly, but use the newRow() function.
+            %     'text' -> Adds lines of text to the GUI 
+            %        Do not use this type directly, but use the add_text(text,horizontalAlignment, fontWeight,fontAngle,tooltip) function.
+            %        (Paramters except text are optional / can be left empty)
+            %        Possible horizontal alignment: left, center, right
+            %        Possible font weights: normal, bold, light, demi
+            %        Possible font angles: normal, italic, oblique
             %
             % par_settings: Settings needed to setup parameter, depends on type
             %   'float':  Cell array {defaultValue, lowerBound, upperBound}
@@ -201,12 +221,72 @@ classdef TNTplugin < handle % Inherit from handle class
                     if(~iscell(par_settings) || length(par_settings) ~= 2)
                         error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {''default directory'',''filterEnding''}!', par_name, par_type)
                     end
+                case 'newRow'           
+                    %  -> sets new row in the gui. Do not use this type directly, but use the newRow() function.
+                case 'text'
+                    %  -> Lines of text in the gui. Do not use this type directly, but use the add_text() function.
                 otherwise
                     error('add_plugin_param: Unknown parameter type ''%s'' of parameter ''%s''.', par_type, par_name);
             end
             
             % --- Add parameter information ---
             obj.param_specification = vertcat(obj.param_specification, {par_name, par_type, par_settings, sprintf(par_tooltip)});
+        end
+        
+        % Starts a new row in the plugin GUI
+        function newRow(obj)
+           add_param(obj, 'noname', 'newRow', [], '' );
+        end
+        
+        % Add lines of text to the GUI
+        % This is meant for descriptions or sections/headings
+        % (Paramters except text are optional / can be left empty)
+        % Possible horizontal alignment: left, center, right
+        % Possible font weights: normal, bold, light, demi
+        % Possible font angles: normal, italic, oblique
+        function add_text(obj,text,horizontalAlignment, fontWeight,fontAngle,tooltip)
+            if nargin < 3 || isempty(horizontalAlignment)
+                horizontalAlignment = 'left';
+            else
+                switch horizontalAlignment
+                    case 'left'
+                    case 'right'
+                    case 'center'
+                    otherwise
+                        error('Unknown horizontal alginment ''%s''.\n', horizontalAlignment);
+                end
+            end
+            
+            if nargin < 4 || isempty(fontWeight)
+                fontWeight = 'normal';
+            else
+                switch fontWeight
+                    case 'normal'
+                    case 'light'
+                    case 'demi'
+                    case 'bold'
+                    otherwise
+                        error('Unknown font weight ''%s''.\n', fontWeight);
+                end
+            end
+            
+            if nargin < 5 || isempty(fontAngle)
+                fontAngle = 'normal';
+                else
+                switch fontAngle
+                    case 'normal'
+                    case 'italic'
+                    case 'oblique'
+                    otherwise
+                        error('Unknown font angle ''%s''.\n', fontAngle);
+                end
+            end
+            
+            if nargin < 6 || isempty(tooltip)
+                tooltip = '';
+            end
+            
+           add_param(obj, 'noname', 'text', {text, horizontalAlignment, fontWeight, fontAngle}, tooltip );
         end
         
         % Add data to the options that have nothing to do with the GUI and its parameters.
@@ -309,13 +389,85 @@ classdef TNTplugin < handle % Inherit from handle class
             elemRowIdx = 1;
             left_pos = text_gap;
             bott_pos = -8;
-            newRow();
+            startNewRow();
             
             % Create controls for all parameters
             for iP = 1:num_pars
                 pName = par_name{iP};
                 pStructVarName = struct_varNames{iP};
                 pType = par_type{iP};
+                
+                % Check for special formatting parameters 
+                % (like starting new rows or textboxes)
+                % Code outside this switch statement is skipped for these
+                % 'parameters'/keywords
+                switch pType
+                    % Start a new row
+                    case'newRow'
+                        startNewRow();
+                        continue
+                        
+                    % Check if user wants to add text
+                    case 'text'
+                        % Unpack settings
+                        pSettings = par_settings{iP};
+                        text = pSettings{1};
+                        horizontalAlignment = pSettings{2};
+                        fontWeight = pSettings{3};
+                        fontAngle = pSettings{4};
+                        
+                        text_pos = [1, 1, panel_width-2*text_gap, elemHeight];
+                        h_text = uicontrol('Parent',h_panel, 'Units','points','Style','text', 'Position',text_pos, ...
+                            'BackgroundColor',bg_color,'FontSize',fontSize,'String',text,'HorizontalAlignment',horizontalAlignment);
+                        
+                        panel_width_characters = 90; % Approximate panel width
+                        wrapped_text = textwrap(h_text, {text}, panel_width_characters);
+                        nRows = size(wrapped_text,1);
+                        
+                        % Set text
+                        set(h_text,'String', wrapped_text{1});
+                        % Set font weight and angle
+                        set(h_text, 'FontWeight', fontWeight, 'FontAngle', fontAngle);
+                        % Set Tooltip
+                        set(h_text, 'TooltipString',par_tooltip{iP});
+                        
+                        % Place element in panel
+                        placeElement();
+                        if nRows == 1
+                            startNewRow();
+                        else
+                            % Start new row without row gap (gap between parameter rows)
+                            elemRowIdx = 1;
+                            left_pos = text_gap;
+                            bott_pos = bott_pos-elemHeight;
+                            
+                            for iLine = 2:nRows
+                                text_pos = [1, 1, panel_width-2*text_gap, elemHeight];
+                                h_text = uicontrol('Parent',h_panel, 'Units','points','Style','text', 'Position',text_pos, ...
+                                    'BackgroundColor',bg_color,'FontSize',fontSize,'String',text,'HorizontalAlignment',horizontalAlignment);
+                                % Set text
+                                set(h_text,'String', wrapped_text{iLine});
+                                % Set font weight and angle
+                                set(h_text, 'FontWeight', fontWeight, 'FontAngle', fontAngle);
+                                % Set Tooltip
+                                set(h_text, 'TooltipString',par_tooltip{iP});
+                                
+                                % Place element in panel
+                                placeElement();
+                                if( iLine == nRows )
+                                    startNewRow();
+                                else % new row without row gap (gap between parameter rows)
+                                    elemRowIdx = 1;
+                                    left_pos = text_gap;
+                                    bott_pos = bott_pos-elemHeight;
+                                end
+                            end
+                        end
+                        
+                        continue
+                        
+                    otherwise % Just continue
+                end
                 
                 % Check if value for parameter was given
                 if(isfield(obj.options,pStructVarName))
@@ -386,7 +538,7 @@ classdef TNTplugin < handle % Inherit from handle class
                             setPopup(h_val, pValue);
                         end
                     case 'filechooser'
-                        val_pos = [value_position(1), value_position(2), 3*editWidth, elemHeight];
+                        val_pos = [value_position(1), value_position(2), 2.5*editWidth, elemHeight];
                         h_val= uicontrol('Parent',h_panel, 'Units','points', 'Position', val_pos, ...
                             'Style','edit','BackgroundColor', 'w','FontSize',fontSize,'String',pValue);
                         
@@ -432,7 +584,7 @@ classdef TNTplugin < handle % Inherit from handle class
             panel_pos(4) = panel_newheight;
             set(h_panel,'Position',panel_pos);
             
-            function newRow()
+            function startNewRow()
                 elemRowIdx = 1;
                 left_pos = text_gap;
                 bott_pos = bott_pos-row_gap-elemHeight;
@@ -440,62 +592,82 @@ classdef TNTplugin < handle % Inherit from handle class
             
             % Place element in the panel
             function placeElement()
-                % Filechoosers always occupy their own row
-                if strcmp(pType,'filechooser')
-                    % Width of 'text value'
-                    overall_width = textwidth + text_gap + valwidth + text_gap + buttonwidth;
-                    
-                    % Check if element should be placed in this row
-                    elemFitsInRow = (left_pos + overall_width < (panel_width -text_gap) );
-                    if(~elemFitsInRow)
-                        newRow();
-                    end
-                    
-                    text_pos = get(h_text,'Position');
-                    text_pos(1:2) = [left_pos,bott_pos];
-                    set(h_text,'Position',text_pos);
-                    
-                    val_pos = get(h_val, 'Position');
-                    val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos];
-                    set(h_val,'Position',val_pos);
-                    
-                    button_pos = get(h_button, 'Position');
-                    button_pos(1:2) = [left_pos+textwidth+text_gap+text_gap+valwidth+text_gap, bott_pos];
-                    set(h_button,'Position',button_pos);
-                    
-                    left_pos = left_pos + overall_width + col_gap; % Next column
-                    
-                    % If next element exceeds the max elements per row, begin new row
-                    % (Except for the last element)
-                    if( elemRowIdx > maxElemPerRow && iP~=num_pars)
-                        newRow();
-                    end
-                else % For all other parameter types:
-                    % Width of 'text value'
-                    overall_width = textwidth + text_gap + valwidth;
-                    
-                    % Check if element should be placed in this row
-                    elemFitsInRow = (left_pos + overall_width < (panel_width -text_gap) );
-                    if(~elemFitsInRow)
-                        newRow();
-                    end
-                    
-                    text_pos = get(h_text,'Position');
-                    text_pos(1:2) = [left_pos,bott_pos];
-                    set(h_text,'Position',text_pos);
-                    
-                    val_pos = get(h_val, 'Position');
-                    % Note: +(elemHeight-val_pos(4))/2 is needed to center Elements that are note elemHeight high (like poupmenus which need at least 17 points in height.
-                    val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos+(elemHeight-val_pos(4))/2]; 
-                    set(h_val,'Position',val_pos);
-                    
-                    left_pos = left_pos + overall_width + col_gap; % Next column
-                    elemRowIdx = elemRowIdx+1;
-                    % If next element exceeds the max elements per row, begin new row
-                    % (Except for the last element)
-                    if( elemRowIdx > maxElemPerRow && iP~=num_pars)
-                        newRow();
-                    end
+                switch pType
+                    case'filechooser'
+                        % Width of 'text value'
+                        overall_width = textwidth + text_gap + valwidth + text_gap + buttonwidth;
+                        
+                        % If filechooser element is too wide for panel, make the edit field smaller
+                        if(overall_width > (panel_width-2*text_gap) )
+                            difference = abs(overall_width-(panel_width-2*text_gap) );
+                            val_pos(3) = val_pos(3)-1.05*difference;
+                            set(h_val,'Position',val_pos);
+                            valwidth = val_pos(3);
+                            
+                            overall_width = textwidth + text_gap + valwidth + text_gap + buttonwidth;
+                        end
+                        
+                        % Check if element should be placed in this row
+                        elemFitsInRow = (left_pos + overall_width < (panel_width -2*text_gap) );
+                        if(~elemFitsInRow)
+                            startNewRow();
+                        end
+                        
+                        text_pos = get(h_text,'Position');
+                        text_pos(1:2) = [left_pos,bott_pos];
+                        set(h_text,'Position',text_pos);
+                        
+                        val_pos = get(h_val, 'Position');
+                        val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos];
+                        set(h_val,'Position',val_pos);
+                        
+                        button_pos = get(h_button, 'Position');
+                        button_pos(1:2) = [left_pos+textwidth+text_gap+text_gap+valwidth+text_gap, bott_pos];
+                        set(h_button,'Position',button_pos);
+                        
+                        left_pos = left_pos + overall_width + col_gap; % Next column
+                        
+                        % If next element exceeds the max elements per row, begin new row
+                        % (Except for the last element)
+                        if( elemRowIdx > maxElemPerRow && iP~=num_pars)
+                            startNewRow();
+                        end
+                        
+                    case 'text'
+                        if elemRowIdx ~= 1
+                            startNewRow();
+                        end
+                        
+                        text_pos = get(h_text,'Position');
+                        text_pos(1:2) = [left_pos,bott_pos];
+                        set(h_text,'Position',text_pos);
+                        
+                    otherwise % For all other parameter types:                        
+                        % Width of 'text value'
+                        overall_width = textwidth + text_gap + valwidth;
+                        
+                        % Check if element should be placed in this row
+                        elemFitsInRow = (left_pos + overall_width < (panel_width -2*text_gap) );
+                        if(~elemFitsInRow)
+                            startNewRow();
+                        end
+                        
+                        text_pos = get(h_text,'Position');
+                        text_pos(1:2) = [left_pos,bott_pos];
+                        set(h_text,'Position',text_pos);
+                        
+                        val_pos = get(h_val, 'Position');
+                        % Note: +(elemHeight-val_pos(4))/2 is needed to center Elements that are note elemHeight high (like poupmenus which need at least 17 points in height.
+                        val_pos(1:2) = [left_pos+textwidth+text_gap, bott_pos+(elemHeight-val_pos(4))/2];
+                        set(h_val,'Position',val_pos);
+                        
+                        left_pos = left_pos + overall_width + col_gap; % Next column
+                        elemRowIdx = elemRowIdx+1;
+                        % If next element exceeds the max elements per row, begin new row
+                        % (Except for the last element)
+                        if( elemRowIdx > maxElemPerRow && iP~=num_pars)
+                            startNewRow();
+                        end
                 end
             end
             

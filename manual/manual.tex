@@ -339,10 +339,12 @@ As you can see, this plugin has two parameters of different types which will be 
 \end{tabular}
 \end{table}
 
-The fourth parameter of the \texttt{add\textunderscore param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports \texttt{sprintf} modifiers, e.g. \texttt{\textbackslash{}n} for new line). 
+The fourth parameter of the \texttt{add\textunderscore param} function is the tooltip shown when hovering over the parameter with the mouse (note: this supports \texttt{sprintf} modifiers, e.g. \texttt{\textbackslash{}n} for new line). \\
+
+To  better structure the GUI users can call the \texttt{newRow()} function of a plugin instance between \texttt{add\textunderscore param(...)} calls which starts a new row in the graphical representation of the plugin. Furthermore, headings or descriptions can be added with \texttt{add\_text(text, horizontalAlignment, fontWeight, fontAngle, tooltip)}. The added text is automatically wrapped to fit into the plugin panel and always occupies its own rows (never shares rows with other parameters).   Possible values for \texttt{horizontalAlignment} are: 'left', 'center', 'right'.  Possible values for \texttt{fontWeight} are: 'normal', 'bold', 'light', 'demi'. Possible values for \texttt{fontAngle} are: 'normal', 'italic', 'oblique'.
 
 \subsection{Plugin body}
-A plugin must define a main function in \texttt{plugin.mainFunc}, which is called for every movie frame or all positions in the case of tracking. Unless explicitly forbidden, this process is parallelized using the parallelization toolbox.
+A plugin must define a main function in \texttt{plugin.mainFunc}, which is called for every movie frame or only once in the case of tracking. Unless explicitly forbidden, this process is parallelized using the parallelization toolbox.
 
 The main functions have a different interface for every plugin type shown below:
 \begin{lstlisting}[style=Matlab-editor]
@@ -382,13 +384,13 @@ function [data, options] = postFuncName(data, options)
 The \texttt{initFunc} can alter the \texttt{options} struct or add parameters to it before the main function is executed. This is useful for example for pre-computing masks for filter steps, creating lookup tables, or checking input parameter correctness. The \texttt{postFunc} function can be used to post-process \texttt{data} before it is saved and also add arbitrary information to \texttt{options}. Note that \texttt{data} (either \texttt{candidateData}, \texttt{refinementData}, or \texttt{trackingData}) depends on the plugin type, see Sec.~\ref{sec:datastructures}). 
 
 \subsection{Global variables and parallelization}
-If needed, plugin functions can access external data not available to them via a function call by using global variables. Accessible variables are \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{refinementOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\textunderscore movie} and \texttt{imgCorrection} as defined in Sec.~\ref{sec:datastructures}. They could be used as such:
+If needed, plugin functions can access external data not available to them via a function call by using global variables. Accessible variables are  \texttt{globalOptions}, \texttt{candidateOptions}, \texttt{refinementOptions}, \texttt{trackingOptions}, \texttt{movie}, \texttt{filename\textunderscore movie} and \texttt{imgCorrection} as defined in Sec.~\ref{sec:datastructures}. In addition the boolean \texttt{parallelProcessingAvailable} is true if parallel processing is available to TrackNTrace. They could be used as such:
 \begin{lstlisting}[style=Matlab-editor]
 function [output] = fittingFun(img, options, currentFrame)
 global globalOptions;
-can_use_photons = globalOptions.photonConversion;
+img_in_photons = globalOptions.photonConversion;
 
-if can_use photons
+if img_in_photons
    output = PhotonFun(img,options);
 else
    output = NoPhotonFun(img,options);
