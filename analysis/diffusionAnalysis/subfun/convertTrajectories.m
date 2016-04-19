@@ -25,8 +25,8 @@ switch lower(trmethod)
     
     case('tnt')
         if ischar(traj)
-            traj = load(traj,'-mat','trajectoryData');
-            traj = traj.trajectoryData;
+            traj = load(traj,'-mat','trackingData');
+            traj = traj.trackingData;
         end
         
         nrTraj = max(traj(:,1)); %number of trajectories

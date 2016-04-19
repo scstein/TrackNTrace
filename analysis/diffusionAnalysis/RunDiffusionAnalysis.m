@@ -108,7 +108,8 @@ if saveToFile
     diffusionAnalysis_result.experimParam = experimParam;
     diffusionAnalysis_result.trajParam = trajParam;
     diffusionAnalysis_result.fitParam = fitParam;
-    diffusionAnalysis_result.printParam = printParam; %#ok<STRNU>
+    diffusionAnalysis_result.printParam = printParam; 
+    diffusionAnalysis_result.msdResult = msd_result;%#ok<STRNU>
     
     if saveOverwrite
         save(saveFilename,'diffusionAnalysis_result','-append');

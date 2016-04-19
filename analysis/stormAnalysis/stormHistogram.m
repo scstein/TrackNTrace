@@ -83,7 +83,9 @@ if nargin < 4 || isempty(inputData)
     end
     
     load(inputData,'filename_movie');
-    filename = filename_movie;
+    if exist('filename_movie','var')
+        filename = filename_movie;
+    end
         
 end
 
