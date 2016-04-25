@@ -309,8 +309,8 @@ end
 for iMovie=1:numel(list_filenames_TNTdata)
     filename_TNTdata = list_filenames_TNTdata{iMovie};
     load(filename_TNTdata,'-mat');
-        
-    if  not(exist('candidateData','var') && exist('refinementData','var'))
+    
+    if not(exist('candidateData','var') && exist('refinementData','var')) || isempty(candidateData) || isempty(fittingData)
         % Read movie
         if iMovie==1 || ~strcmp(filename_movie,filename_movie_last_loop)
             movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
@@ -318,13 +318,13 @@ for iMovie=1:numel(list_filenames_TNTdata)
         filename_movie_last_loop = filename_movie;
 
         % Compute the positions
-        if not(exist('candidateData','var'))
+        if not(exist('candidateData','var')) || isempty(candidateData)
             fprintf('######\nTNT: Locating candidates in movie %s.\n',filename_movie);
             [candidateData, candidateOptions] = findCandidateParticles(movie, dark_img, globalOptions, candidateOptions);
         else
             fprintf('######\nTNT: Using loaded candidateData for processing.\n');
         end
-        if not(exist('refinementData','var'))
+        if not(exist('refinementData','var')) || isempty(fittingData)
             fprintf('######\nTNT: Refining positions in movie %s.\n',filename_movie);
             [refinementData, refinementOptions] = fitParticles(movie, dark_img, globalOptions, refinementOptions, candidateData);
         else
@@ -339,6 +339,7 @@ for iMovie=1:numel(list_filenames_TNTdata)
     end
     
     save(filename_TNTdata,'candidateData','refinementData','globalOptions','candidateOptions','refinementOptions','movieSize','firstFrame_lastFrame','-append');
+    candidateData = []; fittingData = [];
 end
 
 %% Compute trajectories for every movie
