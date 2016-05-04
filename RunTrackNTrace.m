@@ -310,7 +310,7 @@ for iMovie=1:numel(list_filenames_TNTdata)
     filename_TNTdata = list_filenames_TNTdata{iMovie};
     load(filename_TNTdata,'-mat');
     
-    if not(exist('candidateData','var') && exist('refinementData','var')) || isempty(candidateData) || isempty(fittingData)
+    if not(exist('candidateData','var') && exist('refinementData','var')) || isempty(candidateData) || isempty(refinementData)
         % Read movie
         if iMovie==1 || ~strcmp(filename_movie,filename_movie_last_loop)
             movie = read_tiff(filename_movie, false, [globalOptions.firstFrame,globalOptions.lastFrame]);
