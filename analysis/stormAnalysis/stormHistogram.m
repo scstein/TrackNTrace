@@ -56,24 +56,10 @@ function [stormMap,stormRaw] = stormHistogram(inputData,movieSize,pixelSize,hist
 %% Parse input
 
 % No input data? Try to do things automatically as best as possible
-if nargin < 4 || isempty(inputData)
+if nargin < 1 || isempty(inputData)
     [inputData, path] = uigetfile({'*.mat*', 'MATLAB TrackNTrace file'},'Choose TrackNTrace file to analyze.');
     inputData = [path,inputData];
-    load(inputData,'movieSize'); movieSize = movieSize(1:2);
-    
-    if ~exist('pixelSize','var') || isempty(pixelSize)
-        warning off backtrace
-        warning('Pixel size not given, setting to 100 nm.');
-        warning on backtrace
-        pixelSize = 100;
-    end
-    
-    if ~exist('histogramType','var') || isempty(histogramType)
-        warning off backtrace
-        warning('Histogram type not given, setting to ''gauss''.');
-        warning on backtrace
-        histogramType = 'gauss';
-    end
+    load(inputData,'movieSize');
     
     load(inputData,'globalOptions');
     if exist('globalOptions','var')
@@ -85,32 +71,58 @@ if nargin < 4 || isempty(inputData)
     load(inputData,'filename_movie');
     if exist('filename_movie','var')
         filename = filename_movie;
-    end
-        
+    end  
 end
 
-    
+
+if nargin < 2
+    if isempty(movieSize)
+        error('Either give the X-Y movie size or choose a TrackNTrace file. The movie size has to be known. Aborting.');
+    end
+end
+movieSize = movieSize(1:2);
+
+if ~exist('pixelSize','var') || isempty(pixelSize)
+    warning off backtrace
+    warning('Pixel size not given, setting to 100 nm.');
+    warning on backtrace
+    pixelSize = 100;
+end
+
+
+if ~exist('histogramType','var') || isempty(histogramType)
+    warning off backtrace
+    warning('Histogram type not given, setting to ''default''.');
+    warning on backtrace
+    histogramType = 'default';
+end
+
 
 if ~exist('filename','var') || isempty(filename)
     filename = [];
 end
+
 
 if ~exist('superResMag','var') || isempty(superResMag) 
     superResMag = 8;
 end
 superResMag = round(superResMag);
 
+
 if ~exist('nHistogramSteps','var') || isempty(nHistogramSteps)
     nHistogramSteps = 4;
 end
+
 
 if ~exist('photonConversion','var') || isempty(photonConversion) 
     photonConversion = false;
 end
 
+
 if ~exist('locPrecision','var')
     locPrecision = [];
 end
+
 
 guessLocPrecision = false;
 if photonConversion
@@ -160,7 +172,7 @@ if guessLocPrecision
     locPrecision = sqrt((sigma_sq+1/12)./N.*(1+4*tau+sqrt(2*tau./(1+4*tau)))); %Rieger et al, DOI 10.1002/cphc.201300711
 else
     if isempty(locPrecision)
-        disp(sprintf('Localization precision estimation not possible, switchting to default STORM histogram.\n')); %#ok<DSPS>
+        disp(sprintf('Localization precision estimation not possible, switching to default STORM histogram.\n')); %#ok<DSPS>
         histogramType = 'default';
     else
         locPrecision = repmat(locPrecision/pixelSize,size(pos,1),1);
@@ -247,7 +259,7 @@ end
         XY = XY(~out_of_bounds,:);
         XYweights = XYweights(~out_of_bounds,:);
         idx = floor(XY/binWidth)+1;
-        idx = sub2ind(movieSize*superResMag,idx(:,2),idx(:,1));
+        idx = sub2ind(movieSize(2:-1:1)*superResMag,idx(:,2),idx(:,1));
         
         histogram = zeros(movieSize(2)*superResMag,movieSize(1)*superResMag);
         for jPos = 1:numel(idx)
