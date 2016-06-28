@@ -101,17 +101,13 @@ end
 refinementOptions.halfWindowSize = min(10,ceil(3*refinementOptions.PSFSigma));
 switch refinementOptions.fitType
     case '[x,y,N,BG]'
-        fitType = 1;
         nrParam = 0;
     case '[x,y,N,BG,s]'
-        fitType = 2;
         nrParam = 1;
     case '[x,y,N,BG,sx,sy]'
-        fitType = 4;
         nrParam = 2;
 end
 
-refinementOptions.fitType = fitType;
 refinementOptions.nrParam = nrParam;
 refinementOptions.outParamDescription = refinementOptions.outParamDescription(1:5+nrParam);
 
@@ -231,15 +227,15 @@ function [P,CRLB,LL]=gaussmlev2(data,PSFSigma,iterations,fittype,function_name,A
 %     function_name = functions{iFun};
 %     try
         switch fittype
-            case 1
-                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,fittype);
-            case 2
-                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,fittype);
+            case '[x,y,N,BG]'
+                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,1);
+            case '[x,y,N,BG,s]'
+                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,2);
             case 3
                 %not reachable here
-                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,fittype,Ax,Ay,Bx,By,gamma,d);
-            case 4
-                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,fittype);
+                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,3,Ax,Ay,Bx,By,gamma,d);
+            case '[x,y,N,BG,sx,sy]'
+                [P, CRLB, LL]=feval(function_name,data,PSFSigma,iterations,4);
         end
 %         return
 %     catch ME
