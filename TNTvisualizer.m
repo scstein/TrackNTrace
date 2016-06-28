@@ -901,6 +901,9 @@ end
     % corresponding data is missing.
     function parse_inputs_and_setup(num_argin)
         
+        fullPathToThisFile = mfilename('fullpath');
+        [TNTpath,~,~] = fileparts(fullPathToThisFile);
+        
         % Set unspecified input to empty
         if num_argin<2
             candidateData = [];
@@ -949,7 +952,7 @@ end
                     % but the subfunction does not (e.g. because it was renamed) throws an
                     % error on loading the file
                     s = warning('off','all');
-                        rmpath(genpath([path,filesep,'plugins']));
+                        rmpath(genpath([TNTpath,filesep,'plugins']));
                     warning(s);          
                     warning off backtrace
                         TNTdata = load(movieOrTNTfile);
@@ -957,7 +960,7 @@ end
                     % Add plugin path again (otherwise we loading a TNT
                     % file gives warning that the function to the function
                     % handles could not be found.
-                    addpath(genpath([path,filesep,'plugins']));
+                    addpath(genpath([TNTpath,filesep,'plugins']));
                     
                     fprintf('Loading movie specified in TNT file..\n')
                     if(isfield(TNTdata,'firstFrame_lastFrame'))
@@ -986,7 +989,7 @@ end
                 % but the subfunction does not (e.g. because it was renamed) throws an
                 % error on loading the file
                 s = warning('off','all');
-                    rmpath(genpath([path,filesep,'plugins']));
+                    rmpath(genpath([TNTpath,filesep,'plugins']));
                 warning(s);
                 warning off backtrace
                     TNTdata = load(candidateDataOrTNTfile);
@@ -994,7 +997,7 @@ end
                 % Add plugin path again (otherwise we loading a TNT
                 % file gives warning that the function to the function
                 % handles could not be found.
-                addpath(genpath([path,filesep,'plugins']));
+                addpath(genpath([TNTpath,filesep,'plugins']));
                 if(~isequal(size(movie), TNTdata.movieSize))
                    error('Input movie and given TNT file do not fit together! Movie size [%i,%i,%i], TNT file [%i,%i,%i].\n',size(movie),TNTdata.movieSize) 
                 end
