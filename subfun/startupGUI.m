@@ -108,7 +108,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.listbox_movieList,'Value',1);
         end
         
-        path = [];
+        path = pwd;
         if ~isempty(filename_movies)
             [path,~,~] = fileparts(filename_movies{end});
         end
@@ -129,6 +129,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         set(h_all.listbox_movieList,'String',filename_movies);
+        
+        % Enable the Start button
+        if numel(filename_movies) > 0
+            set(h_all.button_start,'Enable','on');
+        end
     end
 
 % Remove a movie from the movie list
@@ -148,6 +153,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         filename_movies(selected_entry) = [];
         set(h_all.listbox_movieList,'String',filename_movies);
+        
+        % Disable the Start button
+        if numel(filename_movies) == 0
+            set(h_all.button_start,'Enable','off');
+        end
     end
 
 
