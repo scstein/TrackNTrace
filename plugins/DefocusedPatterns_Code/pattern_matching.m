@@ -180,7 +180,7 @@ if compute_im_detect
             rowShift = matches(iMatch, 1);
             colShift = matches(iMatch, 2);
             Intensity = matches(iMatch,3);
-            im_detect(rowShift+1:rowShift+pattRows, colShift+1:colShift+pattCols) = im_detect(rowShift+1:rowShift+pattCols, colShift+1:colShift+pattCols) + Intensity*patterns(:,:,iPatt);
+            im_detect(rowShift+1:rowShift+pattRows, colShift+1:colShift+pattCols) = im_detect(rowShift+1:rowShift+pattRows, colShift+1:colShift+pattCols) + Intensity*patterns(:,:,iPatt);
         end
     end
 else
