@@ -82,7 +82,7 @@ for i_track = 1:n_tracks-1
     % To ease further computation, we fill every time intervall not present
     % for a particle with NaNs
     filled_track = NaN(n_frames,2);
-    filled_track(tracks{i_track}(:,1),:) = tracks{i_track}(:,2:3);
+    filled_track(tracks{i_track}(:,1)-min_frame+1,:) = tracks{i_track}(:,2:3);
     
     displacement = diff(filled_track);
     non_nans = ~isnan( displacement(:,1) );
