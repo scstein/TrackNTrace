@@ -674,8 +674,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 
 % Opens a file chooser dialog to select the output folder
     function callback_selectOutputFolder(~, ~)
-        outputFolderPath = get(h_all.edit_darkMovie,'String');
-        path = [];
+        outputFolderPath = get(h_all.edit_outputFolder,'String');
+        path = pwd;
         if ~isempty(outputFolderPath)
             [path,~,~] = fileparts(outputFolderPath);
         end
@@ -689,7 +689,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
 % Opens a file chooser dialog to select the dark movie
     function callback_selectDarkMovie(~, ~)
         darkMoviePath = get(h_all.edit_darkMovie,'String');
-        path = [];
+        path = pwd;
         if ~isempty(darkMoviePath)
             [path,~,~] = fileparts(darkMoviePath);
         end
