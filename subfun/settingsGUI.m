@@ -243,8 +243,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             end
         else
             % Select the default plugin if it is found
-            default_plugin_index = strfind({candidate_plugins(:).name},GUIinputs.TNToptions.defaultCandidatePlugin);
-            default_plugin_index = find(~cellfun(@isempty,default_plugin_index));
+            default_plugin_index = strcmp({candidate_plugins(:).name},GUIinputs.TNToptions.defaultCandidatePlugin);
+            default_plugin_index = find(default_plugin_index);
             if isempty(default_plugin_index)
                 warning off backtrace
                 warning('Default candidate plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultCandidatePlugin);
@@ -270,8 +270,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             end
         else
             % Select the default plugin if it is found
-            default_plugin_index = strfind({refinement_plugins(:).name},GUIinputs.TNToptions.defaultRefinementPlugin);
-            default_plugin_index = find(~cellfun(@isempty,default_plugin_index));
+            default_plugin_index = strcmp({refinement_plugins(:).name},GUIinputs.TNToptions.defaultRefinementPlugin);
+            default_plugin_index = find(default_plugin_index);
             if isempty(default_plugin_index)
                 warning off backtrace
                 warning('Default fitting plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultRefinementPlugin);
@@ -297,8 +297,8 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             end
         else
             % Select the default plugin if it is found
-            default_plugin_index = strfind({tracking_plugins(:).name},GUIinputs.TNToptions.defaultTrackingPlugin);
-            default_plugin_index = find(~cellfun(@isempty,default_plugin_index));
+            default_plugin_index = strcmp({tracking_plugins(:).name},GUIinputs.TNToptions.defaultTrackingPlugin);
+            default_plugin_index = find(default_plugin_index);
             if isempty(default_plugin_index)
                 warning off backtrace
                 warning('Default tracking plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultTrackingPlugin);

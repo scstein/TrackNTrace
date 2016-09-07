@@ -324,7 +324,7 @@ for iMovie=1:numel(list_filenames_TNTdata)
         else
             fprintf('######\nTNT: Using loaded candidateData for processing.\n');
         end
-        if not(exist('refinementData','var')) || isempty(fittingData)
+        if not(exist('refinementData','var')) || isempty(refinementData)
             fprintf('######\nTNT: Refining positions in movie %s.\n',filename_movie);
             [refinementData, refinementOptions] = fitParticles(movie, dark_img, globalOptions, refinementOptions, candidateData);
         else
@@ -339,7 +339,7 @@ for iMovie=1:numel(list_filenames_TNTdata)
     end
     
     save(filename_TNTdata,'candidateData','refinementData','globalOptions','candidateOptions','refinementOptions','movieSize','firstFrame_lastFrame','-append');
-    candidateData = []; fittingData = [];
+    candidateData = []; refinementData = [];
 end
 
 %% Compute trajectories for every movie
