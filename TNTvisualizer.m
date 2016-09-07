@@ -1120,6 +1120,11 @@ end
             nrParams = size(data,2);
         end
         
+        % If there is no data, do nothing
+        if nrParams == 0
+            return
+        end
+        
         % Make parameter description the same size as the number of params
         if isempty(description)
             description = repmat({'<Unknown>'}, nrParams,1);

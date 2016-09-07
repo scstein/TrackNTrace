@@ -11,6 +11,8 @@ function options = verifyOutParamDescription(outputData, options)
 outParamDescription = options.outParamDescription;
 unknown_name = '<Unknown>';
 
+
+
 % Find number of parameters in candidateData
 if iscell(outputData) % if outputData is in cell format
     nrOutParams = 0;
@@ -24,10 +26,18 @@ else % if outputData is in matrix format
     nrOutParams = size(outputData,2);
 end
 
+% Is there even any output data? If there is none, we assume the
+% description is correct
+if nrOutParams == 0
+    return;
+end
+
 % Is there a descriptor for every parameter?
 if numel(outParamDescription) == nrOutParams
     return;
 end
+
+
 
 warning off backtrace;
 warning(['The number of descriptors specified in outParamDescription by Plugin ''%s'' does not match the number ', ...

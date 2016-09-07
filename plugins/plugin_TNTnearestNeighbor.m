@@ -137,6 +137,20 @@ if numel(varargin) == 6
     varargin{6} = logical(varargin{6});
 end
 
+% If there is no input data
+if iscell(Localizations)
+    if sum(~cellfun(@isempty,a))  == 0
+        tracks = [];
+        return
+    end
+else
+    if isempty(Localizations)
+       tracks = [];
+       return
+    end
+end
+
+
 tracks = mx_nn_tracker(Localizations, varargin{:});
 end
 
