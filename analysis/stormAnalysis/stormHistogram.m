@@ -259,9 +259,9 @@ end
         XY = XY(~out_of_bounds,:);
         XYweights = XYweights(~out_of_bounds,:);
         idx = floor(XY/binWidth)+1;
-        idx = sub2ind(movieSize(2:-1:1)*superResMag,idx(:,2),idx(:,1));
+        idx = sub2ind(movieSize*superResMag,idx(:,2),idx(:,1));
         
-        histogram = zeros(movieSize(2)*superResMag,movieSize(1)*superResMag);
+        histogram = zeros(movieSize*superResMag);
         for jPos = 1:numel(idx)
             histogram(idx(jPos)) = histogram(idx(jPos))+XYweights(jPos);
         end

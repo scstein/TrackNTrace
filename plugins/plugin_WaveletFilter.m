@@ -90,10 +90,10 @@ img_filtered = filterImageGeneral(img_filtered,{1,options.kernel{2}},options.isS
 % dilate - uses Image Processing Toolbox.
 dilated_mask = imdilate(img_filtered,ones(2*options.detectionRadius+1))==img_filtered;
 dilated_mask = dilated_mask & img_filtered>(options.detectionThreshold*threshold);
-locmax_idx = find(dilated_mask);
-[rowIdx,colIdx] = ind2sub(size(img_filtered),locmax_idx);
+locmax_idx = find(dilated_mask(2:end-1,2:end-1));
+[rowIdx,colIdx] = ind2sub(size(img_filtered)-2,locmax_idx);
 
-candidateData = [colIdx,rowIdx]+(ceil(options.kernelSize/2)-1);
+candidateData = [colIdx,rowIdx]+ceil(options.kernelSize/2);
 
 end
 
