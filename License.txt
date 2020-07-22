@@ -5,6 +5,8 @@ You can find a copy of the license at <http://www.gnu.org/licenses/>.
 If not stated otherwise, the following copyright applies:
  Copyright (C) 2016  Simon Christoph Stein, scstein@phys.uni-goettingen.de
  Copyright (C) 2016  Jan Thiart, jthiart@phys.uni-goettingen.de
+Extended by
+ Copyright (C) 2020  Jan Christoph Thiele, christoph.thiele@phys.uni-goettingen.de
 
 
 Plugin files/(sub)functions (mostly in the plugins subfolder) might come with their own license.
@@ -33,18 +35,20 @@ TrackNTrace uses variety of external programs / modules:
 	Copyright 2016 Google Inc. All rights reserved.
 	License see 3) below
 (x) "FastPsfFitting" and "NearestNeighborTracker",
-    Copyright (c) 2016 Simon Christoph Stein and Jan Thiart,
-    Free BSD license (see 1) below))
-
-
+    	Copyright (c) 2016 Simon Christoph Stein and Jan Thiart,
+    	Free BSD license (see 1) below))
+(x) RCC (redundant cross-correlation),
+    	By Yina Wang @ Hust 2013.09.09, 
+    	URL: https://doi.org/10.1364/OE.22.015982
+(x) export_fig,
+    	Copyright (c) 2014, Oliver J. Woodford, Yair M. Altman
 
 Below you find the licenses for the following program parts:
 
 1. License for "FastPsfFitting" mx_psfFit_Image and "NearestNeighborTracker" mx_nn_tracker(Free BSD license)
 2. License nanoflann library, used by "NearestNeighborTracker"
 3. License ceres solver library, used by mx_psfFit_image (ceres.dll / libceres.so)
-
-
+4. License export_fig
 
 1) License for "FastPsfFitting" mx_psfFit_Image and "NearestNeighborTracker" mx_nn_tracker(Free BSD license), Copyright 2016 Simon Christoph Stein and Jan Thiart
 
@@ -138,3 +142,33 @@ Below you find the licenses for the following program parts:
 % however caused and on any theory of liability, whether in contract, strict liability, or tort (including
 % negligence or otherwise) arising in any way out of the use of this software, even if advised of the
 % possibility of such damage.
+
+4) License export_fig
+
+Copyright (c) 2014, Oliver J. Woodford, Yair M. Altman
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the {organization} nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
