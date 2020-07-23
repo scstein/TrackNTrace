@@ -15,6 +15,10 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
+%     Extended CT, 2019:
+%		- new plugin types: import, postprocessing
+%		- new UI: 'button' executes callback which can modify options
+%
 classdef TNTplugin < handle % Inherit from handle class
 % Base class of TrackNTrace plugins. After a plugin is specified, a
 % graphical representation can be constructed inside a given UI panel 
@@ -42,6 +46,35 @@ classdef TNTplugin < handle % Inherit from handle class
 %       type 1&2 plugins. Useful if the main function itself is parallelized
 %       (e.g. a compiled multithreaded mex file) or if global information is
 %       needed (e.g. access to multiple frames of the movie).
+%
+%   Import plugins are using the following properties:
+%   name: Plugin name.
+%   type: 5
+%   mainFunc: Handle to main function. The main function is called to load/
+%       generate the movie. The following syntax is expected: 
+%       [movie, metadata] = mainFunc(filename_movie,[globalOptions.firstFrame, globalOptions.lastFrame], globalOptions.binFrame,flimFlag,[globalOptions.tgStart globalOptions.tgEnd])
+%        movie is supposed to be a cell: {movie_intensity,movie_lifetime}
+%        If flimFlag is false the movie_lifetime is not used.
+%        metadata is supposed to be a struct with potentially the following
+%        fields: 'filename','pixelsize','pixelsize_unit','tau_unit',
+%                'bidirectional','head'
+%   outParamDescription: Description of the outputs the mainFunc (optional)
+%   info: Struct with info about the plugin itself. Fields:
+%        'Description', Plugin description.
+%        'supportedFormats', List of support file formats like {{'*.ext1;*.ext2','NAME'}}
+%        'hasFLIM',  boolean whether the plugin returns FLIM movies. (optional)
+%        'hasTCSPC', boolean whether the plugin supports TCSPC. If true
+%                    time gating is enabled. Required for lifetime fitting. (optional)
+%        'getTCSPC', function handle. Used for preview of the time gating. (optional)
+%                    [tcspcdata,resolution] = getTCSPC(inputfile,maxPhotons)
+%        'setFile',  function handle. Called when a new file is selected.
+%                    valid = setFile(filename)
+%                    Can modify options and return false to indicate an 
+%                    incompatible file (e.g. when multiple plugin share the
+%                    same extension). (optional)
+%        
+%   initFunc: Initialization function which is called once before the main is first executed.
+%   postFunc: Post-processing function which is called after the main function is last executed.
 %
 %
 % Function overview:
@@ -109,6 +142,9 @@ classdef TNTplugin < handle % Inherit from handle class
                 case 1 % Candidate method
                 case 2 % Refinement/fitting method
                 case 3 % Tracking method
+                case 4 % Postprocessing
+                case 5 % Import
+                case 6 % Export
                 otherwise
                     error('Invalid plugin type ''%i'' when constructing plugin ''%s''', type, name);
             end
@@ -126,6 +162,10 @@ classdef TNTplugin < handle % Inherit from handle class
                         obj.outParamDescription = {'x','y','z','Amplitude','Background'};
                     case 3 % Tracking method
                         obj.outParamDescription = {'Track','Frame','x','y','z'};
+                    case 4 % Postprocessing method
+                        obj.outParamDescription = {'Track','Frame','x','y','z','Lifetime'};
+                    case 5 % Postprocessing method
+                        obj.outParamDescription = {'movie'};
                     otherwise
                         warning('Invalid plugin type ''%i'' when constructing plugin ''%s''', type, name);
                 end
@@ -164,7 +204,7 @@ classdef TNTplugin < handle % Inherit from handle class
             %   Use options.>NAME< within your plugins function to address these parameters
             %
             % par_type: Type of parameter
-            %   One of 'float', 'int', 'bool','string','list','filechooser', 
+            %   One of 'float', 'int', 'bool','string','list','filechooser',
             %   Two special types: 
             %     'newRow' -> sets new row in the gui. 
             %        Do not use this type directly, but use the newRow() function.
@@ -182,6 +222,7 @@ classdef TNTplugin < handle % Inherit from handle class
             %   'string': The default value (a string)
             %   'list':   A cell array string list of possible choices for 'list' (first entry is default)
             %   'filechooser': A cell array string list {'default directory','file ending filter'}
+            %   'button': Function handle which takes and returns the pluginOptions.
             % 
             % par_tooltip: Tooltip shown when hovering over the parameter
             %   with the mouse. Supports sprintf modifier (e.g. \n for newline) directly
@@ -220,6 +261,10 @@ classdef TNTplugin < handle % Inherit from handle class
                 case 'filechooser'
                     if(~iscell(par_settings) || length(par_settings) ~= 2)
                         error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {''default directory'',''filterEnding''}!', par_name, par_type)
+                    end
+                case 'button'           
+                    if(~isa(par_settings,'function_handle') || length(par_settings)~= 1)
+                        error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be [function_handle]!', par_name, par_type)
                     end
                 case 'newRow'           
                     %  -> sets new row in the gui. Do not use this type directly, but use the newRow() function.
@@ -293,6 +338,7 @@ classdef TNTplugin < handle % Inherit from handle class
         function addInternalsToOptions(obj)
             % save plugin name
             obj.options.plugin_name = obj.name;
+            obj.options.info = obj.info;
             
             % Save the functions in options
             obj.options.initFunc = obj.initFunc;
@@ -303,10 +349,46 @@ classdef TNTplugin < handle % Inherit from handle class
             obj.options.useParallelProcessing = obj.useParallelProcessing;
         end
         
+        % Add default parameters to the options in case no panel was built.
+        function addDefaultsToOptions(obj)
+            par_name = obj.param_specification(:,1);
+            par_type = obj.param_specification(:,2);
+            par_settings = obj.param_specification(:,3);
+            
+            % Compute the variable name for every parameter
+            % Replace white space ' ' by underscore '_' & remove dots '.'
+            for iP = 1:numel(par_name)
+                stripped_name =  par_name{iP};
+                stripped_name(stripped_name == ' ') = '_';
+                stripped_name(stripped_name == '.') = '';
+                if ~isfield(obj.options,stripped_name)
+                    if(iscell(par_settings{iP}))
+                        obj.options.(stripped_name) = par_settings{iP}{1};
+                    else %for bool
+                        obj.options.(stripped_name) = par_settings{iP};
+                    end
+%                     switch par_type{iP}
+%                         case {'float','int','bool'}
+%                             obj.options.(stripped_name) = par_settings{iP}{1};
+%                         case 'string'
+%                             obj.options.(stripped_name) = par_settings{iP};
+%                         case 'list'
+%                             obj.options.(stripped_name) = par_settings{iP}{1};
+%                         case 'filechooser'
+%                             obj.options.(stripped_name) = '';                       
+%                         otherwise
+%                     end
+                end
+            end
+        end
+        
         % Retrieves the options for this plugin (function handles, all parameter values etc.)
         function options = getOptions(obj)
             % Add non-GUI parameters to options
             obj.addInternalsToOptions();
+            
+            % Add default options in case the panel was not built yet.
+            obj.addDefaultsToOptions();
             
             % Return the options
             options = obj.options;
@@ -465,7 +547,19 @@ classdef TNTplugin < handle % Inherit from handle class
                         end
                         
                         continue
+                    case 'button'
                         
+                        button_pos = [1, 1, editWidth, elemHeight*1.1];
+                        h_button= uicontrol('Parent',h_panel, 'Units','points', 'Position', button_pos, ...
+                            'Style','pushbutton','FontSize',fontSize,'String',pName);
+                        set(h_button, 'Callback', {@callback_customButton, par_settings{iP}});
+                        
+                        % Set Tooltip
+                        set(h_button, 'TooltipString',par_tooltip{iP});
+                        
+                        placeElement();
+                        
+                        continue
                     otherwise % Just continue
                 end
                 
@@ -483,7 +577,6 @@ classdef TNTplugin < handle % Inherit from handle class
                 end
                 
                 pSettings = par_settings{iP};
-                
                 
                 % Add text
                 text_pos = [1, 1, 1, elemHeight];
@@ -642,6 +735,28 @@ classdef TNTplugin < handle % Inherit from handle class
                         text_pos(1:2) = [left_pos,bott_pos];
                         set(h_text,'Position',text_pos);
                         
+                    case 'button'
+                        
+                        button_pos = get(h_button,'Position');
+                        buttonwidth = button_pos(3);
+                        
+                        % Check if element should be placed in this row
+                        elemFitsInRow = (buttonwidth < (panel_width -2*text_gap) );
+                        if(~elemFitsInRow)
+                            startNewRow();
+                        end
+                        
+                        button_pos(1:2) = [left_pos, bott_pos+(elemHeight-button_pos(4))/2];
+                        set(h_button,'Position',button_pos);
+                        
+                        left_pos = left_pos + buttonwidth + col_gap; % Next column
+                        elemRowIdx = elemRowIdx+1;
+                        % If next element exceeds the max elements per row, begin new row
+                        % (Except for the last element)
+                        if( elemRowIdx > maxElemPerRow && iP~=num_pars)
+                            startNewRow();
+                        end
+                        
                     otherwise % For all other parameter types:                        
                         % Width of 'text value'
                         overall_width = textwidth + text_gap + valwidth;
@@ -694,6 +809,14 @@ classdef TNTplugin < handle % Inherit from handle class
                 obj.options.(structVarName) = value; % Save the parameter value
             end
             
+            % Executes a plugin provided function which can modify any
+            % option.
+            function callback_customButton(uiObj, eventdata, cfunc)
+                obj.addInternalsToOptions();
+                obj.options = cfunc(obj.options);
+                obj.createOptionsPanel(uiObj.Parent); % Rebuild the panel to keep obj and GUI in sync
+            end
+            
             function callback_saveOnChange(uiObj, eventdata, structVarName, pType, pSettings)
                 switch pType
                     case 'float'
@@ -743,7 +866,7 @@ classdef TNTplugin < handle % Inherit from handle class
                         return
                     end
                 end
-                error('invalid option ''%s'' to setPopup tag: %s',optionString,get(hObj,'Tag'));
+                warning('invalid option ''%s'' to setPopup tag: %s',optionString,get(hObj,'Tag'));
             end
         end
         
