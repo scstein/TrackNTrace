@@ -15,7 +15,7 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIreturns] = settingsGUI(globalOptions, candidateOptions,refinementOptions,trackingOptions, GUIinputs)
+function [globalOptions,importOptions,candidateOptions,refinementOptions,trackingOptions,postprocOptions, GUIreturns] = settingsGUI(globalOptions,importPlugin,candidateOptions,refinementOptions,trackingOptions, postprocOptions, GUIinputs)
 % TrackNTrace main GUI. Here plugins can be selected, their options 
 % adjusted. This GUI is used for this management only, while the overall
 % program flow is handled by RunTrackNTrace.m
@@ -23,6 +23,12 @@ function [globalOptions, candidateOptions,refinementOptions,trackingOptions, GUI
 % Author: Simon Christoph Stein
 % E-Mail: scstein@phys.uni-goettingen.de
 % Date: 2016
+%
+% Extended CT, 2019:
+%	- added UI panel for importPlugin
+%	- added UI framebinning
+%	- added UI timegate and preview
+%	- added UI panel for postprocessing
 %
 
 titleText = 'Adjust options for movie:';
@@ -40,11 +46,16 @@ GUIreturns.previewMode = false;
 GUIreturns.outputFolderSameAsMovie = false;
 GUIreturns.outputFolder = [];
 
+% Get importOptions (the import plugin is already loaded, but it's options
+% might get changed).
+importOptions = importPlugin.getOptions();
 % Save options at startup (to check later if options changed)
 globalOptions_atStartup = globalOptions;
+importOptions_atStartup = importOptions;
 candidateOptions_atStartup = candidateOptions;
 refinementOptions_atStartup = refinementOptions;
 trackingOptions_atStartup = trackingOptions;
+postprocOptions_atStartup = postprocOptions;
 
 
 % -- Preparing the GUI --
@@ -90,13 +101,33 @@ set(h_all.button_darkMovie, 'Callback', @callback_selectDarkMovie);
 
 set(h_all.edit_firstFrame,'Callback',{@callback_IntEdit,1,inf});
 set(h_all.edit_lastFrame,'Callback',{@callback_IntEdit,1,inf});
+set(h_all.edit_binFrame,'Callback',{@callback_IntEdit,1,inf});
 %Photon conversion
 set(h_all.cbx_usePhotonConv, 'Callback', @callback_updateMainGUIstate);
 set(h_all.edit_photonBias, 'Callback', {@callback_IntEdit,0,inf});
 set(h_all.edit_photonSensitivity, 'Callback', {@callback_FloatEdit,1.0,inf});
 set(h_all.edit_photonGain, 'Callback', {@callback_IntEdit,1,1000});
+%Time gate
+if GUIinputs.hasTCSPC
+    set(h_all.cbx_useTimegate, 'Enable', 'On');
+    set(h_all.cbx_useTimegate, 'Callback', @callback_updateMainGUIstate);
+    set(h_all.edit_tgStart, 'Callback', {@callback_IntEdit,0,inf});
+    set(h_all.edit_tgEnd, 'Callback', {@callback_IntEdit,0,inf});
+    set(h_all.button_showTCSPC, 'Callback', @callback_showTCSPC);
+else
+    set(h_all.cbx_useTimegate, 'Enable', 'Off');
+    set(h_all.cbx_useTimegate, 'Value', false);
+end
 
+% % Import plugin
+if size(importPlugin.param_specification,1)>0 %if import plugin has options
+    set(h_all.button_importOptions,'Enable','on');
+    set(h_all.button_importOptions,'Callback',@callback_importOptionsPanel);
+else
+    set(h_all.button_importOptions,'Enable','off');
+end
 % % Candidate plugin
+set(h_all.cbx_enableCandidate, 'Callback', @callback_updateMainGUIstate);
 set(h_all.popup_candidateMethod, 'Callback', @callback_updatePlugins);
 set(h_all.cbx_candidate_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
 if(GUIinputs.show_candidateData_fromFile_cbx)
@@ -106,6 +137,7 @@ else
 end
 
 % % Refinement plugin
+set(h_all.cbx_enableRefinement, 'Callback', @callback_updateMainGUIstate);
 set(h_all.popup_refinementMethod, 'Callback', @callback_updatePlugins);
 set(h_all.cbx_refinement_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
 if(GUIinputs.show_refinementData_fromFile_cbx)
@@ -117,12 +149,28 @@ end
 % % Tracking plugin
 set(h_all.cbx_enableTracking, 'Callback', @callback_updateMainGUIstate);
 set(h_all.popup_trackingMethod, 'Callback', @callback_updatePlugins);
-% cbx_verbose
+set(h_all.cbx_tracking_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
+if(GUIinputs.show_trackingData_fromFile_cbx)
+ set(h_all.cbx_tracking_loaded, 'Value', GUIinputs.use_loaded_trackingData);
+else
+ set(h_all.cbx_tracking_loaded, 'Visible', 'off');
+end
+
+% % Postproc plugin
+set(h_all.cbx_enablePostproc, 'Callback', @callback_updateMainGUIstate);
+set(h_all.popup_postprocMethod, 'Callback', @callback_updatePlugins);
+set(h_all.cbx_postproc_loaded, 'Callback', @callback_updateMainGUIstate_loadedData);
+if(GUIinputs.show_postprocData_fromFile_cbx)
+ set(h_all.cbx_postproc_loaded, 'Value', GUIinputs.use_loaded_postprocData);
+else
+ set(h_all.cbx_postproc_loaded, 'Visible', 'off');
+end
 
 % % Help buttons
 set(h_all.button_candidateHelp, 'Callback', @callback_helpButtons);
 set(h_all.button_refinementHelp, 'Callback', @callback_helpButtons);
 set(h_all.button_trackingHelp, 'Callback', @callback_helpButtons);
+set(h_all.button_postprocHelp, 'Callback', @callback_helpButtons);
 
 % % Elements at bottom of GUI
 set(h_all.button_preview, 'Callback', @callback_preview);
@@ -146,17 +194,19 @@ end
 candidate_plugins = [];
 refinement_plugins = [];
 tracking_plugins = [];
+postproc_plugins = [];
 
 % Save last selected plugin per category
 selected_candidate_plugin = -1;
 selected_refinement_plugin = -1;
 selected_tracking_plugin = -1;
+selected_postproc_plugin = -1;
 
 % Load the plugins
 if GUIinputs.showStartupInformation % Show warnings only on startup
     fprintf('TNT: Loading plugins ...\n')
     loadPlugins();
-    fprintf('TNT: Successfully imported %i plugins (%i candidate detection, %i refinement, %i tracking).\n',numel(candidate_plugins)+numel(refinement_plugins)+numel(tracking_plugins),numel(candidate_plugins),numel(refinement_plugins),numel(tracking_plugins));
+    fprintf('TNT: Successfully imported %i plugins (%i candidate detection, %i refinement, %i tracking, %i postprocessing).\n',numel(candidate_plugins)+numel(refinement_plugins)+numel(tracking_plugins),numel(candidate_plugins),numel(refinement_plugins),numel(tracking_plugins),numel(postproc_plugins));
 else
     warning off;
     loadPlugins();
@@ -196,6 +246,10 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
                         refinement_plugins  = [refinement_plugins, plugin];
                     case 3 % Tracking
                         tracking_plugins = [tracking_plugins, plugin];
+                    case 4 % Postprocessing
+                        postproc_plugins = [postproc_plugins, plugin];
+                    case {5,6} % Postprocessing, Import, Export
+                        % Ignore
                     otherwise
                         warning('Detected unknown plugin of type %i',plugin.type);
                 end
@@ -207,6 +261,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         found_candidate_plugin = numel(candidate_plugins)>0;
         found_refinement_plugin = numel(refinement_plugins)>0;
         found_tracking_plugin = numel(tracking_plugins)>0;
+        found_postproc_plugin = numel(postproc_plugins)>0;
         
         if not(found_candidate_plugin)
             error('No candidate detection plugin detected.');
@@ -215,18 +270,28 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             error('No refinement plugin detected.');
         end
         if not(found_tracking_plugin)
-            error('No tracking plugin detected.')
+            warning('No tracking plugin detected.')
+        end
+        if not(found_postproc_plugin)
+            warning('No tracking plugin detected.')
         end
         
         % Set popup choices
         set(h_all.popup_candidateMethod, 'String', {candidate_plugins(:).name});
         set(h_all.popup_refinementMethod, 'String', {refinement_plugins(:).name});
-        set(h_all.popup_trackingMethod, 'String', {tracking_plugins(:).name});
+        if found_tracking_plugin
+            set(h_all.popup_trackingMethod, 'String', {tracking_plugins(:).name});
+        end
+        if found_postproc_plugin
+            set(h_all.popup_postprocMethod, 'String', {postproc_plugins(:).name});
+        end
     end
 
 % Select plugins based on the current candidateOptions, refinementOptions,
 % trackingOptions. After selection, the plugin panels are constructed
     function selectPluginsBasedOnOptions()
+        found_tracking_plugin = numel(tracking_plugins)>0;
+        found_postproc_plugin = numel(postproc_plugins)>0;
         
         % Candidate detection
         if ~isempty(candidateOptions)
@@ -283,46 +348,90 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         
         % Tracking
-        if ~isempty(trackingOptions)
-            selected_tracking_plugin = -1;
-            % Search for a loaded plugin with the same name
-            for iPlug = 1:numel(tracking_plugins)
-                if strcmp(trackingOptions.plugin_name,tracking_plugins(iPlug).name)
-                    selected_tracking_plugin = iPlug;
+        if found_tracking_plugin
+            if ~isempty(trackingOptions)
+                selected_tracking_plugin = -1;
+                % Search for a loaded plugin with the same name
+                for iPlug = 1:numel(tracking_plugins)
+                    if strcmp(trackingOptions.plugin_name,tracking_plugins(iPlug).name)
+                        selected_tracking_plugin = iPlug;
+                    end
+                end
+                
+                if selected_tracking_plugin < 0
+                    error('Plugin ''%s'' not found.',trackingOptions.plugin_name) ;
+                end
+            else
+                % Select the default plugin if it is found
+                default_plugin_index = strcmp({tracking_plugins(:).name},GUIinputs.TNToptions.defaultTrackingPlugin);
+                default_plugin_index = find(default_plugin_index);
+                if isempty(default_plugin_index)
+                    warning off backtrace
+                    warning('Default tracking plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultTrackingPlugin);
+                    warning on backtrace
+                    selected_tracking_plugin = 1;
+                else
+                    selected_tracking_plugin = default_plugin_index;
                 end
             end
-            
-            if selected_tracking_plugin < 0
-                error('Plugin ''%s'' not found.',trackingOptions.plugin_name) ;
-            end
-        else
-            % Select the default plugin if it is found
-            default_plugin_index = strcmp({tracking_plugins(:).name},GUIinputs.TNToptions.defaultTrackingPlugin);
-            default_plugin_index = find(default_plugin_index);
-            if isempty(default_plugin_index)
-                warning off backtrace
-                warning('Default tracking plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultTrackingPlugin);
-                warning on backtrace
-                selected_tracking_plugin = 1;
+        end
+        % Postprocessing
+        if found_postproc_plugin
+            if ~isempty(postprocOptions)
+                selected_postproc_plugin = -1;
+                % Search for a loaded plugin with the same name
+                for iPlug = 1:numel(postproc_plugins)
+                    if strcmp(postprocOptions.plugin_name,postproc_plugins(iPlug).name)
+                        selected_postproc_plugin = iPlug;
+                    end
+                end
+                
+                if selected_postproc_plugin < 0
+                    error('Plugin ''%s'' not found.',postprocOptions.plugin_name) ;
+                end
             else
-                selected_tracking_plugin = default_plugin_index;
+                % Select the default plugin if it is found
+                default_plugin_index = strcmp({postproc_plugins(:).name},GUIinputs.TNToptions.defaultPostprocPlugin);
+                default_plugin_index = find(default_plugin_index);
+                if isempty(default_plugin_index)
+                    warning off backtrace
+                    warning('Default postproc plugin ''%s'' not found. Selecting first one.',GUIinputs.TNToptions.defaultPostprocPlugin);
+                    warning on backtrace
+                    selected_postproc_plugin = 1;
+                else
+                    selected_postproc_plugin = default_plugin_index;
+                end
             end
         end
-        
         % Set popups to correct plugin name
         set(h_all.popup_candidateMethod, 'Value', selected_candidate_plugin);
         set(h_all.popup_refinementMethod, 'Value', selected_refinement_plugin);
-        set(h_all.popup_trackingMethod, 'Value', selected_tracking_plugin);
+        if found_tracking_plugin
+            set(h_all.popup_trackingMethod, 'Value', selected_tracking_plugin);
+        end
+        if found_postproc_plugin
+            set(h_all.popup_postprocMethod, 'Value', selected_postproc_plugin);
+        end
         
         % Build panels by invoking the selected plugins function
         candidate_plugins( selected_candidate_plugin).setOptions(candidateOptions);
         refinement_plugins( selected_refinement_plugin).setOptions(refinementOptions);
-        tracking_plugins( selected_tracking_plugin).setOptions(trackingOptions);
+        if found_tracking_plugin
+            tracking_plugins( selected_tracking_plugin).setOptions(trackingOptions);
+        end
+        if found_postproc_plugin
+            postproc_plugins( selected_postproc_plugin).setOptions(postprocOptions);
+        end
         
         % Create the panels
         candidate_plugins( selected_candidate_plugin).createOptionsPanel(h_all.panel_candidate);
-        refinement_plugins( selected_refinement_plugin).createOptionsPanel(h_all.panel_fitting);
-        tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
+        refinement_plugins( selected_refinement_plugin).createOptionsPanel(h_all.panel_refinement);
+        if found_tracking_plugin
+            tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
+        end
+        if found_postproc_plugin
+            postproc_plugins( selected_postproc_plugin).createOptionsPanel(h_all.panel_postproc);
+        end
         
         updatePanelPositions();
     end
@@ -354,21 +463,24 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             set(h_all.edit_photonBias, 'Enable','off');
             set(h_all.edit_photonSensitivity, 'Enable','off');
             set(h_all.edit_photonGain, 'Enable','off');
-        end
-              
+        end        
         
-        % Enable/disable tracking panel
-        if get(h_all.cbx_enableTracking, 'Value')
-            set(h_all.popup_trackingMethod,'Enable','on');
-            set(h_all.label_trackingMethod,'Enable','on');
-            set(h_all.button_trackingHelp,'Enable','on');
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
+        % Enable/disable timegate
+        if get(h_all.cbx_useTimegate, 'Value')
+            set(h_all.text_tgStart, 'Enable', 'on');
+            set(h_all.text_tgEnd, 'Enable', 'on');
+            set(h_all.edit_tgStart, 'Enable', 'on');
+            set(h_all.edit_tgEnd, 'Enable', 'on');
+            set(h_all.button_showTCSPC, 'Enable', 'on');
         else
-            set(h_all.popup_trackingMethod,'Enable','off');
-            set(h_all.label_trackingMethod,'Enable','off');
-            set(h_all.button_trackingHelp,'Enable','off');
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
+            set(h_all.text_tgStart, 'Enable', 'off');
+            set(h_all.text_tgEnd, 'Enable', 'off');
+            set(h_all.edit_tgStart, 'Enable', 'off');
+            set(h_all.edit_tgEnd, 'Enable', 'off');
+            set(h_all.button_showTCSPC, 'Enable', 'off');
         end
+        
+        updatePanelEnable();
         
     end
 
@@ -389,56 +501,62 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             % Update plugins
             selectPluginsBasedOnOptions();
             
-            globalOptions.firstFrame = GUIinputs.firstFrame_lastFrame_loaded(1);
-            globalOptions.lastFrame = GUIinputs.firstFrame_lastFrame_loaded(2);
+%             globalOptions.firstFrame = GUIinputs.firstFrame_lastFrame_loaded(1);
+%             globalOptions.lastFrame = GUIinputs.firstFrame_lastFrame_loaded(2);
             setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
             setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
-            
+            setNum(h_all.edit_binFrame, globalOptions.binFrame, true);
+                        
             set(h_all.text_FrameInterval, 'Enable', 'off');
             set(h_all.text_firstFrame, 'Enable', 'off');
             set(h_all.text_lastFrame, 'Enable', 'off');
             set(h_all.edit_firstFrame, 'Enable','off');
             set(h_all.edit_lastFrame, 'Enable','off');
+            set(h_all.edit_binFrame, 'Enable','off');
         else
             set(h_all.text_FrameInterval, 'Enable', 'on');
             set(h_all.text_firstFrame, 'Enable', 'on');
             set(h_all.text_lastFrame, 'Enable', 'on');
             set(h_all.edit_firstFrame, 'Enable','on');
             set(h_all.edit_lastFrame, 'Enable','on');
+            set(h_all.edit_binFrame, 'Enable','on');
         end
         
-        if get(h_all.cbx_candidate_loaded, 'Value')            
-            set(h_all.cbx_refinement_loaded,'Enable','on');
-            set(h_all.popup_candidateMethod,'Enable','off');
-            set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','off');
-        else
-            set(h_all.cbx_refinement_loaded,'Enable','off');
-            set(h_all.popup_candidateMethod,'Enable','on');
-            set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','on');
-        end
+        updatePanelEnable();
         
-        if get(h_all.cbx_refinement_loaded, 'Value')            
-            set(h_all.cbx_candidate_loaded,'Enable','off');
-            set(h_all.popup_refinementMethod,'Enable','off');
-            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','off');
-        else
-            set(h_all.cbx_candidate_loaded,'Enable','on');
-            set(h_all.popup_refinementMethod,'Enable','on');
-            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','on');
-        end
-        
-        % Enable/disable tracking panel
-        if get(h_all.cbx_enableTracking, 'Value')
-            set(h_all.popup_trackingMethod,'Enable','on');
-            set(h_all.label_trackingMethod,'Enable','on');
-            set(h_all.button_trackingHelp,'Enable','on');
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
-        else
-            set(h_all.popup_trackingMethod,'Enable','off');
-            set(h_all.label_trackingMethod,'Enable','off');
-            set(h_all.button_trackingHelp,'Enable','off');
-            set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
-        end       
+%         if get(h_all.cbx_candidate_loaded, 'Value') || ~get(h_all.cbx_enableCandidate, 'Value')
+%             set(h_all.cbx_refinement_loaded,'Enable','on');
+%             set(h_all.popup_candidateMethod,'Enable','off');
+%             set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','off');
+%         else
+%             set(h_all.cbx_refinement_loaded,'Enable','off');
+%             set(h_all.popup_candidateMethod,'Enable','on');
+%             set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','on');
+%         end
+%         
+%         if get(h_all.cbx_refinement_loaded, 'Value') || ~get(h_all.cbx_enableRefinement, 'Value')
+%             set(h_all.cbx_candidate_loaded,'Enable','off');
+%             set(h_all.popup_refinementMethod,'Enable','off');
+%             set(findall(h_all.panel_refinement,'-property','Enable'), 'Enable','off');
+%         else
+%             set(h_all.cbx_candidate_loaded,'Enable','on');
+%             set(h_all.popup_refinementMethod,'Enable','on');
+%             set(findall(h_all.panel_refinement,'-property','Enable'), 'Enable','on');
+%         end
+%         
+%         
+%         % Enable/disable tracking panel
+%         if get(h_all.cbx_enableTracking, 'Value')
+%             set(h_all.popup_trackingMethod,'Enable','on');
+%             set(h_all.label_trackingMethod,'Enable','on');
+%             set(h_all.button_trackingHelp,'Enable','on');
+%             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
+%         else
+%             set(h_all.popup_trackingMethod,'Enable','off');
+%             set(h_all.label_trackingMethod,'Enable','off');
+%             set(h_all.button_trackingHelp,'Enable','off');
+%             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
+%         end       
         
     end
 
@@ -449,16 +567,18 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         selected_candidate_plugin =  get(h_all.popup_candidateMethod,'Value');
         selected_refinement_plugin = get(h_all.popup_refinementMethod,'Value');
         selected_tracking_plugin = get(h_all.popup_trackingMethod,'Value');
+        selected_postproc_plugin = get(h_all.popup_postprocMethod,'Value');
         
         % Update panels to display currently selected plugin
         candidate_plugins( selected_candidate_plugin).createOptionsPanel(h_all.panel_candidate);
-        refinement_plugins( selected_refinement_plugin).createOptionsPanel(h_all.panel_fitting);
+        refinement_plugins( selected_refinement_plugin).createOptionsPanel(h_all.panel_refinement);
         tracking_plugins( selected_tracking_plugin).createOptionsPanel(h_all.panel_tracking);
+        postproc_plugins( selected_postproc_plugin).createOptionsPanel(h_all.panel_postproc);
         
         % Disable candidate search / refinement panels if the box to use
         % data loaded from a file is checked (the user should not be able
         % to alter the parameters then.
-                if get(h_all.cbx_candidate_loaded, 'Value')            
+        if get(h_all.cbx_candidate_loaded, 'Value')
             set(h_all.cbx_refinement_loaded,'Enable','on');
             set(h_all.popup_candidateMethod,'Enable','off');
             set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable','off');
@@ -471,11 +591,11 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if get(h_all.cbx_refinement_loaded, 'Value')            
             set(h_all.cbx_candidate_loaded,'Enable','off');
             set(h_all.popup_refinementMethod,'Enable','off');
-            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','off');
+            set(findall(h_all.panel_refinement,'-property','Enable'), 'Enable','off');
         else
             set(h_all.cbx_candidate_loaded,'Enable','on');
             set(h_all.popup_refinementMethod,'Enable','on');
-            set(findall(h_all.panel_fitting,'-property','Enable'), 'Enable','on');
+            set(findall(h_all.panel_refinement,'-property','Enable'), 'Enable','on');
         end
         % --------------
         
@@ -488,6 +608,14 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         else
             set(h_all.popup_trackingMethod,'Enable','off');
             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
+        end
+        % Enable/disable postproc panel
+        if get(h_all.cbx_enablePostproc, 'Value')
+            set(h_all.popup_postprocMethod,'Enable','on');
+            set(findall(h_all.panel_postproc,'-property','Enable'), 'Enable','on');
+        else
+            set(h_all.popup_postprocMethod,'Enable','off');
+            set(findall(h_all.panel_postproc,'-property','Enable'), 'Enable','off');
         end
     end
 
@@ -525,36 +653,51 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.cbx_refinement_loaded, 'Position',pos);
         
+        set(h_all.cbx_enableRefinement, 'Units',units);
+        pos = get(h_all.cbx_enableRefinement, 'Position');
+        pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.cbx_enableRefinement, 'Position',pos);
+        
+        set(h_all.label_enableRefinement, 'Units',units);
+        pos = get(h_all.label_enableRefinement, 'Position');
+        pos(2) = panel_candidate_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.label_enableRefinement, 'Position',pos);
+        
         % Relative to label_fitting_Method
-        set(h_all.panel_fitting, 'Units',units);
-        panel_fitting_pos = get(h_all.panel_fitting, 'Position');
-        panel_fitting_pos(2) = label_refinementMethod_pos(2)-ABOVE_PANEL_SPACING-panel_fitting_pos(4);
-        set(h_all.panel_fitting, 'Position',panel_fitting_pos);
+        set(h_all.panel_refinement, 'Units',units);
+        panel_refinement_pos = get(h_all.panel_refinement, 'Position');
+        panel_refinement_pos(2) = label_refinementMethod_pos(2)-ABOVE_PANEL_SPACING-panel_refinement_pos(4);
+        set(h_all.panel_refinement, 'Position',panel_refinement_pos);
         
         % Relative to fitting panel
         set(h_all.label_enableTracking, 'Units',units);
         label_enableTracking_pos = get(h_all.label_enableTracking, 'Position');
-        label_enableTracking_pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-label_enableTracking_pos(4)/2;
+        label_enableTracking_pos(2) = panel_refinement_pos(2)-TOPIC_SPACING-label_enableTracking_pos(4)/2;
         set(h_all.label_enableTracking, 'Position',label_enableTracking_pos);
         
         set(h_all.cbx_enableTracking, 'Units',units);
         pos = get(h_all.cbx_enableTracking, 'Position');
-        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2;
+        pos(2) = panel_refinement_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.cbx_enableTracking, 'Position',pos);
+        
+        set(h_all.cbx_tracking_loaded, 'Units',units);
+        pos = get(h_all.cbx_tracking_loaded, 'Position');
+        pos(2) = panel_refinement_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.cbx_tracking_loaded, 'Position',pos);
         
         set(h_all.label_trackingMethod, 'Units',units);
         pos = get(h_all.label_trackingMethod, 'Position');
-        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2;
+        pos(2) = panel_refinement_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.label_trackingMethod, 'Position',pos);
         
         set(h_all.popup_trackingMethod, 'Units',units);
         pos = get(h_all.popup_trackingMethod, 'Position');
-        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2;
+        pos(2) = panel_refinement_pos(2)-TOPIC_SPACING-pos(4)/2;
         set(h_all.popup_trackingMethod, 'Position',pos);
         
         set(h_all.button_trackingHelp, 'Units',units);
         pos = get(h_all.button_trackingHelp, 'Position');
-        pos(2) = panel_fitting_pos(2)-TOPIC_SPACING-pos(4)/2 + 0.1; % Note the 0.1 is empirical and fits better
+        pos(2) = panel_refinement_pos(2)-TOPIC_SPACING-pos(4)/2 + 0.1; % Note the 0.1 is empirical and fits better
         set(h_all.button_trackingHelp, 'Position',pos);
         
         % Relative to label tracking
@@ -563,20 +706,57 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         panel_tracking_pos(2) = label_enableTracking_pos(2)-ABOVE_PANEL_SPACING-panel_tracking_pos(4);
         set(h_all.panel_tracking, 'Position',panel_tracking_pos);
         
-        % Relative to tracking panel        
+        % Relative to tracking panel
+        set(h_all.label_enablePostproc, 'Units',units);
+        label_enablePostproc_pos = get(h_all.label_enablePostproc, 'Position');
+        label_enablePostproc_pos(2) = panel_tracking_pos(2)-TOPIC_SPACING-label_enablePostproc_pos(4)/2;
+        set(h_all.label_enablePostproc, 'Position',label_enablePostproc_pos);
+        
+        set(h_all.cbx_enablePostproc, 'Units',units);
+        pos = get(h_all.cbx_enablePostproc, 'Position');
+        pos(2) = panel_tracking_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.cbx_enablePostproc, 'Position',pos);
+        
+        set(h_all.cbx_postproc_loaded, 'Units',units);
+        pos = get(h_all.cbx_postproc_loaded, 'Position');
+        pos(2) = panel_tracking_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.cbx_postproc_loaded, 'Position',pos);
+        
+        set(h_all.label_postprocMethod, 'Units',units);
+        pos = get(h_all.label_postprocMethod, 'Position');
+        pos(2) = panel_tracking_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.label_postprocMethod, 'Position',pos);
+        
+        set(h_all.popup_postprocMethod, 'Units',units);
+        pos = get(h_all.popup_postprocMethod, 'Position');
+        pos(2) = panel_tracking_pos(2)-TOPIC_SPACING-pos(4)/2;
+        set(h_all.popup_postprocMethod, 'Position',pos);
+        
+        set(h_all.button_postprocHelp, 'Units',units);
+        pos = get(h_all.button_postprocHelp, 'Position');
+        pos(2) = panel_tracking_pos(2)-TOPIC_SPACING-pos(4)/2 + 0.1; % Note the 0.1 is empirical and fits better
+        set(h_all.button_postprocHelp, 'Position',pos);
+        
+        % Relative to label postproc
+        set(h_all.panel_postproc, 'Units',units);
+        panel_postproc_pos = get(h_all.panel_postproc, 'Position');
+        panel_postproc_pos(2) = label_enablePostproc_pos(2)-ABOVE_PANEL_SPACING-panel_postproc_pos(4);
+        set(h_all.panel_postproc, 'Position',panel_postproc_pos);
+        
+        % Relative to postproc panel        
         set(h_all.button_continueForAll, 'Units',units);
         pos = get(h_all.button_continueForAll, 'Position');
-        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
+        pos(2) = panel_postproc_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.button_continueForAll, 'Position',pos);
         
         set(h_all.button_continue, 'Units',units);
         pos = get(h_all.button_continue, 'Position');
-        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
+        pos(2) = panel_postproc_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.button_continue, 'Position',pos);
         
         set(h_all.button_preview, 'Units',units);
         pos = get(h_all.button_preview, 'Position');
-        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
+        pos(2) = panel_postproc_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.button_preview, 'Position',pos);
         
         button_preview_height = pos(4);
@@ -584,22 +764,22 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         set(h_all.text_firstFrameTesting, 'Units',units);
         pos = get(h_all.text_firstFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
+        pos(2) = panel_postproc_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.text_firstFrameTesting, 'Position',pos);
         
         set(h_all.edit_firstFrameTesting, 'Units',units);
         pos = get(h_all.edit_firstFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-pos(4);
+        pos(2) = panel_postproc_pos(2)-BUTTON_SPACING-pos(4);
         set(h_all.edit_firstFrameTesting, 'Position',pos);
         
         set(h_all.text_lastFrameTesting, 'Units',units);
         pos = get(h_all.text_lastFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-button_preview_height;
+        pos(2) = panel_postproc_pos(2)-BUTTON_SPACING-button_preview_height;
         set(h_all.text_lastFrameTesting, 'Position',pos);
         
         set(h_all.edit_lastFrameTesting, 'Units',units);
         pos = get(h_all.edit_lastFrameTesting, 'Position');
-        pos(2) = panel_tracking_pos(2)-BUTTON_SPACING-button_preview_height;
+        pos(2) = panel_postproc_pos(2)-BUTTON_SPACING-button_preview_height;
         set(h_all.edit_lastFrameTesting, 'Position',pos);
         
         % Rescale window based on last element
@@ -624,6 +804,135 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_main,'Position', win_pos);
     end
 
+% This function enables/disables the plugin GUI based on the state of the
+% enable and 'use loaded data' checkbox.
+    function updatePanelEnable()
+        % If loaded data is used the popup and panel are disabled and the
+        % loaded checkbox of the next panel is activated
+                      
+        % Enable/disable candidate panel
+        enableState = 'off';
+        if get(h_all.cbx_enableCandidate, 'Value')
+            if ~get(h_all.cbx_candidate_loaded, 'Value')
+                enableState = 'on';
+                set(h_all.cbx_refinement_loaded, 'Value',false); % Unchecking use-loaded also unchecks the use loaded of the next step.
+            end
+            set(h_all.cbx_candidate_loaded,'Enable','on');
+            set(h_all.button_candidateHelp,'Enable','on');
+            set(h_all.cbx_enableRefinement,'Enable','on');
+        else
+            set(h_all.cbx_candidate_loaded,'Enable','off');
+            set(h_all.button_candidateHelp,'Enable','off');
+            set(h_all.cbx_enableRefinement,'Enable','off');
+        end
+        set(h_all.popup_candidateMethod,'Enable',enableState);
+        set(h_all.label_candidateMethod,'Enable',enableState);
+        set(findall(h_all.panel_candidate,'-property','Enable'), 'Enable',enableState);
+              
+        % Enable/disable refinement panel
+        enableState = 'off';
+        if get(h_all.cbx_enableRefinement, 'Value') && get(h_all.cbx_enableCandidate, 'Value') 
+            if ~get(h_all.cbx_refinement_loaded, 'Value')
+                enableState = 'on';
+                set(h_all.cbx_tracking_loaded, 'Value',false); % Unchecking use-loaded also unchecks the use loaded of the next step.
+            else
+                set(h_all.cbx_candidate_loaded,'Enable','off'); % The checkbox use-loaded of the previous step is disabled if it is checked for this step.
+            end
+            if get(h_all.cbx_candidate_loaded, 'Value')
+                set(h_all.cbx_refinement_loaded,'Enable','on');
+            else
+                set(h_all.cbx_refinement_loaded,'Enable','off');
+            end
+            set(h_all.button_refinementHelp,'Enable','on');
+            set(h_all.cbx_enableTracking, 'Enable','on');
+        else
+            set(h_all.cbx_refinement_loaded,'Enable','off');
+            set(h_all.button_refinementHelp,'Enable','off');
+            set(h_all.cbx_enableTracking, 'Enable','off');
+        end
+        set(h_all.popup_refinementMethod,'Enable',enableState);
+        set(h_all.label_refinementMethod,'Enable',enableState);
+        set(findall(h_all.panel_refinement,'-property','Enable'), 'Enable',enableState);
+        
+        % Enable/disable tracking panel
+        enableState = 'off';
+        if get(h_all.cbx_enableTracking, 'Value') && get(h_all.cbx_enableRefinement, 'Value') && get(h_all.cbx_enableCandidate, 'Value')
+            if ~get(h_all.cbx_tracking_loaded, 'Value')
+                enableState = 'on';
+                set(h_all.cbx_postproc_loaded, 'Value',false); % Unchecking use-loaded also unchecks the use loaded of the next step.
+            else
+                set(h_all.cbx_refinement_loaded,'Enable','off'); % The checkbox use-loaded of the previous step is disabled if it is checked for this step.
+            end
+            if get(h_all.cbx_refinement_loaded, 'Value')
+                set(h_all.cbx_tracking_loaded,'Enable','on');
+            else
+                set(h_all.cbx_tracking_loaded,'Enable','off');
+            end
+            set(h_all.button_trackingHelp,'Enable','on');
+            set(h_all.cbx_enablePostproc, 'Enable','on');
+        else
+            set(h_all.cbx_tracking_loaded,'Enable','off');
+            set(h_all.button_trackingHelp,'Enable','off');
+            set(h_all.cbx_enablePostproc, 'Enable','off');
+        end
+        set(h_all.popup_trackingMethod,'Enable',enableState);
+        set(h_all.label_trackingMethod,'Enable',enableState);
+        set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable',enableState);
+        
+        % Enable/disable postproc panel
+        enableState = 'off';
+        if get(h_all.cbx_enablePostproc, 'Value') && get(h_all.cbx_enableTracking, 'Value') && get(h_all.cbx_enableRefinement, 'Value') && get(h_all.cbx_enableCandidate, 'Value')
+            if ~get(h_all.cbx_postproc_loaded, 'Value')
+                enableState = 'on';
+            else
+                set(h_all.cbx_tracking_loaded,'Enable','off'); % The checkbox use-loaded of the previous step is disabled if it is checked for this step.
+            end
+            if get(h_all.cbx_tracking_loaded, 'Value')
+                set(h_all.cbx_postproc_loaded,'Enable','on');
+            else
+                set(h_all.cbx_postproc_loaded,'Enable','off');
+            end
+            set(h_all.button_postprocHelp,'Enable','on');
+        else
+            set(h_all.cbx_postproc_loaded,'Enable','off');
+            set(h_all.button_postprocHelp,'Enable','off');
+        end
+        set(h_all.popup_postprocMethod,'Enable',enableState);
+        set(h_all.label_postprocMethod,'Enable',enableState);
+        set(findall(h_all.panel_postproc,'-property','Enable'), 'Enable',enableState);
+              
+%         % Enable/disable tracking panel
+%         if get(h_all.cbx_enableTracking, 'Value') && get(h_all.cbx_enableRefinement, 'Value') && get(h_all.cbx_enableCandidate, 'Value')
+%             set(h_all.popup_trackingMethod,'Enable','on');
+%             set(h_all.label_trackingMethod,'Enable','on');
+%             set(h_all.button_trackingHelp,'Enable','on');
+%             set(h_all.cbx_tracking_loaded,'Enable','on');
+%             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','on');
+%             set(h_all.cbx_enablePostproc, 'Enable','on');
+%         else
+%             set(h_all.popup_trackingMethod,'Enable','off');
+%             set(h_all.label_trackingMethod,'Enable','off');
+%             set(h_all.button_trackingHelp,'Enable','off');
+%             set(h_all.cbx_tracking_loaded,'Enable','off');
+%             set(findall(h_all.panel_tracking,'-property','Enable'), 'Enable','off');
+%             set(h_all.cbx_enablePostproc, 'Enable','off');
+%         end
+%               
+%         % Enable/disable postproc panel
+%         if get(h_all.cbx_enablePostproc, 'Value') && get(h_all.cbx_enableTracking, 'Value') && get(h_all.cbx_enableRefinement, 'Value') && get(h_all.cbx_enableCandidate, 'Value')
+%             set(h_all.popup_postprocMethod,'Enable','on');
+%             set(h_all.label_postprocMethod,'Enable','on');
+%             set(h_all.button_postprocHelp,'Enable','on');
+%             set(h_all.cbx_postproc_loaded,'Enable','on');
+%             set(findall(h_all.panel_postproc,'-property','Enable'), 'Enable','on');
+%         else
+%             set(h_all.popup_postprocMethod,'Enable','off');
+%             set(h_all.label_postprocMethod,'Enable','off');
+%             set(h_all.button_postprocHelp,'Enable','off');
+%             set(h_all.cbx_postproc_loaded,'Enable','off');
+%             set(findall(h_all.panel_postproc,'-property','Enable'), 'Enable','off');
+%         end
+    end
 
 % This will process all given movies with the current settings without
 % individual figures showing up for each one.
@@ -641,10 +950,23 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         
         [~,name,~] = fileparts(outfile); % Append _TNT to filename
         outfile = [path,name,'_TNT.mat'];
-        save(outfile,'filename_movie','globalOptions', 'candidateOptions','refinementOptions');
-        if(globalOptions.enableTracking) % Save tracking options only if tracking is desired
-            save(outfile,'trackingOptions','-append');
+        
+        % Save the globalOptions and Options of the enabled steps
+        savevars = {'filename_movie','globalOptions','importOptions'};
+        if(globalOptions.enableCandidate)
+            savevars = [savevars,'candidateOptions'];
         end
+        if(globalOptions.enableRefinement)
+            savevars = [savevars,'refinementOptions'];
+        end
+        if(globalOptions.enableTracking)
+            savevars = [savevars,'trackingOptions'];
+        end
+        if(globalOptions.enablePostproc)
+            savevars = [savevars,'postprocOptions'];
+        end
+        
+        save(outfile,savevars{:});
     end
 
 % Load settings from a file
@@ -660,13 +982,28 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
         warning off % We turn warnings off, as trackingOptions might not exist
-        allOptions = load([path,infile],'globalOptions', 'candidateOptions','refinementOptions','trackingOptions');
+        allOptions = load([path,infile],'globalOptions', 'importOptions', 'candidateOptions','refinementOptions','trackingOptions','postprocOptions');
         warning on
         globalOptions   = allOptions.globalOptions;
-        candidateOptions = allOptions.candidateOptions;
-        refinementOptions   = allOptions.refinementOptions;
+        if ~isfield(globalOptions,'useTimegate') % check to preserve compability with old TnT files
+            globalOptions.useTimegate = false;
+        end
+        if isfield(allOptions,'importOptions') && strcmp(importOptions.plugin_name,allOptions.importOptions.plugin_name)
+            % Only set importOptions if the import plugin matches.
+            importPlugin.setOptions(allOptions.importOptions);
+            importOptions = importPlugin.getOptions();
+        end
+        if isfield(allOptions,'candidateOptions')
+            candidateOptions = allOptions.candidateOptions;
+        end
+        if isfield(allOptions,'refinementOptions')
+            refinementOptions   = allOptions.refinementOptions;
+        end
         if isfield(allOptions,'trackingOptions')
             trackingOptions  = allOptions.trackingOptions;
+        end
+        if isfield(allOptions,'postprocOptions')
+            postprocOptions  = allOptions.postprocOptions;
         end
         
         setGUIBasedOnOptions();
@@ -700,6 +1037,32 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_darkMovie,'Tooltip',[path,darkMovie]);
     end
 
+% Show the time gates and the TCSPC histogram
+    function callback_showTCSPC(~, ~)
+        if isfield(importOptions.info,'getTCSPC') && isa(importOptions.info.getTCSPC,'function_handle')
+            figure;
+            showTimegate(filename_movie,importOptions,[str2double(get(h_all.edit_tgStart,'String')),str2double(get(h_all.edit_tgEnd,'String'))]);
+        else
+            fprintf('TNT: The import plugin %s does not support preview of the TCSPC.\n', importOptions.plugin_name)
+        end
+    end
+
+% Create importOptions modal dialog
+    function callback_importOptionsPanel(~, ~)
+        pos = get(h_main,'Position');
+        pos = [pos(1)+10 pos(2)+pos(4)-200 pos(3)-20 100];
+        fig = figure('WindowStyle','modal','Name','Import Options', 'NumberTitle','off','Resize','off','Visible','off','Position',pos);
+        imPanel = uipanel('Parent',fig,'Units','normalized','Position',[0.05 0.05 0.9 0.9]);
+        set(imPanel,'Units','points');
+        initPos = get(imPanel,'Position');
+        importPlugin.createOptionsPanel(imPanel);
+        newPos = get(imPanel,'Position');
+        set(fig,'Position',get(fig,'Position')+[0 0 0 newPos(4) - initPos(4)]);
+        set(imPanel,'Position',[initPos(1:2) newPos(3:4)]);
+        set(fig,'Visible','on');
+        uiwait(fig);
+    end
+
 % Shows a message dialog with the info of the currently selected plugin
     function callback_helpButtons(hObj, event)
         switch hObj
@@ -712,6 +1075,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
             case h_all.button_trackingHelp
                 name = tracking_plugins(selected_tracking_plugin).name;
                 msg = tracking_plugins(selected_tracking_plugin).info;
+            case h_all.button_postprocHelp
+                name = postproc_plugins(selected_postproc_plugin).name;
+                msg = postproc_plugins(selected_postproc_plugin).info;
             otherwise
                 error('Unknown caller of callback. Something went wront =?!');
         end
@@ -804,6 +1170,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         set(h_all.edit_darkMovie,'Tooltip',globalOptions.filename_dark_movie);
         setNum(h_all.edit_firstFrame, globalOptions.firstFrame, true);
         setNum(h_all.edit_lastFrame, globalOptions.lastFrame, true);
+        setNum(h_all.edit_binFrame, globalOptions.binFrame, true);
         setNum(h_all.edit_firstFrameTesting, globalOptions.firstFrameTesting, true);
         setNum(h_all.edit_lastFrameTesting, globalOptions.lastFrameTesting, true);
         
@@ -813,8 +1180,16 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         setNum(h_all.edit_photonSensitivity,globalOptions.photonSensitivity);
         setNum(h_all.edit_photonGain,globalOptions.photonGain, true);
         
-        % % Tracking
-        set(h_all.cbx_enableTracking,'Value', globalOptions.enableTracking); % --
+        % Timegate
+        set(h_all.cbx_useTimegate,'Value',globalOptions.useTimegate)
+        setNum(h_all.edit_tgStart,globalOptions.tgStart, true);
+        setNum(h_all.edit_tgEnd,globalOptions.tgEnd, true);
+        
+        % % enable/disable Plugins
+        set(h_all.cbx_enableCandidate,'Value', globalOptions.enableCandidate);
+        set(h_all.cbx_enableRefinement,'Value', globalOptions.enableRefinement);
+        set(h_all.cbx_enableTracking,'Value', globalOptions.enableTracking);
+        set(h_all.cbx_enablePostproc,'Value', globalOptions.enablePostproc);
         
         % Update plugins
         selectPluginsBasedOnOptions();
@@ -831,6 +1206,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         globalOptions.filename_dark_movie = get(h_all.edit_darkMovie,'String');
         globalOptions.firstFrame = getNum(h_all.edit_firstFrame);
         globalOptions.lastFrame =  getNum(h_all.edit_lastFrame);
+        globalOptions.binFrame =  getNum(h_all.edit_binFrame);
         globalOptions.firstFrameTesting = getNum(h_all.edit_firstFrameTesting);
         globalOptions.lastFrameTesting = getNum(h_all.edit_lastFrameTesting);
         
@@ -839,33 +1215,50 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         globalOptions.photonSensitivity = getNum(h_all.edit_photonSensitivity);
         globalOptions.photonGain = getNum(h_all.edit_photonGain);
         
-        % Tracking
-        globalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); % --
+        globalOptions.useTimegate = logical(get(h_all.cbx_useTimegate,'Value'));
+        globalOptions.tgStart = getNum(h_all.edit_tgStart);
+        globalOptions.tgEnd = getNum(h_all.edit_tgEnd);
+        
+        % enable/disable Plugins
+        globalOptions.enableCandidate = logical(get(h_all.cbx_enableCandidate,'Value')); 
+        globalOptions.enableRefinement = logical(get(h_all.cbx_enableRefinement,'Value')); 
+        globalOptions.enableTracking = logical(get(h_all.cbx_enableTracking,'Value')); 
+        globalOptions.enablePostproc = logical(get(h_all.cbx_enablePostproc,'Value')); 
         
         % Store options from plugins
+        importOptions = importPlugin.getOptions();
         candidateOptions = candidate_plugins(selected_candidate_plugin).getOptions();
         refinementOptions = refinement_plugins(selected_refinement_plugin).getOptions();
         trackingOptions = tracking_plugins(selected_tracking_plugin).getOptions();
+        postprocOptions = postproc_plugins(selected_postproc_plugin).getOptions();
         
         % Store if loaded data should be used
-        GUIreturns.use_loaded_candidateData = get(h_all.cbx_candidate_loaded,'Value');
+        GUIreturns.use_loaded_candidateData  = get(h_all.cbx_candidate_loaded,'Value');
         GUIreturns.use_loaded_refinementData = get(h_all.cbx_refinement_loaded,'Value');
+        GUIreturns.use_loaded_trackingData   = get(h_all.cbx_tracking_loaded,'Value');
+        GUIreturns.use_loaded_postprocData   = get(h_all.cbx_postproc_loaded,'Value');
         
         %Check if options were changed compared to intial ones
-        GUIreturns.globalOptionsChanged   = ~isequaln(globalOptions_atStartup, globalOptions);
-        GUIreturns.candidateOptionsChanged = ~isequaln(candidateOptions_atStartup, candidateOptions);
-        GUIreturns.refinementOptionsChanged   = ~isequaln(refinementOptions_atStartup, refinementOptions);
-        GUIreturns.trackingOptionsChanged  = ~isequaln(trackingOptions_atStartup, trackingOptions);
+        GUIreturns.globalOptionsChanged     = ~isequaln(globalOptions_atStartup, globalOptions);
+        GUIreturns.importOptionsChanged     = ~isequaln(importOptions_atStartup, importOptions);
+        GUIreturns.candidateOptionsChanged  = ~isequaln(candidateOptions_atStartup, candidateOptions);
+        GUIreturns.refinementOptionsChanged = ~isequaln(refinementOptions_atStartup, refinementOptions);
+        GUIreturns.trackingOptionsChanged   = ~isequaln(trackingOptions_atStartup, trackingOptions);
+        GUIreturns.postprocOptionsChanged   = ~isequaln(postprocOptions_atStartup, postprocOptions);
         %Check if preview window changed
-        GUIreturns.previewIntervalChanged = (globalOptions_atStartup.firstFrameTesting ~= globalOptions.firstFrameTesting) || (globalOptions_atStartup.lastFrameTesting ~= globalOptions.lastFrameTesting);
+        GUIreturns.previewIntervalChanged = (globalOptions_atStartup.firstFrameTesting ~= globalOptions.firstFrameTesting) || (globalOptions_atStartup.lastFrameTesting ~= globalOptions.lastFrameTesting) || (globalOptions_atStartup.binFrame ~= globalOptions.binFrame);
+        GUIreturns.timegateChanged = (globalOptions_atStartup.useTimegate ~= globalOptions.useTimegate) || (globalOptions_atStartup.tgStart ~= globalOptions.tgStart) || (globalOptions_atStartup.tgEnd ~= globalOptions.tgEnd);
         
         % Check if only change in globalOptions is enableTracking
-        GUIreturns.globalOptionsChanged_ExcludingEnableTracking = false;
+        GUIreturns.globalOptionsChanged_ExcludingEnable = false;
         if GUIreturns.globalOptionsChanged
             globalOptions_tmp = globalOptions;
+            globalOptions_tmp.enableCandidate = globalOptions_atStartup.enableCandidate;
+            globalOptions_tmp.enableRefinement = globalOptions_atStartup.enableRefinement;
             globalOptions_tmp.enableTracking = globalOptions_atStartup.enableTracking;
+            globalOptions_tmp.enablePostproc = globalOptions_atStartup.enablePostproc;
             
-            GUIreturns.globalOptionsChanged_ExcludingEnableTracking = ~isequaln(globalOptions_atStartup, globalOptions_tmp);
+            GUIreturns.globalOptionsChanged_ExcludingEnable = ~isequaln(globalOptions_atStartup, globalOptions_tmp);
         end
         
         % Save output folder
@@ -887,11 +1280,20 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         delete(h_main);
     end
 
-% Called when closing the application via the 'X' button (or via close)
+% Called when closing the application via the 'X' button (or via close).
+% Use try to make sure that this is not blocking in case of errors.
     function onAppClose(hObj, event)
-        storeOptions();
-        GUIreturns.userExit = true;
-        delete(h_main);
+        try
+            storeOptions();
+            GUIreturns.userExit = true;
+        catch err
+            warning(err.message);
+        end
+        try
+            delete(h_main);
+        catch err
+            warning(err.message);
+        end
     end
 
 end

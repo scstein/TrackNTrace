@@ -16,7 +16,11 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [candidateData, refinementData, trackingData, previewOptions] = runPreview(movie,darkImage, candidateData, refinementData,trackingData, previewOptions, GUIreturns)
+% 	CT, 2020:
+% 	- support for postprossing plugins
+%	- struct based call of TNTvisualizer
+%
+function [candidateData, refinementData, trackingData, postprocData, previewOptions] = runPreview(movie,darkImage,metadata, candidateData, refinementData, trackingData, postprocData, previewOptions, GUIreturns)
 % Computes candidates, refines the position and tracks if requested.
 %
 % Note: previewOptions is a struct with the fields candidateOptions, refinementOptions, trackingOptions
@@ -35,80 +39,119 @@ function [candidateData, refinementData, trackingData, previewOptions] = runPrev
 % This is somewhat shitty and can probably only be changed by recoding
 % Track'N'Trace in a class based way;
 global globalOptions
+global importOptions
 global candidateOptions
 global refinementOptions
 global trackingOptions
+global postprocOptions
 
 % Make copy of original globals which should be left untouched by the preview
+% Note: the importOptions should not be changed by the plugins.
 cpy_globalOptions = globalOptions;
 cpy_candidateOptions = candidateOptions;
 cpy_refinementOptions = refinementOptions;
 cpy_trackingOptions = trackingOptions;
+cpy_postprocOptions = postprocOptions;
 
-% if no data is supplied, just run every step
-if nargin < 3 || GUIreturns.globalOptionsChanged_ExcludingEnableTracking
-    [candidateData, candidateOptions] = findCandidateParticles(movie, darkImage, globalOptions, candidateOptions);
-    [refinementData, refinementOptions] = fitParticles(movie, darkImage, globalOptions, refinementOptions, candidateData);
-    
-    % track the particles
-    if globalOptions.enableTracking
-        [trackingData,trackingOptions] = trackParticles(refinementData,trackingOptions);
+
+% if no data is supplied or globalOptions changed run everything
+if nargin < 4 || GUIreturns.globalOptionsChanged_ExcludingEnable || GUIreturns.importOptionsChanged
+    % Initilise output data
+    [candidateData, refinementData, trackingData, postprocData]=deal([]);
+else
+    % if the options changed delete the old data and all dependent data.
+    % Otherwise restore the old options.
+    if GUIreturns.candidateOptionsChanged || ~globalOptions.enableCandidate
+        candidateData = [];
     else
-        trackingData = [];
-    end
-else % Reuse data where possible
-    % Perform candidate search if required
-    if GUIreturns.candidateOptionsChanged
-        [candidateData, candidateOptions] = findCandidateParticles(movie, darkImage, globalOptions, candidateOptions);
-    else % or use the options from the last preview run
         candidateOptions = previewOptions.candidateOptions;
     end
-    
-    % Perform refinement if required
-    if GUIreturns.candidateOptionsChanged || GUIreturns.refinementOptionsChanged
-        [refinementData, refinementOptions] = fitParticles(movie, darkImage, globalOptions, refinementOptions, candidateData);
-    else % or use the options from the last preview run
+    if GUIreturns.refinementOptionsChanged || ~globalOptions.enableRefinement || isempty(candidateData)
+        refinementData = [];
+    else
         refinementOptions = previewOptions.refinementOptions;
     end
-    
-    
-    % By invalidating tracking data we remember that the tracking options
-    % were changed by the user, even if he set enableTracking = false in at the same time
-    if GUIreturns.trackingOptionsChanged
+    if GUIreturns.trackingOptionsChanged || ~globalOptions.enableTracking || isempty(refinementData)
         trackingData = [];
-    end
-    
-    % Perform tracking if required
-    if GUIreturns.candidateOptionsChanged || GUIreturns.refinementOptionsChanged || GUIreturns.trackingOptionsChanged || isempty(trackingData)
-        if globalOptions.enableTracking
-            % Track the particles
-            [trackingData,trackingOptions] = trackParticles(refinementData,trackingOptions);
-        end
-    else % or use the options from the last preview run
+    else
         trackingOptions = previewOptions.trackingOptions;
-    end    
+    end
+    if GUIreturns.postprocOptionsChanged || ~globalOptions.enablePostproc || isempty(trackingData)
+        postprocData = [];
+    else
+        postprocOptions = previewOptions.postprocOptions;
+    end
 end
+
+% Execute step if data is requested and not existing
+if globalOptions.enableCandidate && isempty(candidateData)
+    [candidateData, candidateOptions] = findCandidateParticles(movie{1}, darkImage, globalOptions, candidateOptions);
+end
+if globalOptions.enableRefinement && isempty(refinementData) && ~isempty(candidateData)
+    [refinementData, refinementOptions] = fitParticles(movie{1}, darkImage, globalOptions, refinementOptions, candidateData);
+end
+if globalOptions.enableTracking && isempty(trackingData) && ~isempty(refinementData)
+    [trackingData,trackingOptions] = trackParticles(refinementData,trackingOptions);
+end
+if globalOptions.enablePostproc && isempty(postprocData) && ~isempty(trackingData)
+    [postprocData,postprocOptions] = postprocTracks(trackingData, globalOptions,importOptions, postprocOptions);
+end
+
 fprintf('\n');
 
-%visualize all trajectories
-if globalOptions.enableTracking
-    TNTvisualizer(movie, candidateData, candidateOptions.outParamDescription, refinementData, refinementOptions.outParamDescription, trackingData, trackingOptions.outParamDescription, 5, true, globalOptions.firstFrameTesting);
+% Build TNTdata struct
+if isstruct(metadata) && isfield(metadata,'filename')
+    [~,titlename] = fileparts(metadata.filename);
+    titlename = ['Preview of ', titlename];
 else
-    TNTvisualizer(movie, candidateData, candidateOptions.outParamDescription, refinementData, refinementOptions.outParamDescription, [], [], 5, true, globalOptions.firstFrameTesting);
+    titlename = 'Preview';
 end
+
+TNTdata = struct(...
+    'title',titlename,...
+    'is_blocking',true,...
+    'firstFrame_lastFrame',[globalOptions.firstFrameTesting, globalOptions.lastFrameTesting],...
+    'FPS',5,...
+    'metadata',metadata,...
+    'globalOptions',globalOptions...
+    );
+
+% tntvisoptions = cell(1,8);
+if globalOptions.enableCandidate
+%     tntvisoptions(1:2) = {candidateData, candidateOptions.outParamDescription};
+    TNTdata.candidateData = candidateData;
+    TNTdata.candidateOptions = candidateOptions;
+end
+if globalOptions.enableRefinement
+%     tntvisoptions(3:4) = {refinementData, refinementOptions.outParamDescription};
+    TNTdata.refinementData = refinementData;
+    TNTdata.refinementOptions = refinementOptions;
+end
+if globalOptions.enableTracking
+%     tntvisoptions(5:6) = {trackingData, trackingOptions.outParamDescription};
+    TNTdata.trackingData = trackingData;
+    TNTdata.trackingOptions = trackingOptions;
+end
+if globalOptions.enablePostproc
+%     tntvisoptions(7:8) = {postprocData, postprocOptions.outParamDescription};
+    TNTdata.postprocData = postprocData;
+    TNTdata.postprocOptions = postprocOptions;
+end
+% tntvisoptions = [tntvisoptions,{5, true, globalOptions.firstFrameTesting}];
+% TNTvisualizer(movie, tntvisoptions{:});
+TNTvisualizer(movie, TNTdata);
 
 % Store options from this preview
 previewOptions.candidateOptions = candidateOptions;
 previewOptions.refinementOptions = refinementOptions;
 previewOptions.trackingOptions = trackingOptions;
+previewOptions.postprocOptions = postprocOptions;
 
 % Restore original globals
 globalOptions = cpy_globalOptions;
 candidateOptions = cpy_candidateOptions;
 refinementOptions = cpy_refinementOptions;
 trackingOptions = cpy_trackingOptions;
+postprocOptions = cpy_postprocOptions;
 
 end
-
-
-

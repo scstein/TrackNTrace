@@ -15,7 +15,7 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [filename_movies, globalOptions, candidateOptions,refinementOptions,trackingOptions, candidateData_loaded, refinementData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI()
+function [filename_movies, globalOptions,importOptions, candidateOptions,refinementOptions,trackingOptions,postprocOptions, candidateData_loaded, refinementData_loaded, trackingData_loaded, postprocData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI(formats,filename_movies)
 % TrackNTrace startup GUI. Here the input (movies/TNT data file) can be
 % selected when RunTrackNTrace.m is called.
 %
@@ -23,21 +23,37 @@ function [filename_movies, globalOptions, candidateOptions,refinementOptions,tra
 % E-Mail: scstein@phys.uni-goettingen.de
 % Date: 2016
 %
+% Extended CT, 2019:
+%	- support for any filetype covered by an importPlugin (in argument formats)
+%	- filename_movies can be passed as input argument
 
 GUIreturns.userExit = false;
 
 globalOptions = [];
+importOptions = [];
 candidateOptions = [];
 refinementOptions = [];
 trackingOptions = [];
+postprocOptions = [];
 
 candidateData_loaded = [];
 refinementData_loaded = [];
+trackingData_loaded = [];
+postprocData_loaded = [];
 movieSize_loaded = [];
 firstFrame_lastFrame_loaded = [];
 outputPath_loaded = -1;
 
-filename_movies ={};
+if nargin<2 || ~iscell(filename_movies)
+    filename_movies ={};
+else % Take existing files from provided list
+    %TODO check extension against format list
+    ind = logical(cellfun(@(f)exist(f,'file'),filename_movies));
+    if ~all(ind)
+        cellfun(@(f)fprintf('TNT: File not found: %s\n',f),filename_movies(~ind),'UniformOutput',false);
+    end
+    filename_movies = filename_movies(ind);
+end
 
 % -- Preparing the GUI --
 h_main = openfig('startupGUI_Layout.fig');
@@ -53,6 +69,11 @@ set(h_all.button_removeMovie, 'Callback', @callback_removeMovie);
 set(h_all.button_load, 'Callback', @callback_loadSettings);
 set(h_all.button_start, 'Callback',@callback_exit);
 
+
+if numel(filename_movies) > 0 % show passed movies
+    set(h_all.button_start,'Enable','on');
+    set(h_all.listbox_movieList,'String',filename_movies);
+end
 
 % % GUI main
 uiwait(h_main);
@@ -70,19 +91,35 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
         warning off
-        allOptions = load([path,infile],'globalOptions', 'candidateOptions','refinementOptions','trackingOptions','filename_movie','candidateData','refinementData','movieSize','firstFrame_lastFrame');
+        allOptions = load([path,infile],'globalOptions','importOptions','candidateOptions','refinementOptions','trackingOptions','postprocOptions','filename_movie','candidateData','refinementData','trackingData','postprocData','movieSize','firstFrame_lastFrame');
         warning on
         globalOptions   = allOptions.globalOptions;
-        candidateOptions = allOptions.candidateOptions;
-        refinementOptions   = allOptions.refinementOptions;
+        if isfield(allOptions,'importOptions')
+            importOptions = allOptions.importOptions;
+        end
+        if isfield(allOptions,'candidateOptions')
+            candidateOptions = allOptions.candidateOptions;
+        end
+        if isfield(allOptions,'refinementOptions')
+            refinementOptions   = allOptions.refinementOptions;
+        end
         if isfield(allOptions,'trackingOptions')
             trackingOptions  = allOptions.trackingOptions;
+        end
+        if isfield(allOptions,'postprocOptions')
+            postprocOptions  = allOptions.postprocOptions;
         end
         if isfield(allOptions,'candidateData')
             candidateData_loaded  = allOptions.candidateData;
         end
         if isfield(allOptions,'refinementData')
             refinementData_loaded  = allOptions.refinementData;
+        end
+        if isfield(allOptions,'trackingData')
+            trackingData_loaded  = allOptions.trackingData;
+        end
+        if isfield(allOptions,'postprocData')
+            postprocData_loaded  = allOptions.postprocData;
         end
         if isfield(allOptions,'movieSize')
             movieSize_loaded  = allOptions.movieSize;
@@ -112,7 +149,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         if ~isempty(filename_movies)
             [path,~,~] = fileparts(filename_movies{end});
         end
-        [movieList, path] = uigetfile([path,filesep,'*.tif'],'MultiSelect','on');
+        [movieList, path] = uigetfile(formats,'Select files to load',[path,filesep],'MultiSelect','on');
         if( isfloat(movieList) ); return; end; % User pressed cancel.
         
         % atach path to every entry in the list then add to listbox

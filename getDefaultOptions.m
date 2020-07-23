@@ -16,6 +16,8 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
+%     Extended CT, 2019
+%
 function [globalOptions, TNToptions] = getDefaultOptions()
 % [globalOptions] = getDefaultOptions 
 % 
@@ -37,12 +39,14 @@ TNToptions.rememberSettingsForNextMovie = true; % If this is set to true, settin
 TNToptions.defaultCandidatePlugin = 'Cross correlation';
 TNToptions.defaultRefinementPlugin = 'TNT Fitter';
 TNToptions.defaultTrackingPlugin = 'TNT NearestNeighbor';
+TNToptions.defaultPostprocPlugin = 'fit lifetime';
 
 % General Options of the GUI
 globalOptions.filename_dark_movie = ''; % This directory is chosen as startup when clicking to select a movie
 globalOptions.previewMode = true; %enable/disable previewMode by setting true/false.
 globalOptions.firstFrame = 1; %integer, first movie frame to consider. 
 globalOptions.lastFrame = inf; %integer, last movie frame to consider. Put inf or 'end' to read to the end.
+globalOptions.binFrame = 1; %integer, number of frames which are combined to one frame.
 globalOptions.firstFrameTesting = 1; %integer, first movie frame to consider during testMode
 globalOptions.lastFrameTesting = 50; %integer, last movie frame to consider during testMode. Put inf to read to the end.
 
@@ -52,7 +56,15 @@ globalOptions.photonBias = 100; %integer, camera A/D count floor which is added 
 globalOptions.photonSensitivity = 5; %double, electrons per image count, depends on pre-amp setting and readout mode. Check your camera manual and spec sheet!
 globalOptions.photonGain = 100; %integer, EMCCD gain of camera
 
-% Options for tracking particle positions
-globalOptions.enableTracking = false;
+% Options for timegate
+globalOptions.useTimegate = false; %boolean, enables timegate
+globalOptions.tgStart = 0; 
+globalOptions.tgEnd = inf; 
+
+% Options to enable plugins
+globalOptions.enableCandidate  = true;
+globalOptions.enableRefinement = true;
+globalOptions.enableTracking   = false;
+globalOptions.enablePostproc   = false;
 
 end
