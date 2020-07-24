@@ -196,7 +196,6 @@ end
 allFramesCandidateData = []; % Computed on demand for histogram plots
 allFramesRefinementData = []; % Computed on demand for histogram plots
 
-% use_bw = false; % Is visualization black/white or colored?
 use_flim = false;                                                   % Plot FLIM image
 cm_maps = {@cmap_heat,'hot','gray','jet','hsv',@cmap_isoluminant65,@cmap_isoluminant75,@cmap_rainbow_bgyrm};% List of available colormaps
 cm_names = {'heat','hot','B/W','jet','hsv','iso65','iso75','Rainbow'};
@@ -306,7 +305,6 @@ set(h_all.edit_gamma,'Callback',@gammaCallback);
 setNum(h_all.edit_gamma,img_gamma);
 
 % Checkbox
-% set(h_all.cb_bw, 'Value', use_bw, 'Callback',@bwCallback);
 set(h_all.cb_invert, 'Value', cm_invert, 'Callback',@setColormap);
 set(h_all.cb_flim, 'Value', use_flim, 'Callback',@flimCallback);
 
@@ -874,7 +872,7 @@ end
             case 'movie'
                 % Nothing additional to draw.
             case 'candidate'
-                if(isempty(candidateData{iF}));
+                if(isempty(candidateData{iF}))
                     if dothandle_cand ~= -1 % Skip uninitialized handles (must be drawn once)
                         set(dothandle_cand,'xdata',[],'ydata',[]);
                     end
@@ -892,7 +890,7 @@ end
                 
                 
             case 'refinement'
-                if(isempty(refinementData{iF}));
+                if(isempty(refinementData{iF}))
                     if dothandle_fit ~= -1 % Skip uninitialized handles (must be drawn once)
                         set(dothandle_fit,'xdata',[],'ydata',[]);
                     end
@@ -1249,25 +1247,6 @@ end
         end        
     end
 
-    % Switch black-white and hot display mode
-    function bwCallback(~, ~)
-        isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
-        if isTimerOn
-            stop(h_all.timer);
-        end
-        
-        use_bw = ~use_bw;
-        
-        drawColors(nr_track_colors); % Recompute colors
-        
-        if isTimerOn
-            start(h_all.timer);
-        else
-            updateFrameDisplay()
-        end
-        
-    end
-
     % Switch flim and intensity display mode
     function flimCallback(~, ~)
         isTimerOn = strcmp(get(h_all.timer, 'Running'), 'on');
@@ -1333,7 +1312,9 @@ end
                 end
             end
         end
-                
+        
+        drawColors(nr_track_colors); % Recompute colors
+        
         if isTimerOn
             start(h_all.timer);
         else
@@ -1343,11 +1324,8 @@ end
 
     % Recompute the colors based on the current background
     function drawColors(num_colors)
-%         if use_bw
-%             bg = {'k'}; % background color
-%         else
-            bg = {'r'};
-%         end
+        
+        bg = mean(getColormap(cm_maps{cm_ind}));
         
         colors = distinguishable_colors(2, bg);
         marker_color = colors(2,:);
@@ -1887,7 +1865,7 @@ end
     end
 %% Reconstruction
     function callback_reconstruct(~,~,sthist_zParam)
-        recMode = get(h_all.popup_reconstruct_mode,'Value');
+        sthist_mode = get(h_all.popup_reconstruct_mode,'Value');
         pixelSize = str2double(get(h_all.edit_reconstruct_pixelsize, 'String')); %nm
         sthist_superRes =  str2double(get(h_all.edit_reconstruct_res,'String'));
         sthist_locprec =  str2double(get(h_all.edit_reconstruct_locprec,'String'));
@@ -1921,7 +1899,7 @@ end
                 locData = allFramesCandidateData(:,1:2);
                 avgTracks = false;
                 
-                recMode = 1; % We do not have amplitudes
+                sthist_mode = 1; % We do not have amplitudes
                 sthist_guessLocPrecision = false;
                 if sthist_zParam
                     sthist_z = allFramesCandidateData(:,sthist_zParam);
@@ -2006,7 +1984,8 @@ end
             else
                 sigma_sq = locData(:,5).^2;
             end
-            N = locData(:,3).*2*pi.*sigma_sq; %total number of photons
+            N = locData(:,3).*2*pi.*sigma_sq; % total number of photons
+            N(N<=0) = NaN; % Negative amplitudes can occure (the TNTfitter is unconstrained), but are misfits. NaNs are filtered out before reconstruction.
             tau = 2*pi*locData(:,4).*(sigma_sq+1/12)./N;
             sthist_locprec = sqrt((sigma_sq+1/12)./N.*(1+4*tau+sqrt(2*tau./(1+4*tau)))); %Rieger et al, DOI 10.1002/cphc.201300711
         end
@@ -2017,22 +1996,22 @@ end
             locData = locData(:,1:2);
             sthist_map =  cell(1,1);
         end
-        switch recMode
+        switch sthist_mode
             case 1 % Gaussian
-                recMode = 'gaussian';
+                sthist_mode = 'gaussian';
                 sthist_weight = [];
             case 2 % Weighted
-                recMode = 'point';
+                sthist_mode = 'point';
                 sthist_weight = sthist_locprec;
                 sthist_locprec = [];                
             case 3 % Jitter
-                recMode = 'jitter';
+                sthist_mode = 'jitter';
                 sthist_weight = [];                
             otherwise % Points
-                recMode = 'point';
+                sthist_mode = 'point';
                 sthist_weight = [];
         end
-        [sthist_map{:}] = reconstructSMLM(locData,sthist_locprec,sthist_weight,sthist_superRes,size(movie),recMode);
+        [sthist_map{:}] = reconstructSMLM(locData,sthist_locprec,sthist_weight,sthist_superRes,size(movie),sthist_mode);
                 
         TNTvisualizer(sthist_map,struct('title','Reconstruction','metadata',struct('pixelsize',pixelSize/sthist_superRes*1e-3,'pixelsize_unit',[char(181) 'm'])));
 
