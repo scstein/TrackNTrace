@@ -7,7 +7,7 @@ function name = makeValidMatfileName(name)
 % If name is path this is applied to the whole path which can leed to a
 % different output folder.
 
-acceptedChar = '!#$%&''()+,-./0123456789:;=@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{}~';
+acceptedChar = ' !#$%&''()+,-./0123456789:;=@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{}~';
 valid = ismember(name, acceptedChar);
 if ~all(valid)
     name = num2cell(name);

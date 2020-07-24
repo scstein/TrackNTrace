@@ -118,7 +118,12 @@ function [movie,metadata] = read_PTU(pluginOptions,filename_movie, frame_range, 
         end
         % Save cache
         if isfield(pluginOptions,'cacheMovie')
-            setCache({movie,metadata},pluginOptions.cacheMovie, filename_movie, frame_range, frame_binning,fastLT,timegate,pluginOptions.fastLT);
+            try
+                setCache({movie,metadata},pluginOptions.cacheMovie, filename_movie, frame_range, frame_binning,fastLT,timegate,pluginOptions.fastLT);
+            catch err
+                warning('Could not cache the movie: Path might be read-only or contain special characters.');
+                disp( getReport( err, 'extended', 'hyperlinks', 'on' ) );
+            end
         end
     else
         error('No PTU file.');
@@ -207,7 +212,8 @@ function setCache(argout,maxcache, filename_movie, varargin)
 end
 function mf = openCache(filename_movie,createFlag,clearFlag)
     cacheSuffix = '_FLIM.cache';
-    cachename = makeValidMatfileName([filename_movie(1:end-4) cacheSuffix]);% Matlab cannot write to matfiles with special characters in the name
+    [fpath,fname] = fileparts(filename_movie);
+    cachename = fullfile(fpath,makeValidMatfileName([fname cacheSuffix]));% Matlab cannot write to matfiles with special characters in the name
     if exist(cachename,'file') && nargin > 2 && clearFlag
         delete(cachename);
     end
