@@ -2103,7 +2103,7 @@ end
                     % handles could not be found.
                     addpath(TNTpluginpath);
                     
-                    [~,titlename] = fileparts(fileORmovie);
+                    [~,titlename] = fileparts(candidateDataOrTNTfile);
                 end
                 
                 if isfield(TNTdata,'movieSize') && ~isequal(size(movie), TNTdata.movieSize)
@@ -2527,7 +2527,7 @@ end
             case 1 % Tiff (Stack)
                 exportFormat = '.tif';
                 exportFrames = 1:size(movie,3);
-                exportFunction = @(file,img) export_tiff(file,permute(img,[1 2 4 3]),1);
+                exportFunction = @(file,img) save_tiff(file,permute(img,[1 2 4 3]),1);
 
             case 2 % Gif (Stack)
                 exportFormat = '.gif';
@@ -2537,7 +2537,7 @@ end
             case 3 % Tiff (Frame)
                 exportFormat = '.tif';
                 exportFrames = frame;
-                exportFunction = @(file,img) export_tiff(file,permute(img,[1 2 4 3]),1);
+                exportFunction = @(file,img) save_tiff(file,permute(img,[1 2 4 3]),1);
                 
             case 4 % Png (Frame)
                 exportFormat = '.png';
@@ -2548,7 +2548,7 @@ end
                 exportFormat = '.tif';
                 exportFrames = NaN;
                 exportData = movie;
-                exportFunction = @(file,img) export_tiff(file,img,1);
+                exportFunction = @(file,img) save_tiff(file,img,1);
                 
             case 6 % Tiff (tau)
                 exportFormat = '.tif';
@@ -2558,7 +2558,7 @@ end
                     return
                 end
                 exportData = movieLT;
-                exportFunction = @(file,img) export_tiff(file,img,1);
+                exportFunction = @(file,img) save_tiff(file,img,1);
                 
             case 7 % Copy to new figure window
                 nfig = figure('Color',[1 1 1],'Units','pixels','Visible','off');
