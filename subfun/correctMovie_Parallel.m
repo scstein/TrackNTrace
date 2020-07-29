@@ -18,6 +18,7 @@ function [correctedStack] = correctMovie_Parallel(movieStack, globalOptions, img
 %        - photonBias: Image count bias of camera.% 
 %        - photonSensitivity: Sensitivity of camera, see camera specification for details.
 %        - photonGain: Gain of camera during recording.
+%        - binFrame: number of raw frames summed to one frame in movieStack
 %
 %     imgCorrection: 2D correction image created from a movie of dark
 %     images taken with closed shutter. See helper/CalculateDark.m
@@ -36,13 +37,13 @@ nImages = size(movieStack,3);
 
 if correctDark
     if usePhoton
-        correctedStack = (double(movieStack)-globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain)+repmat(imgCorrection,[1,1,nImages]);
+        correctedStack = (double(movieStack)-double(globalOptions.binFrame)*globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain)+repmat(imgCorrection,[1,1,nImages]);
     else
         correctedStack = double(movieStack)+repmat(imgCorrection,[1,1,nImages]);
     end
 else
     if usePhoton
-        correctedStack = (double(movieStack)-globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain);
+        correctedStack = (double(movieStack)-double(globalOptions.binFrame)*globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain);
     else
         correctedStack = double(movieStack);
     end

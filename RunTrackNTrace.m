@@ -261,7 +261,7 @@ else
             if(~strcmp(globalOptions_def.filename_dark_movie, globalOptions.filename_dark_movie))
                 if(~isempty(globalOptions.filename_dark_movie))
                     try
-                        dark_img = CalculateDark(read_tiff(globalOptions.filename_dark_movie));
+                        dark_img = double(globalOptions.binFrame) .* CalculateDark(read_tiff(globalOptions.filename_dark_movie));
                     catch err
                         error('Error when calculating dark image from movie ''%s''.\n  Error: %s',globalOptions.filename_dark_movie,err.message);
                     end
@@ -310,7 +310,7 @@ else
                     if(~strcmp(filename_dark_movie, globalOptions.filename_dark_movie))
                         if(~isempty(globalOptions.filename_dark_movie))
                             try
-                                dark_img = CalculateDark(read_tiff(globalOptions.filename_dark_movie));
+                                dark_img = double(globalOptions.binFrame) .* CalculateDark(read_tiff(globalOptions.filename_dark_movie));
                             catch err
                                 error('Error when calculating dark image from movie ''%s''.\n  Error: %s',globalOptions.filename_dark_movie,err.message);
                             end
@@ -410,6 +410,7 @@ else
             candidateOptions = [];
             refinementOptions   = [];
             trackingOptions  = [];
+            postprocOptions  = [];
         else
             dark_img_def = dark_img;
         end
