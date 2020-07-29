@@ -2002,7 +2002,7 @@ end
                 sthist_weight = [];
             case 2 % Weighted
                 sthist_mode = 'point';
-                sthist_weight = sthist_locprec;
+                sthist_weight = 1./sthist_locprec;
                 sthist_locprec = [];                
             case 3 % Jitter
                 sthist_mode = 'jitter';
