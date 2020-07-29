@@ -333,12 +333,25 @@ set(h_all.edit_reconstruct_res,'Callback',{@callback_FloatEdit,1,1e3});
 set(h_all.edit_reconstruct_pixelsize,'Callback',{@callback_FloatEdit,1,1e4});
 set(h_all.edit_reconstruct_locprec,'Callback',{@callback_FloatEdit,0,1e4,'includeNaN'}); % Allow nan
 if isfield(metadata,'pixelsize')&&~isempty(metadata.pixelsize)&&~isnan(metadata.pixelsize)
-    if metadata.pixelsize < 1
-        % Guess that it's in um
+    if metadata.pixelsize < 1 % Guess that it's in um
         set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e3);
-    else
-        % Guess that it's in nm
+    else % Guess that it's in nm
         set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize);
+    end
+    % Try to replace guess
+    if isfield(metadata,'pixelsize_unit')&&ischar(metadata.pixelsize_unit)
+        switch strtrim(metadata.pixelsize_unit)
+            case 'nm'
+                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize);
+            case [char(181) 'm']
+                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e3);
+            case 'mm' % not really microscopy anymore ;)
+                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e6);
+            case 'cm'
+                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e7);
+            case 'm'
+                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e9);
+        end
     end
 end
 
