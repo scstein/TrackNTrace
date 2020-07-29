@@ -29,7 +29,7 @@ plugin.initFunc = @calculate_patterns;
 plugin.postFunc = @assemble_pattern_movie;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Candidate detection for defocused emitters based on normalized cross correlation of the input images with theoretical patterns.\n \nTemplate patterns are calculated using wave optical calculations as described in M. Böhmer and J. Enderlein, "Orientation imaging of single molecules by wide-field epifluorescence microscopy" J. Opt. Soc. Am. B 20 , 554 (2003).';
+plugin.info = 'Candidate detection for defocused emitters based on normalized cross correlation of the input images with theoretical patterns.\n \nTemplate patterns are calculated using wave optical calculations as described in M. B?hmer and J. Enderlein, "Orientation imaging of single molecules by wide-field epifluorescence microscopy" J. Opt. Soc. Am. B 20 , 554 (2003).';
 
 % Deactivate TNT's parallel processing, the findCandidates function is parallelized itself
 plugin.useParallelProcessing = false;
@@ -51,7 +51,7 @@ plugin.add_param('lambdaEmission',...
 plugin.add_param('pixelSize',...
     'float',...
     {24, 0, inf},...
-    'Camera sensor pixel size in unit [µm].');
+    'Camera sensor pixel size in unit [?m].');
 plugin.add_param('patternRadius',...
     'int',...
     {30, 0, inf},...
@@ -59,7 +59,7 @@ plugin.add_param('patternRadius',...
 plugin.add_param('defocus',...
     'float',...
     {1, 0, inf},...
-    'Focus distance to the molecule plane patterns are calculated for in [µm]');
+    'Focus distance to the molecule plane patterns are calculated for in [?m]');
 plugin.newRow();
 plugin.add_param('inplaneAngleStep',...
     'float',...
@@ -109,8 +109,8 @@ persistent old_patterns old_patt_angle_inplane old_patt_angle_outplane old_patt_
 % Setup parameters
 mag = options.mag; % magnification
 NA = options.NA; % objective NA
-lamem = options.lambdaEmission/1000;   % emission wavelength in µm (options.lambdaEmission in nm)
-pixelSize = options.pixelSize;  % camera pixelSize in µm
+lamem = options.lambdaEmission/1000;   % emission wavelength in ?m (options.lambdaEmission in nm)
+pixelSize = options.pixelSize;  % camera pixelSize in ?m
 nn = options.patternRadius;         % pixel radius of disk pattern is calculated for
 defocus = options.defocus; % focus position
 inplaneAngleStep = options.inplaneAngleStep;
@@ -220,7 +220,7 @@ else
     if( strcmp(options.optimize_for,'Speed'))
         Template_size = size(patterns);
         Template_size = Template_size(1:2);
-        Img_size = size(movie);
+        Img_size = size(movie{1});
         Img_size = Img_size(1:2);
         
         outsize = Img_size + Template_size - 1;
@@ -378,7 +378,7 @@ if options.generate_pattern_movie
     img_files = dir([options.temp_dir, filesep, '*.tif']);
     
     global movie;
-    options.pattern_movie = single(zeros(size(movie)));
+    options.pattern_movie = single(zeros(size(movie{1})));
     
     for iImg = 1:size(img_files,1)
         %Using evalc to suppress output to terminal

@@ -165,7 +165,7 @@ end
 % function [kernel,isSeparable] = testFilterPerformance(kernel1D,kernel2D)
 % global movie
 % 
-% [nrRow,nrCol] = size(movie);
+% [nrRow,nrCol] = size(movie{1});
 % img_test = rand(nrRow,nrCol);
 % 
 % if iscell(kernel2D)

@@ -30,7 +30,7 @@ plugin.initFunc = @copy_options;
 plugin.postFunc = @assemble_pattern_movie;
 
 % Description of plugin, supports sprintf format specifier like '\n' for a newline
-plugin.info = 'Refinement for defocused emitters based on a conjugate gradient algorithm minimizing a least squares cost function of the difference of the actual image to theoretical template patterns.\n \nTemplate patterns are calculated using wave optical calculations as described in M. Böhmer and J. Enderlein, "Orientation imaging of single molecules by wide-field epifluorescence microscopy" J. Opt. Soc. Am. B 20 , 554 (2003).';
+plugin.info = 'Refinement for defocused emitters based on a conjugate gradient algorithm minimizing a least squares cost function of the difference of the actual image to theoretical template patterns.\n \nTemplate patterns are calculated using wave optical calculations as described in M. B?hmer and J. Enderlein, "Orientation imaging of single molecules by wide-field epifluorescence microscopy" J. Opt. Soc. Am. B 20 , 554 (2003).';
 
 % Deactivate TNT's parallel processing, the findCandidates function is parallelized itself
 plugin.useParallelProcessing = false;
@@ -68,8 +68,8 @@ global candidateOptions;
 % Setup parameters
 mag = candidateOptions.mag; % magnification
 NA = candidateOptions.NA; % objective NA
-lamem = candidateOptions.lambdaEmission/1000;   % emission wavelength in µm (options.lambda_emission in nm)
-pixelsize = candidateOptions.pixelSize;  % camera pixelsize in µm
+lamem = candidateOptions.lambdaEmission/1000;   % emission wavelength in ?m (options.lambda_emission in nm)
+pixelsize = candidateOptions.pixelSize;  % camera pixelsize in ?m
 nn = candidateOptions.patternRadius;         % pixel radius of disk pattern is calculated for
 defocus = candidateOptions.defocus; % focus position
     
@@ -204,7 +204,7 @@ if options.generate_pattern_movie
     img_files = dir([options.temp_dir, filesep, '*.tif']);
     
     global movie;
-    options.pattern_movie = single(zeros(size(movie)));
+    options.pattern_movie = single(zeros(size(movie{1})));
     
     for iImg = 1:size(img_files,1)
         %Using evalc to suppress output to terminal
