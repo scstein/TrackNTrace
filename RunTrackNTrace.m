@@ -23,7 +23,7 @@
 %   - GUI-less mode
 %
 %
-function RunTrackNTrace(varargin)
+function [varargout] = RunTrackNTrace(varargin)
 % Run this function to start the TrackNTrace application.
 
 clearGlobals(); % Clear global variables used by TNT
@@ -95,6 +95,7 @@ if TNToptions.enableParallelProcessing
 end
 
 if nargin==1 && iscellstr(varargin{1})
+    %Load TNT file
     %TODO add checks for filetype and option to load files and show
     %settings GUI first
     list_filenames_TNTdata = varargin{1};
@@ -516,6 +517,11 @@ if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
     matlabpool('close');
 end
 
+% Return TNT files if requsted
+if nargout>0
+    varargout{1} = list_filenames_TNTdata;
+end
+
 % Clear globals
 clearGlobals();
 
@@ -542,6 +548,9 @@ clearGlobals();
                 if exist(list_filenames_TNTdata{iTNTfile},'file')
                     delete(list_filenames_TNTdata{iTNTfile});
                 end
+            end
+            if nargout>0
+                varargout{1} = '';
             end
         end
         
