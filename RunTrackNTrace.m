@@ -550,7 +550,7 @@ clearGlobals();
                 end
             end
             if nargout>0
-                varargout{1} = '';
+                varargout{1} = {};
             end
         end
         
