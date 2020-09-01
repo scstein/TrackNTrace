@@ -29,7 +29,7 @@ This version is maintained by Jan Christoph Thiele from the University of Goetti
 If you use TrackNTrace please consider citing: 
 Stein, S. C. and Thiart, J. *Sci. Rep.* **6**, 37947; doi: [10.1038/srep37947](https://doi.org/10.1038/srep37947) (2016).
 
-A publication covering the new FLIM capabilities is currently in preparation.
+A publication covering the new FLIM capabilities is currently in preparation. A preprint is available on bioRxiv: [10.1101/2020.08.25.266387v1](https://www.biorxiv.org/content/10.1101/2020.08.25.266387v1).
 
 ## Licensing
 
