@@ -2840,6 +2840,7 @@ function addPathsVisualizer()
     addpath(genpath([path,filesep,'subfun']));
     addpath(genpath([path,filesep,'external']));
     addpath(genpath([path,filesep,'helper']));
+    addpath(genpath([path,filesep,'plugins']));
 end
 
 % Function that cuts data from upper and lower tails of the distribution
