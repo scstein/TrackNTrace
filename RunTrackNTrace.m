@@ -210,6 +210,12 @@ else
             % Test file import
             try
                 import_plugins(selected_import_plugin).setOptions(importOptions);   % This ensures the options are valid options.
+                if 0==selectImportPlugin(filename_movie,import_plugins(selected_import_plugin))
+                    % This should never error. Calling selectImportPlugin again
+                    % is necessary to call a plugins setFile function with the
+                    % new options.
+                    error('Invalid import plugin options.');
+                end
                 importOptions = import_plugins(selected_import_plugin).getOptions();% If importOptions was empty it is now initilsied with the defaults.
                 [movie, metadata] = import_plugins(selected_import_plugin).mainFunc(importOptions,filename_movie,[1 0],1); % Read 0 frames. Movie is supposed to have the right dimensions
             catch err
