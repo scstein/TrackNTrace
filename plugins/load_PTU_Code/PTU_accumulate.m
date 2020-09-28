@@ -90,6 +90,10 @@ if isstruct(inputfile)||strcmpi(class(inputfile),'matlab.io.MatFile')
     head.ImgAcc_Pixelbinning = pixelbinning;
     head.ImgAcc_Framebinning = framebinning;
     head.ImgAcc_Timegate     = timegate;
+    
+    if ~isempty(outi_head)
+        varargout{outi_head} = head;
+    end
 else
     batchFlag = false;
     if endsWith(inputfile,'.mat')
@@ -246,10 +250,10 @@ if ~isempty(outi_cell)
 end
 
 if accum_tcspc
-    tcspc_pix = zeros(ny,nx,Ngate,maxch_n,intminclass(head.TTResult_NumberOfRecords/nx/ny)); %This class should be quite safe. The estimation is that all photons are in one TCSPC channel, but evenly distributed over the pixels
+    tcspc_pix = zeros(ny,nx,Ngate,maxch_n,intminclass(head.TTResult_NumberOfRecords/max(1,nx*ny))); %This class should be quite safe. The estimation is that all photons are in one TCSPC channel, but evenly distributed over the pixels
 end
 if accum_tcspc_f
-    tcspc_pix_frame = zeros(ny,nx,Ngate,maxch_n,lastframe_binned,intminclass(head.TTResult_NumberOfRecords/nx/ny));
+    tcspc_pix_frame = zeros(ny,nx,Ngate,maxch_n,lastframe_binned,intminclass(head.TTResult_NumberOfRecords/max(1,nx*ny)));
 end
 if accum_tag
     tag = zeros(ny,nx,maxch_n,lastframe_binned);
