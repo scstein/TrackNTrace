@@ -22,7 +22,7 @@ This is an extended version of TrackNTrace for the processing of FLIM (fluoresce
 	* reconstruction of super-resolved images
 	* drift correction with RCC (redundant cross-correlation, see Wang et al. [10.1364/OE.22.015982](https://doi.org/10.1364/OE.22.015982))
 	
-This version is maintained by Jan Christoph Thiele from the University of Goettingen.
+This version is maintained by Jan Christoph Thiele from the University of Goettingen. Its first release can be found [here](../../releases/tag/v2.0).
 
 
 ## Citation
