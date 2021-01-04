@@ -2128,7 +2128,7 @@ end
             end            
         end
         if ~isempty(titlename)
-            h_main.Name = ['TNT Visulizer: ' titlename];
+            h_main.Name = ['TNT Visualizer: ' titlename];
         end        
         
         % -- Initialize variables left empty --

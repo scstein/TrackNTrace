@@ -1,6 +1,7 @@
 function [intMap,zMap] = reconstructSMLM(xyz,precision,weight,magnification,orgSize,mode,modeOptions)
 %RECONSTRUCTSMLM generates a super-resolved SMLM image for the intensity and the value z (e.g. a lifetime).
 % The inputs xyz, precision, and orgSize have to be in the same unit e.g. pixel.
+% [intMap,zMap] = reconstructSMLM(xyz,precision,weight,magnification,orgSize,mode,modeOptions)
 % Inputs:
 %  xyz              [nx2 OR nx3] array with x,y position. If a third column is present
 %                   it is averaged across all localisations at each position.

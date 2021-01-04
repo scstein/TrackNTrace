@@ -213,11 +213,20 @@ function [postprocData,options] = fitLT(trackingData,options)
                 lastElapsedTime = mainTime;
             end
             
+            % generate mask
+            % the mask is padded by img_pad to avoid out of bound errors
+            % for localisations at the edges. The padding is cut in the
+            % last step.
+            img_pad = 2;
             c_ind = trackingData(:,2)==cframe;
+            % remove localisations out of the mask+padding (happens rarely when fitting with free sigma)
+            c_pos = img_pad+round(trackingData(c_ind,3:4));
+            c_ind(c_ind) = all(c_pos>0,2);
             if ~any(c_ind)
+                % empty frame
                 continue;
             end
-            % generate SM mask
+            % get sigma
             if size(trackingData,2)<8
                 warning('TNT: The plugin ''%s'' expects a localization sigma in the 8th column. Setting sigma to 1.3. \n',options.plugin_name);
                 c_simga = 1.3;
@@ -227,18 +236,16 @@ function [postprocData,options] = fitLT(trackingData,options)
             masksz = ceil(c_simga*options.maskRadius);
             [x,y] = meshgrid(-masksz:masksz,-masksz:masksz);
             mask = ceil(sqrt(x.^2/masksz^2+y.^2/masksz^2))<2;
-            % generate mask
-            % the mask is padded by img_pad to avoid out of bound errors
-            % for localisations at the edges. The padding is cut in the
-            % last step.
-            img_pad = 2;
-            img_ind = zeros(imgSZ+2.*img_pad);
+            
+            % get TrackIDs
             if options.sumTCSPC
                 track_ids = trackingData(c_ind,1);
             else
                 track_ids = find(c_ind);
             end
-            img_ind(sub2ind(imgSZ+2.*img_pad,img_pad+round(trackingData(c_ind,4)),img_pad+round(trackingData(c_ind,3)))) = track_ids-track_ids(1)+1; % We know that track_ids(1) has the lowest id and use it as offset
+            % construct mask (overlapping areas are removed from the mask)
+            img_ind = zeros(imgSZ+2.*img_pad);
+            img_ind(sub2ind(imgSZ+2.*img_pad,c_pos(:,2),c_pos(:,1))) = track_ids-track_ids(1)+1; % We know that track_ids(1) has the lowest id and use it as offset
             % exclude pixels with overlaping molecules
             img_mask = conv2(img_ind>0,mask,'same')==1;
             img_ind = conv2(img_ind,mask,'same');
