@@ -179,9 +179,11 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
             
         end % destructor
         function update(obj)
-            obj.updateLength();
-            obj.updateText();
-            obj.updatePosition();
+            if ~isempty(obj.Parent)
+                obj.updateLength();
+                obj.updateText();
+                obj.updatePosition();
+            end
         end
         %% Set/Get
         % Properties (get only)
@@ -314,28 +316,30 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
         end % setProperties
         
         function updatePosition(obj)
-            xrange = xlim(obj.Parent);
-            yrange = ylim(obj.Parent);
-            
-            pos_norm = obj.calculatePosition();
-            sb_position = [...
-                pos_norm(1)*diff(xrange)+xrange(1),...
-                pos_norm(2)*diff(yrange)+yrange(1)];
-            
-            [height,lineheight] = obj.getHeight();
-            length = obj.Length_/obj.Pixelsize;
-            width = max(length,obj.Text.Extent(3));
-            
-            line_y = [1 1].*sb_position(2)-height*pos_norm(4)+lineheight/2;
-            line_x = sb_position(1)+length*[-0.5 0.5]-width*(pos_norm(3)-0.5);
-            text_y = sb_position(2)-height*pos_norm(4)+lineheight;
-            text_x = mean(line_x);
-            
-            set(obj.Line,'XData',line_x,'YData',line_y);
-            set(obj.Text,'Position',[text_x,text_y,0]);
-            
-            if obj.KeepOnTop
-                uistack([obj.Line, obj.Text],'top');
+            if ~isempty(obj.Parent) %obj.Parent can be empty when loading a saved figure
+                xrange = xlim(obj.Parent);
+                yrange = ylim(obj.Parent);
+                
+                pos_norm = obj.calculatePosition();
+                sb_position = [...
+                    pos_norm(1)*diff(xrange)+xrange(1),...
+                    pos_norm(2)*diff(yrange)+yrange(1)];
+                
+                [height,lineheight] = obj.getHeight();
+                length = obj.Length_/obj.Pixelsize;
+                width = max(length,obj.Text.Extent(3));
+                
+                line_y = [1 1].*sb_position(2)-height*pos_norm(4)+lineheight/2;
+                line_x = sb_position(1)+length*[-0.5 0.5]-width*(pos_norm(3)-0.5);
+                text_y = sb_position(2)-height*pos_norm(4)+lineheight;
+                text_x = mean(line_x);
+                
+                set(obj.Line,'XData',line_x,'YData',line_y);
+                set(obj.Text,'Position',[text_x,text_y,0]);
+                
+                if obj.KeepOnTop
+                    uistack([obj.Line, obj.Text],'top');
+                end
             end
         end % updatePosition
         
