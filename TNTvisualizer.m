@@ -128,8 +128,15 @@ end
 importMode = false;
 importFormats = {};
 importPlugin = [];
-if nargin==0
-   [filename, path,filterindex] = uigetfile({'*.mat;*.tif','Visualizer files';'*.*','All files'},'Select movie or TNT file to visualize.');
+if nargin==0||(nargin==1 && ischar(movieOrTNTfile) && exist(movieOrTNTfile,'dir'))
+    if nargin==0
+        [filename, path,filterindex] = uigetfile({'*.mat;*.tif','Visualizer files';'*.*','All files'},'Select movie or TNT file to visualize.');
+    else
+        if ~endsWith(movieOrTNTfile,filesep)
+            movieOrTNTfile(end+1) = filesep;
+        end
+        [filename, path,filterindex] = uigetfile({'*.mat;*.tif','Visualizer files';'*.*','All files'},'Select movie or TNT file to visualize.',movieOrTNTfile);        
+    end
     if isfloat(filename)
         % User clicked cancel
         importMode = true;
@@ -332,28 +339,28 @@ set(h_all.but_reconstruct_mean,'Callback',{@callback_reconstruct,true});
 set(h_all.edit_reconstruct_res,'Callback',{@callback_FloatEdit,1,1e3});
 set(h_all.edit_reconstruct_pixelsize,'Callback',{@callback_FloatEdit,1,1e4});
 set(h_all.edit_reconstruct_locprec,'Callback',{@callback_FloatEdit,0,1e4,'includeNaN'}); % Allow nan
-if isfield(metadata,'pixelsize')&&~isempty(metadata.pixelsize)&&~isnan(metadata.pixelsize)
-    if metadata.pixelsize < 1 % Guess that it's in um
-        set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e3);
-    else % Guess that it's in nm
-        set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize);
-    end
-    % Try to replace guess
-    if isfield(metadata,'pixelsize_unit')&&ischar(metadata.pixelsize_unit)
-        switch strtrim(metadata.pixelsize_unit)
-            case 'nm'
-                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize);
-            case [char(181) 'm']
-                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e3);
-            case 'mm' % not really microscopy anymore ;)
-                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e6);
-            case 'cm'
-                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e7);
-            case 'm'
-                set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e9);
-        end
-    end
-end
+% if isfield(metadata,'pixelsize')&&~isempty(metadata.pixelsize)&&~isnan(metadata.pixelsize)
+%     if metadata.pixelsize < 1 % Guess that it's in um
+%         set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e3);
+%     else % Guess that it's in nm
+%         set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize);
+%     end
+%     % Try to replace guess
+%     if isfield(metadata,'pixelsize_unit')&&ischar(metadata.pixelsize_unit)
+%         switch strtrim(metadata.pixelsize_unit)
+%             case 'nm'
+%                 set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize);
+%             case [char(181) 'm']
+%                 set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e3);
+%             case 'mm' % not really microscopy anymore ;)
+%                 set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e6);
+%             case 'cm'
+%                 set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e7);
+%             case 'm'
+%                 set(h_all.edit_reconstruct_pixelsize,'Value',metadata.pixelsize*1e9);
+%         end
+%     end
+% end
 
 % Drift panel
 set(h_all.but_drift_calc,'Callback',@calcDrift);
@@ -814,7 +821,7 @@ end
         
         updateTopText();
         
-        % Update scalebar unit
+        % Update scalebar and pixelsize in reconstruction tab
         if ~isempty(sb_obj) && ~isempty(metadata) && isstruct(metadata) 
             if isfield(metadata,'pixelsize') && ~isempty(metadata.pixelsize)
                 sb_obj.Pixelsize = metadata.pixelsize;
@@ -825,6 +832,29 @@ end
                 sb_obj.Unit = [' ',metadata.pixelsize_unit];
             else
                 sb_obj.Unit = '';
+            end
+            if isfield(metadata,'pixelsize')&&~isempty(metadata.pixelsize)&&~isnan(metadata.pixelsize)
+                if isfield(metadata,'pixelsize_unit')&&ischar(metadata.pixelsize_unit)
+                    switch strtrim(metadata.pixelsize_unit)
+                        case 'nm'
+                            rec_pixelsize = metadata.pixelsize;
+                        case [char(181) 'm']
+                            rec_pixelsize = metadata.pixelsize*1e3;
+                        case 'mm' % not really microscopy anymore ;)
+                            rec_pixelsize = metadata.pixelsize*1e6;
+                        case 'cm'
+                            rec_pixelsize = metadata.pixelsize*1e7;
+                        case 'm'
+                            rec_pixelsize = metadata.pixelsize*1e9;
+                    end
+                else
+                    if metadata.pixelsize < 1 % Guess that it's in um
+                        rec_pixelsize = metadata.pixelsize*1e3;
+                    else % Guess that it's in nm
+                        rec_pixelsize = metadata.pixelsize;
+                    end
+                end
+                callback_FloatEdit(h_all.edit_reconstruct_pixelsize,[],rec_pixelsize,rec_pixelsize,false,'%.1f')
             end
         end
         % Prepare FLIM
@@ -1447,9 +1477,9 @@ end
         if ~isempty(uians)
             tempframe = str2double(uians{1});
             if ~isnan(tempframe)
-                frame = max(1,min(size(movie,3),tempframe));
-                updateFrameDisplay();
-                updateTopText();
+                set(h_all.slider,'Value',max(1,min(size(movie,3),tempframe)));
+                % frame = max(1,min(size(movie,3),tempframe)); % set by update slider
+                updateSlider();
             end
         end
     end
@@ -2309,7 +2339,7 @@ end
         if importMode && ischar(fileORmovie) && ~endsWith(fileORmovie,'.mat')
             [importPlugins,importFormats] = loadImportPlugins();
             
-            if exist(fileORmovie,'file')
+            if isfile(fileORmovie)
                 importPlugin = selectImportPlugin(fileORmovie,importPlugins);
                 if importPlugin>0
                     importPlugin = importPlugins(importPlugin);
@@ -2911,12 +2941,15 @@ end
 
 % Callback for edit fields containing floats. Checks if a correct
 % number was entered and restricts it to the given bounds.
-    function callback_FloatEdit(hObj,~, minVal, maxVal, flag)
+    function callback_FloatEdit(hObj,~, minVal, maxVal, flag, formatstring)
         if nargin<3 || isempty(minVal)
             minVal=-inf;
         end
         if nargin<4 || isempty(maxVal)
             maxVal=inf;
+        end
+        if nargin<6 || isempty(formatstring)
+            formatstring='%.2f';
         end
         
         value = str2num(get(hObj, 'String')); %#ok<ST2NM> str2num distinguishes NaN and invalid input, str2double does not.
@@ -2931,7 +2964,7 @@ end
             value = max(minVal,value);
             value = min(maxVal,value);
             set(hObj,'ForegroundColor','k');
-            set(hObj,'String',sprintf('%.2f',value));
+            set(hObj,'String',sprintf(formatstring,value));
         end
     end
 
