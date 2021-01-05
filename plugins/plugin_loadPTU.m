@@ -75,7 +75,8 @@ function [movie,metadata] = read_PTU(pluginOptions,filename_movie, frame_range, 
             timegate = [];
         end
         % Check cache
-        outArgs = getCache(filename_movie, frame_range, frame_binning,fastLT,timegate,pluginOptions.fastLT);
+        movieArgs = {filename_movie, frame_range, frame_binning,fastLT,timegate,pluginOptions.fastLT};
+        outArgs = getCache(movieArgs{:});
         if ~isempty(outArgs)
             [movie,metadata] = outArgs{1:2};
             return;
@@ -119,7 +120,7 @@ function [movie,metadata] = read_PTU(pluginOptions,filename_movie, frame_range, 
         % Save cache
         if isfield(pluginOptions,'cacheMovie')
             try
-                setCache({movie,metadata},pluginOptions.cacheMovie, filename_movie, frame_range, frame_binning,fastLT,timegate,pluginOptions.fastLT);
+                setCache({movie,metadata},pluginOptions.cacheMovie, movieArgs{:});
             catch err
                 warning('Could not cache the movie: Path might be read-only or contain special characters.');
                 disp( getReport( err, 'extended', 'hyperlinks', 'on' ) );
