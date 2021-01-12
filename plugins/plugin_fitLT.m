@@ -148,37 +148,57 @@ function [postprocData,options] = fitLT(trackingData,options)
         end
         switch options.position
             case 'Refit'
-                rewPrintf('TNT: Refitting positions of tracks\n');
-                % This is an easy and correct implimentation, but allways
-                % summing and passing the whole image is not really efficent.
-                img = options.accumFunc(cacheORfile,{'tag'},options.framebinning,[],options.timegate);
+                rewPrintf('TNT: Refitting positions of tracks: constructing image\n');
+                img = options.accumFunc(cacheORfile,{'tag'},options.framebinning,[],options.timegate); %TODO use cache if exists
                 img = sum(img,3); % sum all channels
-                for ctrack = trackingData(1,1):trackingData(end,1)% loop over tracks
+                halfw = max(round(3*quantile(trackingData(:,8),0.99)),4); % for dense data this window might be too large
+                imgLoc = zeros(2*halfw+1,2*halfw+1,trackingData(end,1));
+                imgInd = 0:2*halfw; % due to padding the coordinates are shifted by halfw
+                % Pad image to avoid out of bounds
+                img = padarray(img,[halfw,halfw]);
+
+                assert(issorted(trackingData(:,1))); %Tracks need to be sorted but might have gaps in the numbering
+                [track_ids,track_start,track_ind] = unique(trackingData(:,1),'first');
+                track_len = diff([track_start; numel(track_ind)+1]);
+                oldLoc = nan(numel(track_ids),6);
+                offLoc = nan(numel(track_ids),2);% offset between imgLoc
+                for ctrack = track_ids(:)'% loop over tracks
                     % Output process every 0.5 seconds
                     mainTime = toc(mainTime_start);
                     if( (mainTime-lastElapsedTime) > 0.5)
                         rewindMessages();
-                        rewPrintf('TNT: Refitting positions of track %i/%i\n',ctrack,trackingData(end,1));
+                        rewPrintf('TNT: Refitting positions of tracks: constructing image (%i/%i)\n',ctrack,track_ids(end));
                         lastElapsedTime = mainTime;
                     end
-                    
-                    c_ind = trackingData(:,1)==ctrack; % Logical index
-                    c_nfr = sum(c_ind);
-                    oldLoc = trackingData(c_ind,3:8);                           % x,y,z, Amp, BG, sigma
-                    oldLoc = [mean(oldLoc(:,1:3),1),sum(oldLoc(:,4:5),1),mean(oldLoc(:,6:end),1)];     % mean for pos/sigma, sum for Amp,BG
-                    %frLoc  = trackingData(c_ind,2);                            % frames
-                    imgLoc = sum(img(:,:,:,trackingData(c_ind,2)),4);           % sum all frames
-                    halfw = round(3*oldLoc(1,6));
-                    newLoc = psfFit_Image(imgLoc,oldLoc([1,2,4,5,6])',[1,1,1,1,1,0,0],true,true,halfw);          % 'optimize x,y,A,BG,sigma' (isoptric gaussian),integrated=true,MLE=true,halfw
-                    
-                    %[xpos,ypos,A,BG,sigma_x,sigma_y,angle; exitflag]
-                    if newLoc(end)>0
-                        newLoc = [newLoc(1:2,:);zeros(1,size(newLoc,2));newLoc(3:4,:)./c_nfr;newLoc(5,:)]; % Add z, normalise amplitude and background to number of frames
-                        trackingData(c_ind,:) = [trackingData(c_ind,1:2),ones(sum(c_ind),1).*newLoc',trackingData(c_ind,9:end)];
-                    else % Fit failed. Remove track
-                        trackingData(c_ind,:) = [];
+                    c_ind = track_start(ctrack)-1+(1:track_len(ctrack));
+                    tempLoc = trackingData(c_ind,3:8);                           % x,y,z, Amp, BG, sigma
+                    if track_len(ctrack)>1
+                        tempLoc = [mean(tempLoc(:,1:3),1),sum(tempLoc(:,4:5),1),mean(tempLoc(:,6:end),1)];     % mean for pos/sigma, sum for Amp,BG
                     end
+                    offLoc(ctrack,:) = round(tempLoc(1:2));
+                    % crop fit window
+                    imgLoc(:,:,ctrack) = sum(img(imgInd+offLoc(ctrack,2),imgInd+offLoc(ctrack,1),:,trackingData(c_ind,2)),4); % sum all frames. Gaps in the track are not filled.
+                    % shift position to fit window
+                    oldLoc(ctrack,:) = [(tempLoc(1:2) +1 -offLoc(ctrack,:) +halfw), tempLoc(3:end)];
                 end
+                clear img;
+                % flatten to 2D image
+                oldLoc(:,1) = oldLoc(:,1) + size(imgLoc,2) * (0:size(oldLoc,1)-1)';
+                imgLoc = reshape(imgLoc,size(imgLoc,1),[]);
+                % refit positions
+                rewindMessages();
+                rewPrintf('TNT: Refitting positions of tracks: performing fit\n');                
+                newLoc = psfFit_Image(imgLoc,oldLoc(:,[1,2,4,5,6])',[1,1,1,1,1,0,0],true,true,halfw);          % 'optimize x,y,A,BG,sigma' (isoptric gaussian),integrated=true,MLE=true,halfw
+                % Calculate positions back
+                % newLoc = [xpos,ypos,A,BG,sigma_x,sigma_y,angle; exitflag]
+                newLoc(1,:) = newLoc(1,:) - size(imgLoc,1) * (0:size(newLoc,2)-1);
+                newLoc(1:2,:) = newLoc(1:2,:) -(1 -offLoc' +halfw);
+                newLoc_valid = newLoc(end,:)>0;
+                newLoc = [newLoc(1:2,:);zeros(1,size(newLoc,2));newLoc(3:4,:)./track_len';newLoc(5,:)]; % Add z, normalise amplitude and background to number of frames
+                trackingData = [trackingData(:,1:2),newLoc(:,track_ind)',trackingData(:,9:end)];
+                % Remove failed fits
+                trackingData = trackingData(newLoc_valid(track_ind),:);
+                clear imgLoc oldLoc newLoc offLoc track_ids track_start track_ind track_len;
             case 'Average'
                 rewPrintf('TNT: Averageing positions of tracks\n');
                 %for ctrack = trackingData(1,1):trackingData(end,1)% loop over tracks
@@ -357,7 +377,7 @@ function [postprocData,options] = fitLT(trackingData,options)
                 fitData = tau_fast_cut(:);
                 options.outParamDescription = [options.outParamDescription;{'lt-tau'}];
         end
-        
+        rewindMessages();
         % save results
         if options.sumTCSPC
             if isempty(fitData)
@@ -375,7 +395,6 @@ function [postprocData,options] = fitLT(trackingData,options)
     else
         warning('TNT: The plugin ''%s'' only supports single photon data. \n',options.plugin_name);
     end
-    
     %% Local functions for status printing
     function rewPrintf(msg, varargin)
         % Rewindable message printing: Print msg and cache it.
