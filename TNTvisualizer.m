@@ -270,6 +270,10 @@ driftcand  = driftcalc;
 driftref   = driftcalc;
 drifttrack = driftcalc;
 driftpost  = driftcalc;
+% Reconstruction
+reconstruction_maxPrecision = inf;      % nm, Accept all
+reconstruction_clusterMinMember = 0;    % Disable clustering
+reconstruction_clusterMaxDistance = 50; % nm
 % ---------------------------
 
 % Show the GUI!
@@ -336,6 +340,7 @@ set(h_all.but_resetFilter, 'Callback', @resetFilter);
 % Reconstruction panel
 set(h_all.but_reconstruct,'Callback',@callback_reconstruct);
 set(h_all.but_reconstruct_mean,'Callback',{@callback_reconstruct,true});
+set(h_all.but_reconstruct_options,'Callback',@callback_reconstruction_options);
 set(h_all.edit_reconstruct_res,'Callback',{@callback_FloatEdit,1,1e3});
 set(h_all.edit_reconstruct_pixelsize,'Callback',{@callback_FloatEdit,1,1e4});
 set(h_all.edit_reconstruct_locprec,'Callback',{@callback_FloatEdit,0,1e4,'includeNaN'}); % Allow nan
@@ -1907,6 +1912,30 @@ end
 
     end
 %% Reconstruction
+    function callback_reconstruction_options(~,~)
+        newOptions = inputdlg({'Maximum localization precision (nm)',...
+            '{\bfCluster detection (grid view)}                      Minimum number of localizations (0=disable)',...
+            'Maximum distance (nm)'},...
+            'Reconstruction options',[1 50],{num2str(reconstruction_maxPrecision),num2str(reconstruction_clusterMinMember),num2str(reconstruction_clusterMaxDistance)},struct('Interpreter', 'tex'));
+        if numel(newOptions)>=3
+            temp = str2double(newOptions{1});
+            if temp<=0 || isnan(temp)
+                reconstruction_maxPrecision = inf;
+            else
+                reconstruction_maxPrecision = temp;
+            end
+            temp = str2double(newOptions{2});
+            if temp<=0 || isnan(temp)
+                reconstruction_clusterMinMember = 0;
+            else
+                reconstruction_clusterMinMember = temp;
+            end
+            temp = str2double(newOptions{3});
+            if ~(temp<=0 || isnan(temp))
+                reconstruction_clusterMaxDistance = temp;
+            end
+        end
+    end
     function callback_reconstruct(~,~,sthist_zParam)
         sthist_mode = get(h_all.popup_reconstruct_mode,'Value');
         pixelSize = str2double(get(h_all.edit_reconstruct_pixelsize, 'String')); %nm
@@ -1927,6 +1956,7 @@ end
             sthist_zParam = false;
         end
         sthist_z = [];
+        sthist_size = size(movie);
         
         % Generate locData = [x,y,amp,bg,sigma]
         sigma_astigmatic = false;
@@ -2031,6 +2061,9 @@ end
             N(N<=0) = NaN; % Negative amplitudes can occure (the TNTfitter is unconstrained), but are misfits. NaNs are filtered out before reconstruction.
             tau = 2*pi*locData(:,4).*(sigma_sq+1/12)./N;
             sthist_locprec = sqrt((sigma_sq+1/12)./N.*(1+4*tau+sqrt(2*tau./(1+4*tau)))); %Rieger et al, DOI 10.1002/cphc.201300711
+            % Set localization precision above the threshold to inf which will
+            % be filtered by reconstructSMLM.
+            sthist_locprec(reconstruction_maxPrecision/pixelSize<sthist_locprec) = inf;
         end
         if sthist_zParam
             locData = [locData(:,1:2) sthist_z];
@@ -2039,6 +2072,36 @@ end
             locData = locData(:,1:2);
             sthist_map =  cell(1,1);
         end
+                
+        if reconstruction_clusterMinMember>0
+            if numel(sthist_locprec)>1
+                ind = ~isnan(sthist_locprec)&~isinf(sthist_locprec)&all(~isnan(locData),2);
+                sthist_locprec = sthist_locprec(ind);
+                locData = locData(ind,:);
+            end
+            % make a grid with detected clustered
+            cluster_idx = dbscan(locData(:,1:2),reconstruction_clusterMaxDistance/pixelSize,reconstruction_clusterMinMember);
+            
+            % discard background localisations
+            locData = locData(cluster_idx>0,:);
+            if numel(sthist_locprec)>1
+                sthist_locprec = sthist_locprec(cluster_idx>0);
+            end
+            cluster_idx = cluster_idx(cluster_idx>0);
+            % get cluster centers
+            cluster_pos(:,1) = accumarray(cluster_idx,locData(:,1),[],@mean);
+            cluster_pos(:,2) = accumarray(cluster_idx,locData(:,2),[],@mean);
+            % shift cluster to generate grid
+            cluster_xy = locData(:,1:2)-cluster_pos(cluster_idx,:);
+            cluster_size = 2*quantile(abs(cluster_xy(:)),0.99);
+            ind = any(abs(cluster_xy)<cluster_size,2);
+            cluster_shift = [ceil((1:max(cluster_idx))'/ceil(sqrt(max(cluster_idx)))),...
+                1+rem((0:max(cluster_idx)-1)',ceil(sqrt(max(cluster_idx))))];
+            
+            locData = [cluster_xy(ind,:)+1.2*cluster_size*cluster_shift(cluster_idx(ind),:), locData(ind,3:end)];
+            sthist_size = flip(ceil(1.2*cluster_size*(0.5+max(cluster_shift))));
+        end
+        
         switch sthist_mode
             case 1 % Gaussian
                 sthist_mode = 'gaussian';
@@ -2054,7 +2117,8 @@ end
                 sthist_mode = 'point';
                 sthist_weight = [];
         end
-        [sthist_map{:}] = reconstructSMLM(locData,sthist_locprec,sthist_weight,sthist_superRes,size(movie),sthist_mode);
+        
+        [sthist_map{:}] = reconstructSMLM(locData,sthist_locprec,sthist_weight,sthist_superRes,sthist_size,sthist_mode);
                 
         TNTvisualizer(sthist_map,struct('title','Reconstruction','metadata',struct('pixelsize',pixelSize/sthist_superRes*1e-3,'pixelsize_unit',[char(181) 'm'])));
 
