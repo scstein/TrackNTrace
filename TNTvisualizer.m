@@ -1664,30 +1664,39 @@ end
     function exportList(~,~)
         modifiers = get(h_main,'currentModifier');
         ctrlIsPressed = ismember('control',modifiers);
+        shiftIsPressed = ismember('shift',modifiers);
         showFiltered = ctrlIsPressed;        
         
-        [exportFile,exportPath] = uiputfile({'*.csv';'*.tsv';'*.xlsx'}, 'Export data...');
-        
-        if ~isnumeric(exportFile)
-            exportFile = fullfile(exportPath,exportFile);
-            [~,~,ext] = fileparts(exportFile);
-            
-            [data,filter,header] = generateList(mode,showFiltered);
-            
-            
-            % writetable is working but very slow and requires sanitisation
-            % of paramNames
+        if shiftIsPressed
+            % export to workspace
+            [data,filter,header] = generateList(mode,showFiltered);       
             data = array2table(data,'VariableNames',matlab.lang.makeValidName(header));
-            switch ext
-                case 'csv'
-                    writetable(data,exportFile,'Delimiter',',','FileType','text');                    
-                case 'tsv'
-                    writetable(data,exportFile,'Delimiter','tab','FileType','text');
-                otherwise
-                    writetable(data,exportFile);
+            assignin('base','TNT_locData',data);
+            assignin('base','TNT_metaData',metadata);
+        else
+            % export to file
+            [exportFile,exportPath] = uiputfile({'*.csv';'*.tsv';'*.xlsx'}, 'Export data...');
+            
+            if ~isnumeric(exportFile)
+                exportFile = fullfile(exportPath,exportFile);
+                [~,~,ext] = fileparts(exportFile);
+                
+                [data,filter,header] = generateList(mode,showFiltered);
+                
+                
+                % writetable is working but very slow and requires sanitisation
+                % of paramNames
+                data = array2table(data,'VariableNames',matlab.lang.makeValidName(header));
+                switch ext
+                    case 'csv'
+                        writetable(data,exportFile,'Delimiter',',','FileType','text');
+                    case 'tsv'
+                        writetable(data,exportFile,'Delimiter','tab','FileType','text');
+                    otherwise
+                        writetable(data,exportFile);
+                end
             end
         end
-        
     end
 
 %% Drift correction
