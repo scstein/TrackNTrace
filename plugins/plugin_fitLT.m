@@ -224,6 +224,13 @@ function [postprocData,options] = fitLT(trackingData,options)
             warning('trackingData empty.');
             return;
         end
+        % get sigma
+        if size(trackingData,2)<8
+            warning('TNT: The plugin ''%s'' expects a localization sigma in the 8th column. Setting sigma to 1.3. \n',options.plugin_name);
+            c_simga = 1.3;
+        else
+            c_simga = median(trackingData(:,8)); % Take the median sigma. If we are looking at something other than single molecules it would be necessary to take the fitted sigma for each.
+        end
         for cframe = trackingData(1,2):trackingData(end,2)% loop over frames
             % Output process every 0.5 seconds
             mainTime = toc(mainTime_start);
@@ -241,17 +248,12 @@ function [postprocData,options] = fitLT(trackingData,options)
             c_ind = trackingData(:,2)==cframe;
             % remove localisations out of the mask+padding (happens rarely when fitting with free sigma)
             c_pos = img_pad+round(trackingData(c_ind,3:4));
-            c_ind(c_ind) = all(c_pos>0,2);
+            c_pos_valid = all(c_pos>0,2) & all(c_pos<(imgSZ([2 1])+2*img_pad),2);
+            c_pos = c_pos(c_pos_valid,:);
+            c_ind(c_ind) = c_pos_valid;
             if ~any(c_ind)
                 % empty frame
                 continue;
-            end
-            % get sigma
-            if size(trackingData,2)<8
-                warning('TNT: The plugin ''%s'' expects a localization sigma in the 8th column. Setting sigma to 1.3. \n',options.plugin_name);
-                c_simga = 1.3;
-            else
-                c_simga = median(trackingData(c_ind,8)); % Take the median sigma for each frame (to compensate focus drift). If we are looking at something other than single molecules it would be necessary to take the fitted sigma for each.
             end
             masksz = ceil(c_simga*options.maskRadius);
             [x,y] = meshgrid(-masksz:masksz,-masksz:masksz);
@@ -272,10 +274,12 @@ function [postprocData,options] = fitLT(trackingData,options)
             img_ind(~img_mask) = 0;
             img_ind = img_ind(img_pad+(1:imgSZ(1)),img_pad+(1:imgSZ(2)));
             
-            tcspc_mol(1,track_ids(1):track_ids(end),:,:) = tcspc_mol(1,track_ids(1):track_ids(end),:,:) + ...
-                cast(options.accumFunc(cacheORfile,{'tcspc_pix'},...
+            tcpsc_frame = options.accumFunc(cacheORfile,{'tcspc_pix'},...
                 [options.framebinning(1) min(options.framebinning(2)+(cframe-[1 0])*min(realmax,options.framebinning(1))-[0 1],[inf options.framebinning(3)])],... %Calculate the first and last unbinned frame of cframe
-                img_ind,false,true),class(tcspc_mol));
+                img_ind,false,true);
+            
+            tcspc_mol(1,track_ids(1)+(0:(size(tcpsc_frame,2)-1)),:,:) = tcspc_mol(1,track_ids(1)+(0:(size(tcpsc_frame,2)-1)),:,:) + ...
+                cast(tcpsc_frame,class(tcspc_mol));
         end
         
         % calculate fast LT
