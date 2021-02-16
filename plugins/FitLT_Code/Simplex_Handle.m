@@ -95,6 +95,7 @@ fv = feval(fhandle,mask*x+xfix,extraArg{:});
 if fv==0
     steps = 0;
     f = fv;
+	dx = zeros(size(xfix));
     return
 end
 for j = 1:n
