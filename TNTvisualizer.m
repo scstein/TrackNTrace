@@ -2777,26 +2777,41 @@ end
     %  tracksVisibleInFrame
     %  maxNr_visibleTracksInFrame
     function compute_tracksVisibleInFrame()
+        % build a list of all trackIDs and corresponding frames, add the track
+        % lifetime, close gaps in the tracks (could be made optional) and
+        % finally construct a cell array of the tracks in each frame
+        
         nr_frames = size(movie,3);
-        tracksVisibleInFrame = cell(nr_frames,1);
-        tracksVisibleInFrame_bool = false(n_tracks,nr_frames);
-        
-        %Note: We need the bool to compute this fast (at the cost of memory)
-        % but convert the data to a cell array for using it later
-        for iTrack = 1:n_tracks
-            track_firstFrame = cell_traj{iTrack}(1,1);
-            track_lastFrame = cell_traj{iTrack}(end,1);
-
-            tracksVisibleInFrame_bool(iTrack, track_firstFrame:min(track_lastFrame+traj_lifetime, nr_frames)) = true;
-        end
-        
-        % Convert bool matrix to indices
-        for iFrame = 1:nr_frames
-            tracksVisibleInFrame{iFrame} = find(tracksVisibleInFrame_bool(:,iFrame)).';
-        end
-        % Alternative:
-        % tracksVisibleInFrame = accumarray(trackingData(:,1),trackingData(:,2),[],@(x){min(x):min(max(x)+traj_lifetime,nr_frames)});
-
+        if size(trackingData,1)>0
+            % add track lifetime
+            sub_frame = trackingData(:,2) + (0:traj_lifetime);
+            val_trackID = trackingData(:,1).*ones(1,traj_lifetime+1);
+            
+            sub_frame = sub_frame(:);
+            val_trackID = val_trackID(:);
+            
+            % close gaps (if longer as lifetime)
+            trackFrames = accumarray(trackingData(:,1),1);
+            lenFun = @(x)max(x)-min(x)+1;
+            trackLength = accumarray(trackingData(:,1),trackingData(:,2),[],lenFun);
+            track_hasGap = (trackFrames+traj_lifetime)<trackLength;
+            sub_gap = [];
+            val_gap = [];
+            if any(track_hasGap)
+                % iterate over all tracks with gaps and add all entries between
+                % first and last frame (duplicate entries are removed later)
+                trackStart = accumarray(trackingData(:,1),trackingData(:,2),[],@min);
+                for idx_track = find(track_hasGap)'
+                    sub_gap(end+(1:trackLength(idx_track)-2)) = trackStart(idx_track) + (1:trackLength(idx_track)-2);
+                    val_gap(end+(1:trackLength(idx_track)-2)) = idx_track;
+                end
+            end
+            % construct cell arry
+            tracksVisibleInFrame = accumarray([sub_frame(:);sub_gap(:)],[val_trackID(:);val_gap(:)],[traj_lifetime+nr_frames 1],@(x){unique(x)'});
+            tracksVisibleInFrame = tracksVisibleInFrame(1:nr_frames);
+        else
+            tracksVisibleInFrame = cell(nr_frames,1);
+        end        
         [~,nr_VisibleTracksInFrame] = cellfun(@size,tracksVisibleInFrame);
         maxNr_visibleTracksInFrame = max(nr_VisibleTracksInFrame);
     end
