@@ -296,7 +296,7 @@ set(h_all.but_contrast,'Callback',@contrastCallback);
 set(h_all.but_autocontrast,'Callback',@autocontrastCallback);
 set(h_all.but_autocontrast,'TooltipString',sprintf('Set contrast automatically.\n The used algorithm can be selected in the popup menu to the right.\n Press  and hold "Shift" key during playback to adjust contrast automatically for each frame.'));
 set(h_all.popup_autocontrast, 'TooltipString', sprintf('Algorithm used for autocontrast.\n   Spots: Emphasize highest 25%% intensity values.\n   Min/Max: Spans all values.\n   98%% range: Cuts the lower and upper 1%% of intensities. '));
-set(h_all.popup_export, 'TooltipString', sprintf('These options export an RGB image of either the current frame or the whole stack with the current display options (colormap, contrast/limits, zoom).\n The images contain the markers for the localisations/tracks and for single frames also any set datatips.\n - Tiff (Stack)\n - Gif (Stack); Note: the GIF''s playback speed is set to the current FPS.\n - Tiff (Frame)\n - Png (Frame)\n\nThese options export the raw data (intensity / fast lifetime) with the native resolution and scale and without any overlay as single channel tiff.\n - Tiff (Stack, int)\n - Tiff (Stack, tau)\n'));
+set(h_all.popup_export, 'TooltipString', sprintf('These options export an RGB image of either the current frame or the whole stack with the current display options (colormap, contrast/limits, zoom).\n The images contain the markers for the localisations/tracks and for single frames also any set datatips.\n - Tiff (Stack)\n - Gif (Stack); Note: the GIF''s playback speed is set to the current FPS.\n - Tiff (Frame)\n - Png (Frame)\n\nThese options export the raw data (intensity / fast lifetime) with the native resolution and scale and without any overlay.\n - Tiff (Stack, int)\n - Tiff (Stack, tau)\n - Workspace (int)\n - Workspace (tau)\n'));
 set(h_all.but_distribution,'Callback',@distributionCallback);
 set(h_all.but_2d_distribution,'Callback',@distribution2DCallback);
 set(h_all.but_weighted_distribution,'Callback',@distributionWeightedCallback);
@@ -335,6 +335,7 @@ set(h_all.but_applyFilter, 'Callback', @applyFilter);
 set(h_all.but_filterInsert, 'Callback', @callback_filter_insertParam);
 set(h_all.but_showList, 'Callback', @showList);
 set(h_all.but_exportList, 'Callback', @exportList);
+set(h_all.but_exportWS, 'Callback', @exportWS);
 set(h_all.but_resetFilter, 'Callback', @resetFilter);
 
 % Reconstruction panel
@@ -1509,9 +1510,10 @@ end
                     candidateDataFilter = cellfun(@(f_all,f_new)accumarray(find(f_all),f_new,size(f_all)),candidateDataFilter,filter_ind,'UniformOutput',false); % merge new filter with previous filters to keep track of relation to unfiltered data
                     allFramesCandidateData = [];
                 case 'refinement'
-                    filter_ind = cellfun(getFilterFun(refinementParams),refinementData,'UniformOutput',false);
-                    refinementData = cellfun(@(d,ind)d(ind,:),refinementData,filter_ind,'UniformOutput',false);
-                    refinementDataFilter = cellfun(@(f_all,f_new)accumarray(find(f_all),f_new,size(f_all)),refinementDataFilter,filter_ind,'UniformOutput',false);
+                    empty_ind = cellfun(@numel,refinementData)==0;
+                    filter_ind = cellfun(getFilterFun(refinementParams),refinementData(~empty_ind),'UniformOutput',false);
+                    refinementData(~empty_ind) = cellfun(@(d,ind)d(ind,:),refinementData(~empty_ind),filter_ind,'UniformOutput',false);
+                    refinementDataFilter(~empty_ind) = cellfun(@(f_all,f_new)accumarray(find(f_all),f_new,size(f_all)),refinementDataFilter(~empty_ind),filter_ind,'UniformOutput',false);
                     allFramesRefinementData = [];
                 case 'tracking'
                     filter_ind = feval(getFilterFun(trackingParams),trackingData);
@@ -1568,12 +1570,15 @@ end
         id_tracks = unique(trackingData(:,1)); % Note: (in case track IDs go from 1 to N without missing numbers, the track index is identical to the tracks ID.
         n_tracks = numel(id_tracks);
         
-        cell_traj = cell(n_tracks ,1);
-        cnt = 1;
-        for iTrack = 1:n_tracks
-            cell_traj{iTrack} = trackingData( trackingData(:,1)== id_tracks(cnt) , 2:end);
-            cnt = cnt+1;
-        end
+        trackingData_sorted = sortrows(trackingData,[1 2]);
+        cell_traj = mat2cell(trackingData_sorted(:,2:end),accumarray(trackingData_sorted(:,1),1),size(trackingData_sorted,2)-1);
+        
+%         cell_traj = cell(n_tracks ,1);
+%         cnt = 1;
+%         for iTrack = 1:n_tracks
+%             cell_traj{iTrack} = trackingData( trackingData(:,1)== id_tracks(cnt) , 2:end);
+%             cnt = cnt+1;
+%         end
         compute_tracksVisibleInFrame();
     end
 
@@ -1661,40 +1666,44 @@ end
         end
         hdl_table.ColumnName = header;
     end
+
+    function exportWS(~,~)
+        modifiers = get(h_main,'currentModifier');
+        ctrlIsPressed = ismember('control',modifiers);
+        showFiltered = ctrlIsPressed;        
+        
+        % export to workspace
+        [data,filter,header] = generateList(mode,showFiltered);
+        data = array2table(data,'VariableNames',matlab.lang.makeValidName(header));
+        assignin('base','TNT_locData',data);
+        assignin('base','TNT_metaData',metadata);
+            
+    end
     function exportList(~,~)
         modifiers = get(h_main,'currentModifier');
         ctrlIsPressed = ismember('control',modifiers);
-        shiftIsPressed = ismember('shift',modifiers);
-        showFiltered = ctrlIsPressed;        
+        showFiltered = ctrlIsPressed;     
         
-        if shiftIsPressed
-            % export to workspace
-            [data,filter,header] = generateList(mode,showFiltered);       
-            data = array2table(data,'VariableNames',matlab.lang.makeValidName(header));
-            assignin('base','TNT_locData',data);
-            assignin('base','TNT_metaData',metadata);
-        else
-            % export to file
-            [exportFile,exportPath] = uiputfile({'*.csv';'*.tsv';'*.xlsx'}, 'Export data...');
+        % export to file
+        [exportFile,exportPath] = uiputfile({'*.csv';'*.tsv';'*.xlsx'}, 'Export data...');
+        
+        if ~isnumeric(exportFile)
+            exportFile = fullfile(exportPath,exportFile);
+            [~,~,ext] = fileparts(exportFile);
             
-            if ~isnumeric(exportFile)
-                exportFile = fullfile(exportPath,exportFile);
-                [~,~,ext] = fileparts(exportFile);
-                
-                [data,filter,header] = generateList(mode,showFiltered);
-                
-                
-                % writetable is working but very slow and requires sanitisation
-                % of paramNames
-                data = array2table(data,'VariableNames',matlab.lang.makeValidName(header));
-                switch ext
-                    case 'csv'
-                        writetable(data,exportFile,'Delimiter',',','FileType','text');
-                    case 'tsv'
-                        writetable(data,exportFile,'Delimiter','tab','FileType','text');
-                    otherwise
-                        writetable(data,exportFile);
-                end
+            [data,filter,header] = generateList(mode,showFiltered);
+            
+            
+            % writetable is working but very slow and requires sanitisation
+            % of paramNames
+            data = array2table(data,'VariableNames',matlab.lang.makeValidName(header));
+            switch ext
+                case 'csv'
+                    writetable(data,exportFile,'Delimiter',',','FileType','text');
+                case 'tsv'
+                    writetable(data,exportFile,'Delimiter','tab','FileType','text');
+                otherwise
+                    writetable(data,exportFile);
             end
         end
     end
@@ -2676,7 +2685,23 @@ end
                 exportData = movieLT;
                 exportFunction = @(file,img) save_tiff(file,img,1);
                 
-            case 7 % Copy to new figure window
+            case 7 % workspace (int)
+                exportFormat = 'workspace';
+                exportFrames = NaN;
+                exportData = movie;
+                exportFunction = @(img) assignin('base','TNT_movie',img);
+                
+            case 8 % workspace (tau)
+                exportFormat = 'workspace';
+                exportFrames = NaN;
+                if isempty(movieLT)
+                    warning('No lifetime data available.');
+                    return
+                end
+                exportData = movieLT;
+                exportFunction = @(img) assignin('base','TNT_movieLT',img);
+                
+            case 9 % Copy to new figure window
                 nfig = figure('Color',[1 1 1],'Units','pixels','Visible','off');
                 temp_unit = h_main.Units;
                 h_main.Units = 'pixels';
@@ -2721,7 +2746,12 @@ end
             end
         end
         
-        [exportFile,exportPath] = uiputfile(exportFormat, 'Export image...');
+        if strcmpi(exportFormat,'workspace')
+                exportFunction(exportData);
+                return;
+        else
+            [exportFile,exportPath] = uiputfile(exportFormat, 'Export image...');
+        end
         
         
         if ~isnumeric(exportFile)
