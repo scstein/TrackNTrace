@@ -128,7 +128,7 @@ else
     if showStartupGUI
         %% Startup (loading input data information)
         [movie_list, globalOptions,importOptions,candidateOptions_loaded,refinementOptions_loaded,trackingOptions_loaded,postprocOptions_loaded, ...
-            candidateData_loaded, refinementData_loaded, trackingData_loaded, postprocData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI(accepted_formats,movie_list);
+            candidateData_loaded, refinementData_loaded, trackingData_loaded, postprocData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, metadata_loaded, outputPath_loaded, GUIreturns] = startupGUI(accepted_formats,movie_list);
         if GUIreturns.userExit
             userExitFunc();
             return;
@@ -409,6 +409,8 @@ else
         if(GUIreturns.use_loaded_candidateData || GUIreturns.use_loaded_refinementData || GUIreturns.use_loaded_trackingData || GUIreturns.use_loaded_postprocData)
             struct_helper.movieSize = movieSize_loaded;
             struct_helper.firstFrame_lastFrame = firstFrame_lastFrame_loaded;
+            metadata =  metadata_loaded;
+            struct_helper.metadata = metadata_loaded;
             save(filename_TNTdata,'-append','-struct','struct_helper');
         end    
 
@@ -437,6 +439,7 @@ for iMovie=1:numel(list_filenames_TNTdata)
             if globalOptions.useTimegate
                 movieArgs = [movieArgs,{[globalOptions.tgStart globalOptions.tgEnd]}]; %#ok<AGROW>
             end
+            clear movie metadata;%Free up memory
             [movie,metadata] = importOptions.mainFunc(importOptions,movieArgs{:});
         end
         parameters_movie_last_loop = {filename_movie,importOptions,[globalOptions.firstFrame,globalOptions.lastFrame],globalOptions.binFrame,globalOptions.useTimegate,[globalOptions.tgStart globalOptions.tgEnd]};

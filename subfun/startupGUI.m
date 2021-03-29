@@ -15,7 +15,7 @@
 %     You should have received a copy of the GNU General Public License
 %     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
-function [filename_movies, globalOptions,importOptions, candidateOptions,refinementOptions,trackingOptions,postprocOptions, candidateData_loaded, refinementData_loaded, trackingData_loaded, postprocData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, outputPath_loaded, GUIreturns] = startupGUI(formats,filename_movies)
+function [filename_movies, globalOptions,importOptions, candidateOptions,refinementOptions,trackingOptions,postprocOptions, candidateData_loaded, refinementData_loaded, trackingData_loaded, postprocData_loaded, movieSize_loaded, firstFrame_lastFrame_loaded, metadata_loaded, outputPath_loaded, GUIreturns] = startupGUI(formats,filename_movies)
 % TrackNTrace startup GUI. Here the input (movies/TNT data file) can be
 % selected when RunTrackNTrace.m is called.
 %
@@ -42,6 +42,7 @@ trackingData_loaded = [];
 postprocData_loaded = [];
 movieSize_loaded = [];
 firstFrame_lastFrame_loaded = [];
+metadata_loaded = [];
 outputPath_loaded = -1;
 
 if nargin<2 || ~iscell(filename_movies)
@@ -126,6 +127,9 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         end
         if isfield(allOptions,'firstFrame_lastFrame')
             firstFrame_lastFrame_loaded  = allOptions.firstFrame_lastFrame;
+        end
+        if isfield(allOptions,'metadata')
+            metadata_loaded  = allOptions.metadata;
         end
         
         filename_movies = {allOptions.filename_movie};
