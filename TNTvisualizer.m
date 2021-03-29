@@ -1561,6 +1561,8 @@ end
         
         % Reapply current drift correction (also updates frame display)
         applyDrift(true,false);
+        
+        plotFrame(frame);
     end
 
     function updateTrackingCache()
@@ -3182,7 +3184,7 @@ function createTabs(tabplaceholder,tabcontainer)
     panelToProcess = flip(findobj(get(tabcontainer,'Children')','-depth',0,'Type','UIPanel'));
     for pidx = 1:numel(panelToProcess)
         currenttab = uitab(tabgroup,'Title',get(panelToProcess(pidx),'Title'),'Tag',get(panelToProcess(pidx),'Tag'));
-        set(get(panelToProcess(pidx),'Children'),'Parent',currenttab);
+        set(findobj(get(panelToProcess(pidx),'Children'),'-not','HandleVisibility','off'),'Parent',currenttab);% findobj removes AnnotationPane Objects because their Parent cannot be modified
     end
     delete(tabcontainer);
 end
