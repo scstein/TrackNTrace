@@ -303,7 +303,7 @@ function [postprocData,options] = fitLT(trackingData,options)
                 tol = options.tolerance; % 1e-8 default
                 steps = 600;
                 
-                [tcspc_cut,t] = tcspc_apply_cutoff(tcspc_mol,options.cutoff,resolution);
+                [tcspc_cut,t,tail_ind] = tcspc_apply_cutoff(tcspc_mol,options.cutoff,resolution);
                 taus_guess = logspace(log10(options.minLT),log10(min(options.maxLT,t(end))),10);
                 attmpt = options.attempts;
                 attmpt_mod = 1+(-(attmpt-1)/2:(attmpt-1)/2)/attmpt; % Slightly vary tau_init when performing multiple attemts
@@ -350,7 +350,7 @@ function [postprocData,options] = fitLT(trackingData,options)
                 % Exclude tcspc with less than minAmp photons
                 fitind = nphot>=options.minAmp;
                 % Cut tcspc and genetate time axis
-                [tcspc_cut,t] = tcspc_apply_cutoff(tcspc_mol(fitind,:),options.cutoff,resolution);
+                [tcspc_cut,t,tail_ind] = tcspc_apply_cutoff(tcspc_mol(fitind,:),options.cutoff,resolution);
                 % Generate log spaced candidate lifetimes and calculate the
                 % decay curves. Add constant as lower thershold for
                 % correlation. (constant = 0 correlation)
@@ -375,7 +375,7 @@ function [postprocData,options] = fitLT(trackingData,options)
                     warning on backtrace
                 end
                 % Recalculate fast lifetime with cut TCSPC
-                [tcspc_cut,t] = tcspc_apply_cutoff(tcspc_mol,options.cutoff,resolution);
+                [tcspc_cut,t,tail_ind] = tcspc_apply_cutoff(tcspc_mol,options.cutoff,resolution);
                 nphot_cut = sum(tcspc_cut,2);
                 tau_fast_cut = real(sqrt(((squeeze(sum(t.^2.*double(tcspc_cut),2)))-((squeeze(sum(t.*double(tcspc_cut),2))).^2)./nphot_cut)./(nphot_cut-1))); % Normalise with (N-1) to make it consitent with (my)var
                 fitData = tau_fast_cut(:);
@@ -395,6 +395,8 @@ function [postprocData,options] = fitLT(trackingData,options)
         
         if options.exportTCSPC
             options.TCSPC = tcspc_mol;
+            options.TCSPC_t = t;
+            options.TCSPC_tail = tail_ind;
         end
     else
         warning('TNT: The plugin ''%s'' only supports single photon data. \n',options.plugin_name);
@@ -422,7 +424,7 @@ end
 % curves potentially containing dead time artefacts or only background. Exspect
 % tcspc in the form [mol gate chan]. If cutoff is in ns resolution has to be
 % given. As second output a cut time axis centred at the peak is returned.
-function [tcspc,t] = tcspc_apply_cutoff(tcspc,cutoff,resolution)
+function [tcspc,t,ind] = tcspc_apply_cutoff(tcspc,cutoff,resolution)
     if nargin<2 && ~isempty(resolution)
         resolution = 1;
     end
@@ -430,6 +432,7 @@ function [tcspc,t] = tcspc_apply_cutoff(tcspc,cutoff,resolution)
     tcspc_int = sum(sum(tcspc,3),2);
     int_thres = quantile(tcspc_int,[0.25 0.75]);
     [~,max_pos] = max(sum(sum(tcspc(int_thres(1) <= tcspc_int & tcspc_int <= int_thres(2),:,:),3),1));
-    tcspc = tcspc(:,(max_pos+cutoff):end,:);
+    ind = (max_pos+cutoff):size(tcspc,2);
+    tcspc = tcspc(:,ind,:);
     t = ((1:size(tcspc,2))+cutoff-1)*resolution;
 end
