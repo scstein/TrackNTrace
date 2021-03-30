@@ -15,5 +15,16 @@ if nargin ~= 4
   end
 end
 
-data = photonscore_mex(photonscore.Const.FN_FILE_READ, ...
+try
+  % invoke D7 file reader
+  data = photonscore_mex_file(photonscore.Const.FN_FILE_READ, ...
     filename, dataset, offset, count);
+catch FileErr
+  try
+    % fallback to historic backend
+    data = photonscore_mex(photonscore.Const.FN_FILE_READ, ...
+      filename, dataset, offset, count);
+  catch FileErr2
+    error('Err1: %s\nErr2: %s\n', FileErr.message, FileErr2.message);
+  end
+end

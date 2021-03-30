@@ -1,5 +1,16 @@
 function info = file_info(filename)
-r = photonscore_mex(photonscore.Const.FN_FILE_INFO, filename);
+
+try
+  % invoke D7 file reader
+  r = photonscore_mex_file(photonscore.Const.FN_FILE_INFO, filename);
+catch FileErr
+  try
+    % fallback to historic backend
+    r = photonscore_mex(photonscore.Const.FN_FILE_INFO, filename);
+  catch FileErr2
+    error('Err1: %s\nErr2: %s\n', FileErr.message, FileErr2.message);
+  end
+end
 
 info.photons_count = nan;
 info.raw_info_ = r;
