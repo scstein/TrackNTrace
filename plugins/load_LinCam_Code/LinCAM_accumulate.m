@@ -28,12 +28,13 @@ function [varargout] = LinCAM_accumulate(inputfile, outputs, framebinning, pixel
 %                between the scan and mask. In the output x=1 and y=mol.
 % timegate     - [min max] photons ariving not inbeween min and max are
 %                rejected. Can be in ns or bin numbers (as int).
+% window       - [xmin xmax ymin ymax] Photons with positions outside the closed
+%                intervals [min xmax] and [ymin ymax] are ignored.
 %
 % Example: Correlate the whole file:
 %  LinCAM_accumulate(filename,{{'arrival',@(head,Ngate)feval(@(Nsub,Timeunit)@(t){{Timeunit*cumsum(reshape(repmat(2.^(0:ceil(log2(maxtime(1)/Timeunit/Nsub))-1),Nsub,1),Ncasc*Nsub,1)),tttr2xfcs(t,true(size(t)),ceil(log2(maxtime(1)/Timeunit/Nsub)),Nsub)}},10,head.MeasDesc_GlobalResolution)}},inf,inf,false)
 %
 %%
-% inputfile = 'W:\Christoph\190426_Silicarhodamine_beads\data.sptw\Vero-cells_Alexa647_11.ptu';
 narginchk(2,6);
 if nargin < 3 || isempty(framebinning)
     framebinning = 1000;
@@ -86,6 +87,8 @@ if isstruct(inputfile)||strcmpi(class(inputfile),'matlab.io.MatFile')
     head.ImgAcc_Pixelbinning = pixelbinning;
     head.ImgAcc_Framebinning = framebinning;
     head.ImgAcc_Timegate     = timegate;
+    
+    inputfile = ''; % clear input file to save memory
 else
     batchFlag = false;
     if endsWith(inputfile,'.mat')
