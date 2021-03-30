@@ -13,7 +13,7 @@ This version can be found [here](../../releases/tag/v1.03).
 
 ## TrackNTrace *Lifetime Edition*
 This is an extended version of TrackNTrace for the processing of FLIM (fluorescence lifetime imaging microscopy) data with the following addition:
-* plugin-based file import with a plugin provided for PicoQuant's PTU single photon file format
+* plugin-based file import with a plugin provided for PicoQuant's PTU single photon file format and Photonscore's PHOTONS format.
 * post-processing step after the tracking
 * plugin to extract the TCSPC decays of each localization and determine the corresponding lifetime using maximum likelihood fitting.
 * extended TNTvisualizer including:
@@ -22,14 +22,16 @@ This is an extended version of TrackNTrace for the processing of FLIM (fluoresce
 	* reconstruction of super-resolved images
 	* drift correction with RCC (redundant cross-correlation, see Wang et al. [10.1364/OE.22.015982](https://doi.org/10.1364/OE.22.015982))
 	
-This version is maintained by Jan Christoph Thiele from the University of Goettingen. Its first release can be found [here](../../releases/tag/v2.0).
+This version is suitable for lifetime-resolved single molecule localisation microscopy with either a CLSM (eg. Microtime 200 with FLIMbee scanner, Picoquant) or a TCSPC camera (LinCAM, Photonscore).
+It is maintained by Jan Christoph Thiele from the University of Goettingen. Its first release can be found [here](../../releases/tag/v2.0).
 
 
 ## Citation
 If you use TrackNTrace please consider citing: 
-Stein, S. C. and Thiart, J. *Sci. Rep.* **6**, 37947; doi: [10.1038/srep37947](https://doi.org/10.1038/srep37947) (2016).
+SC Stein, and J Thiart, *Sci. Rep.* **6**, 37947; doi: [10.1038/srep37947](https://doi.org/10.1038/srep37947) (2016).
 
-A publication covering the new FLIM capabilities is currently in preparation. A preprint is available on bioRxiv: [10.1101/2020.08.25.266387v1](https://www.biorxiv.org/content/10.1101/2020.08.25.266387v1).
+If you use the new FLIM capabilities please also cite:
+JC Thiele, DA Helmerich, N Oleksiievets, R Tsukanov, E Butkevich, M Sauer, O Nevskyi, and J Enderlein, *ACS Nano*, 14, 10, 14190–14200; doi: [10.1021/acsnano.0c07322](https://pubs.acs.org/doi/10.1021/acsnano.0c07322) (2020).
 
 ## Licensing
 
@@ -77,5 +79,8 @@ TrackNTrace uses variety of external programs / modules:
     Copyright (c) 2014, Oliver J. Woodford, Yair M. Altman
     URL: https://github.com/altmany/export_fig
 	License see 4) in License.txt
-
+* Photonscore file import toolbox,
+	Copyright 2021 Photonscore GmbH, Magdeburg,
+	URL: https://www.photonscore.de/
+	
 See the "License.txt" file for more information.
