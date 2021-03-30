@@ -255,7 +255,7 @@ classdef TNTplugin < handle % Inherit from handle class
                         error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be [''defaultValue'']!', par_name, par_type)
                     end
                 case 'list'
-                    if(~iscell(par_settings))
+                    if(~iscell(par_settings) && ~isa(par_settings,'function_handle'))
                         error('add_plugin_param: Failed adding param ''%s'' of type ''%s''. Settings need to be {''choice1'',''choice2'',...})!', par_name, par_type)
                     end
                 case 'filechooser'
@@ -478,6 +478,13 @@ classdef TNTplugin < handle % Inherit from handle class
                 pName = par_name{iP};
                 pStructVarName = struct_varNames{iP};
                 pType = par_type{iP};
+                
+                % If the settings are a function handel excute it to get
+                % settings
+                if isa(par_settings{iP},'function_handle') && ~strcmpi(pType,'button')
+                    obj.addInternalsToOptions();
+                    par_settings{iP} = par_settings{iP}(obj.options);
+                end
                 
                 % Check for special formatting parameters 
                 % (like starting new rows or textboxes)
@@ -813,7 +820,16 @@ classdef TNTplugin < handle % Inherit from handle class
             % option.
             function callback_customButton(uiObj, eventdata, cfunc)
                 obj.addInternalsToOptions();
-                obj.options = cfunc(obj.options);
+                if nargin(cfunc)==1
+                    % This is sufficient to modify option values
+                    obj.options = cfunc(obj.options);
+                elseif nargin(cfunc)==2
+                    % If we need to add/remove options we need full acesss to
+                    % the plugin object.
+                    obj.options = cfunc(obj.options,obj);
+                else
+                    error('Invalid callback.'); 
+                end
                 obj.createOptionsPanel(uiObj.Parent); % Rebuild the panel to keep obj and GUI in sync
             end
             
