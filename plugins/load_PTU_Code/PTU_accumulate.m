@@ -322,7 +322,7 @@ while cframe<=lastframe_binned
     elseif accum_tau || accum_tau_cust || accum_tcspc || accum_tcspc_f || accum_arrival
         tcspcdata = double(mf.im_tcspc(ind,1));
     end
-    ind = all(subs,2);
+    ind = all(subs,2) & subs(:,3) <= maxch_n;
     subs = subs(ind,:); % Remove zero indices (eg. out of frame, out of pixel mask)
     if ~isempty(tcspcdata)
         tcspcdata = tcspcdata(ind);

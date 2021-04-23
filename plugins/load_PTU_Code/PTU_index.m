@@ -85,12 +85,17 @@ if strcmp(name(end-2:end),'ptu')
             im_col = [];
             im_line = [];
             im_frame = [];
-            im_frame_index = [];
-        elseif head.ImgHdr_Ident == 9 % MultiFrame Scan
+            im_frame_index = [];            
+        elseif head.ImgHdr_Ident == 6 ...% SingleFrame Scan (Piezo) 
+            || head.ImgHdr_Ident == 9    % MultiFrame Scan (FLIMbee)
             
             nx    = head.ImgHdr_PixX;
             ny    = head.ImgHdr_PixY;
-            if isfield(head,'ImgHdr_MaxFrames')
+            
+            if head.ImgHdr_Ident == 6 % Piezo measurment single frame
+                nz = 1;
+                BidirectShift = false; % disable shift correction
+            elseif isfield(head,'ImgHdr_MaxFrames')
                 nz = head.ImgHdr_MaxFrames;
             else % Not defined at the start of the measurement
                 tim_p_frame =  1./head.ImgHdr_LineFrequency*ny;
@@ -100,8 +105,6 @@ if strcmp(name(end-2:end),'ptu')
             class_x = intminclass(nx);  % class for the x position
             class_y = intminclass(ny);  % class for the y position
             class_f = intminclass(nz);  % class for the frame number
-            
-
             
             LineStart = 4;
             LineStop  = 2;

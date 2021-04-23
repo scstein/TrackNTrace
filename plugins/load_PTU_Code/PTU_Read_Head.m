@@ -32,7 +32,11 @@ else
     TagTyp   = fread(fid, 1, 'uint32');                 % TagHead.Typ
     
     while ~strcmp(TagIdent, 'Header_End')
-                
+        
+        if strcmp(TagIdent(1),'$')
+            TagIdent(1) = '';
+        end
+        
         if TagIdx > -1
             if strcmpi(TagIdent,'UsrHeadName')
                 EvalName = ['head.' TagIdent '{' int2str(TagIdx + 1) '}'];
