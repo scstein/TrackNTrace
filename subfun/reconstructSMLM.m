@@ -86,7 +86,7 @@ switch lower(mode)
             precision = precision.*ones(size(xyz,1),1);
         end
         % filter localisations
-        valid_loc = ~isinf(precision)&~isnan(precision)& ~isnan(weight);
+        valid_loc = ~isinf(precision)& ~isnan(precision)& ~isnan(weight)& ~any(isnan(xyz(:,1:2)),2);
         if zFlag
             valid_loc = valid_loc & ~isnan(xyz(:,3));
         end
