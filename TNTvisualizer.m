@@ -120,6 +120,9 @@ addPathsVisualizer();
 MATLABversion = strsplit(version,'.');
 if(str2double(MATLABversion(1))>=8 && str2double(MATLABversion(2))>=6) % Use 'drawback nocallbacks' for MATLAB 2015b (8.6.x) and later
     MATLAB_2015b_or_newer = true; 
+    
+    try movieOrTNTfile = controllib.internal.util.hString2Char(movieOrTNTfile); catch, end % Convert strings to char arrays
+    try candidateDataOrTNTfile = controllib.internal.util.hString2Char(candidateDataOrTNTfile); catch, end % Convert strings to char arrays
 else
     MATLAB_2015b_or_newer = false; 
 end
