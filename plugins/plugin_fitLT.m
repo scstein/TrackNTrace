@@ -265,9 +265,12 @@ function [postprocData,options] = fitLT(trackingData,options)
             else
                 track_ids = find(c_ind);
             end
+            % TrackIDs are allways sorted, we avoid gaps in tcpsc_frame by using
+            % 1:numel(track_ids) as temporary index and move it to position
+            % track_ids in tcspc_mol.
             % construct mask (overlapping areas are removed from the mask)
             img_ind = zeros(imgSZ+2.*img_pad);
-            img_ind(sub2ind(imgSZ+2.*img_pad,c_pos(:,2),c_pos(:,1))) = track_ids-track_ids(1)+1; % We know that track_ids(1) has the lowest id and use it as offset
+            img_ind(sub2ind(imgSZ+2.*img_pad,c_pos(:,2),c_pos(:,1))) = 1:numel(track_ids);
             % exclude pixels with overlaping molecules
             img_mask = conv2(img_ind>0,mask,'same')==1;
             img_ind = conv2(img_ind,mask,'same');
@@ -278,10 +281,10 @@ function [postprocData,options] = fitLT(trackingData,options)
                 [options.framebinning(1) min(options.framebinning(2)+(cframe-[1 0])*min(realmax,options.framebinning(1))-[0 1],[inf options.framebinning(3)])],... %Calculate the first and last unbinned frame of cframe
                 img_ind,false,true);
             
-            tcspc_mol(1,track_ids(1)+(0:(size(tcpsc_frame,2)-1)),:,:) = tcspc_mol(1,track_ids(1)+(0:(size(tcpsc_frame,2)-1)),:,:) + ...
-                cast(tcpsc_frame,class(tcspc_mol));
+            tcspc_mol(1,track_ids,:,:) = tcspc_mol(1,track_ids,:,:) + cast(tcpsc_frame,class(tcspc_mol));
         end
         
+        cacheORfile = options.filename_movie; %#ok<NASGU> cache no longer needed.
         % calculate fast LT
         resolution = head.MeasDesc_Resolution*1e9; % in ns
         

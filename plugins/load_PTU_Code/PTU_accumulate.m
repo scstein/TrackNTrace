@@ -143,7 +143,7 @@ else
     if accum_arrival
         loadvars{end+1} = 'im_sync';
     end
-    if sum(feval(@(vars)[vars(cellfun(@(name)any(strcmp(name,loadvars)),{vars.name})).bytes],whos(mf)))<getFreeMem()/4
+    if sum(feval(@(vars)[vars(cellfun(@(name)any(strcmp(name,loadvars)),{vars.name})).bytes],whos(mf)))<getFreeMem()/2
         mf = load(mfile,loadvars{:});
     end
 end
