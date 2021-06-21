@@ -114,6 +114,10 @@ else
     head = mf.head;
     if head.ImgHdr_Dimensions == 1 % Error for point measurements.
         warning('Measurement is not a scan.');
+        [varargout{1:nargout}] = deal([]);
+        if ~isempty(outi_head)
+            varargout{outi_head} = head;
+        end
         return
     end
     % Recalculate index if the BidirectShift is not matching
@@ -304,6 +308,11 @@ while cframe<=lastframe_binned
                                                                                          % clastframe is the first frame of the NEXT iteration.
 %     clastframe = cframe+1;
     ind = im_frame_index(cframe,1):(im_frame_index(clastframe,1)-1);
+    if isempty(ind)
+        % Can occure when frames without photons are present
+        cframe = clastframe;
+        continue;
+    end
     
     subs = [
             pyx_lookup(mf.im_line(ind,1),...
