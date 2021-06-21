@@ -46,6 +46,9 @@ fprintf('Starting Track''N''Trace.\n')
 %% Load default options
 [globalOptions_def, TNToptions] = getDefaultOptions();
 
+% check for overwrite arguments, eg. RunTrackNTrace('enableParallelProcessing',false)
+TNToptions = cell2struct(cellfun(@(fname)parsevarargs(varargin,fname,TNToptions.(fname)),fieldnames(TNToptions),'UniformOutput',false),fieldnames(TNToptions));
+globalOptions_def = cell2struct(cellfun(@(fname)parsevarargs(varargin,fname,globalOptions_def.(fname)),fieldnames(globalOptions_def),'UniformOutput',false),fieldnames(globalOptions_def));
 %% Check if parallel processing is available
 global parallelProcessingAvailable
 parallelProcessingAvailable = false;
