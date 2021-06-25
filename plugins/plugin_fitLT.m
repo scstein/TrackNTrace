@@ -129,7 +129,9 @@ function [postprocData,options] = fitLT(trackingData,options)
     mainTime = []; %#ok<NASGU>
     lastElapsedTime = 0;
     
-    if options.hasTCSPC
+    if isempty(trackingData)
+        postprocData = trackingData;    
+    elseif options.hasTCSPC
         if isempty(options.cacheFunc)
             [head,img]=options.accumFunc(options.filename_movie,{'head','tag'},[1 1 1]);
             cacheORfile = options.filename_movie;
@@ -281,6 +283,10 @@ function [postprocData,options] = fitLT(trackingData,options)
                 [options.framebinning(1) min(options.framebinning(2)+(cframe-[1 0])*min(realmax,options.framebinning(1))-[0 1],[inf options.framebinning(3)])],... %Calculate the first and last unbinned frame of cframe
                 img_ind,false,true);
             
+            % The last localisation(s) can be missing in tcpsc_frame if they
+            % do not contain any photons. This can occur when there are
+            % overlapping localisation from all directions.
+            track_ids = track_ids(1:size(tcpsc_frame,2));
             tcspc_mol(1,track_ids,:,:) = tcspc_mol(1,track_ids,:,:) + cast(tcpsc_frame,class(tcspc_mol));
         end
         
