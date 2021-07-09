@@ -50,10 +50,11 @@ plugin.add_param('exportTCSPC',...
 plugin.add_text('Lifetime fitting options');
 plugin.add_param('fitType',...
     'list',...
-    {'fast lifetime', 'monoexponential MLE', 'average DistFit', 'maximum correlation'},...
+    {'fast lifetime', 'monoexponential MLE', 'monoexponential PM', 'average DistFit', 'maximum correlation'},...
     ['Type of fit:\n'...
      '  fast lifetime: standard deviation of the arivial times. No fit. Ignores the following parameters.\n'...
      '  monoexponential MLE: fitting a monoexponential decay using a Nealder-Mead algorithm with a maximum likelihood estimator.\n'...
+     '  monoexponential PM: pattern matching (MLE) with a library of monoexponential decays. Limited to 1000 lifetimes between minLT and maxLT but faster than fitting.\n'...
      '  average DistFit: fits the decay with a distribution of decays between minLT and maxLT and takes the amplitude-weighted rate average.\n'...
      '  maximum correlation: correlates the decay with a distribution of decays between minLT and maxLT and takes the highest correlation.\n']);
 plugin.add_param('cutoff',...
@@ -306,18 +307,108 @@ function [postprocData,options] = fitLT(trackingData,options)
         % fit
         
         switch options.fitType
-            case {'monoexponential MLE','average DistFit'}
+            case {'monoexponential MLE','monoexponential PM'}
+                
+                [tcspc_cut,t,tail_ind] = tcspc_apply_cutoff(tcspc_mol,options.cutoff,resolution);
+                
+                if strcmp(options.fitType,'monoexponential PM')
+                    n_lt = 500; % number of possible lifetime values
+                    n_bg = 50;  % number of possible background values
+                else
+                    n_lt = 100;
+                    n_bg = 20;
+                end
+                    
+                taus_pm = linspace(max(options.minLT,eps),min(options.maxLT,t(end)),n_lt);
+                bgs_pm = linspace(0,1-1/n_bg,n_bg-1).^2; % square linspace to sample low bg values more densely
+                
+                [taus_pm,bgs_pm] = meshgrid(taus_pm(:),bgs_pm(:)');
+                taus_pm = taus_pm(:);
+                bgs_pm = bgs_pm(:);
+                taus_pm(end+1) = nan;
+                bgs_pm(end+1) = 1;
+                
+                rewindMessages();
+                rewPrintf('TNT: PM: Calculating decay patterns\n');
+                t_delta = mean(diff(t));
+                pfun_monoexp = @(tau,T,t) 1./tau.*exp(-t./tau)./(1-exp(-T./tau)) * t_delta; % Normalised monoexponetial decay
+                pfun_monoexpBG = @(tau,b)b./numel(t)+(1-b).*pfun_monoexp(tau,t(end),t(:)');
+                monoexp_logdecays = log(pfun_monoexpBG(taus_pm,bgs_pm));
+                
+                bunch_sz = 1e4;
+                PM_ind = nan(size(tcspc_cut,1),1);
+                for idx = 1:ceil(numel(PM_ind)/bunch_sz)
+                    ind = ((idx-1)*bunch_sz+1):min(idx*bunch_sz,numel(PM_ind));
+                    [~,PM_ind(ind)] = max(tcspc_cut(ind,:) * monoexp_logdecays',[],2);
+                    rewindMessages();
+                    rewPrintf('TNT: PM: Matching decay patterns %i/%i\n',ind(end),size(tcspc_cut,1));
+                end
+                
+                clear monoexp_logdecays;
+                
+                PM_tau = taus_pm(PM_ind);
+                PM_bg = bgs_pm(PM_ind);
+                PM_np = sum(tcspc_cut,2);
+                
+                PM_tau(PM_np==0) = nan;
+                PM_bg(PM_np==0) = nan;
+                
+                if strcmp(options.fitType,'monoexponential PM')
+                    rewindMessages();
+                    rewPrintf('TNT: PM: Calculate chi2\n');
+                    [PM_ind_uq,~,PM_ind_uqx] = unique(PM_ind);
+                    monoexp_decays = pfun_monoexpBG(taus_pm(PM_ind_uq),bgs_pm(PM_ind_uq));
+                    % Calculate reduced chi2
+                    PM_chi2 = sum((tcspc_cut-PM_np.*monoexp_decays(PM_ind_uqx,:)).^2./monoexp_decays(PM_ind_uqx,:),2)./PM_np./(numel(t)-3);
+                    
+                    clear monoexp_decays;
+                    %% Save
+                    options.outParamDescription = [options.outParamDescription;{'lt-tau';'lt-np';'lt-bg';'lt-chi2'}];
+                    fitData = [PM_tau(:),PM_np(:),PM_bg(:),PM_chi2(:)];
+                else
+                    fitData = nan(size(tcspc_mol,1),4);
+                    options.outParamDescription = [options.outParamDescription;{'lt-tau';'lt-amp';'lt-bg';'lt-chi2'}];
+                    tol = options.tolerance; % 1e-8 default
+                    steps = 600;
+                    
+                    attmpt = options.attempts;
+                    attmpt_mod = 1+(-(attmpt-1)/2:(attmpt-1)/2)/attmpt; % Slightly vary tau_init when performing multiple attemts
+                    attmpt_p = nan(3,attmpt);
+                    attmpt_mle = nan(1,attmpt);
+                    
+                    PM_tau(isnan(PM_tau)) = nanmean(PM_tau); % Replace nans
+                    amp_init = (1-PM_bg).*PM_np ./ exp(-options.cutoff./PM_tau);
+                    bg_init = max(PM_bg.*PM_np,1);
+                    for idx = 1:size(tcspc_cut,1)
+                        % Output process every 0.5 seconds
+                        mainTime = toc(mainTime_start);
+                        if( (mainTime-lastElapsedTime) > 0.5)
+                            rewindMessages();
+                            rewPrintf('TNT: Fitting TCSPC %i/%i\n',idx,size(tcspc_cut,1));
+                            lastElapsedTime = mainTime;
+                        end
+                        
+                        if nphot(idx)<options.minAmp
+                            fitData(idx,1:4) = NaN;
+                        else
+                            % Performe requested number of attempts
+                            for attmpt_idx = 1:attmpt
+                                % MLE Fit using distfit as initial guess
+                                [attmpt_p(:,attmpt_idx),~,~,attmpt_mle(attmpt_idx)] = Simplex_Handle(@ExpFunMono, [bg_init(idx),PM_tau(idx)*attmpt_mod(attmpt_idx),amp_init(idx)], [0 options.minLT 0],[inf options.maxLT inf],tol,-steps,t,tcspc_cut(idx,:)',true);
+                            end
+                            [~, attmpt_best] = min(attmpt_mle);
+                            [lt_err] = ExpFunMono(attmpt_p(:,attmpt_best),t,tcspc_cut(idx,:)',false);                                                                                                 % chi2 for output
+                            fitData(idx,1:4) = [attmpt_p(2,attmpt_best), attmpt_p(3,attmpt_best), attmpt_p(1,attmpt_best), lt_err];
+                        end
+                    end
+                end
+                
+            case {'average DistFit'}
                 fitData = nan(size(tcspc_mol,1),4);
                 options.outParamDescription = [options.outParamDescription;{'lt-tau';'lt-amp';'lt-bg';'lt-chi2'}];
-                tol = options.tolerance; % 1e-8 default
-                steps = 600;
                 
                 [tcspc_cut,t,tail_ind] = tcspc_apply_cutoff(tcspc_mol,options.cutoff,resolution);
                 taus_guess = logspace(log10(options.minLT),log10(min(options.maxLT,t(end))),10);
-                attmpt = options.attempts;
-                attmpt_mod = 1+(-(attmpt-1)/2:(attmpt-1)/2)/attmpt; % Slightly vary tau_init when performing multiple attemts
-                attmpt_p = nan(3,attmpt);
-                attmpt_mle = nan(1,attmpt);
                 
                 for idx = 1:size(tcspc_cut,1)
                     % Output process every 0.5 seconds
@@ -336,21 +427,10 @@ function [postprocData,options] = fitLT(trackingData,options)
                         tau_dist = sum(c(2:end))/sum(c(2:end)'./taus_guess);
                         % Refine guess
                         [lt_err,c_ref] = ExpFunLSQ(tau_dist,t,tcspc_cut(idx,:)',false);
-                        bg_dist = max(c_ref(1),c_ref(2)*1e-3); %in photons, ensures that we are not starting at the boundry
+                        bg_dist = c_ref(1); %in photons, ensures that we are not starting at the boundry
                         amp_dist = c_ref(2); % in photons (analytically normalised, incluedes photons cut in the front)
 
-                        if strcmp(options.fitType,'average DistFit')
-                            fitData(idx,1:4) = [tau_dist, amp_dist, bg_dist, lt_err];
-                        else
-                            % Performe requested number of attempts
-                            for attmpt_idx = 1:attmpt
-                                 % MLE Fit using distfit as initial guess
-                                 [attmpt_p(:,attmpt_idx),~,~,attmpt_mle(attmpt_idx)] = Simplex_Handle(@ExpFunMono, [bg_dist,tau_dist*attmpt_mod(attmpt_idx),amp_dist], [0 options.minLT 0],[inf options.maxLT inf],tol,-steps,t,tcspc_cut(idx,:)',true);
-                            end
-                            [~, attmpt_best] = min(attmpt_mle);
-                            [lt_err] = ExpFunMono(attmpt_p(:,attmpt_best),t,tcspc_cut(idx,:)',false);                                                                                                 % chi2 for output
-                            fitData(idx,1:4) = [attmpt_p(2,attmpt_best), attmpt_p(3,attmpt_best), attmpt_p(1,attmpt_best), lt_err];
-                        end
+                        fitData(idx,1:4) = [tau_dist, amp_dist, bg_dist, lt_err];
                     end
                 end
             case 'maximum correlation'
