@@ -182,7 +182,7 @@ function [tcspcdata,resolution] = getTCSPC(inputfile,maxPhotons)
     offset = 0;    
     tcspcdata = photonscore.file_read(inputfile, '/photons/dt', offset, count);
     head = photonscore.file_info(inputfile);
-    resolution = head.dt_channel*1e-12;
+    resolution = head.dt_channel*1e-12;  % in s
 end
 
 function options = findWindow(options)

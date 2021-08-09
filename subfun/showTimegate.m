@@ -12,10 +12,10 @@ function [fighdl] = showTimegate(inputfile,importOptions,timegate,nsFlag)
         nsFlag = false;
     end
     
-    [tcspcdata,Resolution] = importOptions.info.getTCSPC(inputfile,maxPhotons);
+    [tcspcdata,Resolution] = importOptions.info.getTCSPC(inputfile,maxPhotons); % Resolution in s
     
     if nsFlag
-        timegate = timegate./Resolution;
+        timegate = timegate./(Resolution*1e9);
     end
     timegate(end+1:2) = inf; % Ensure that second entry exists
         

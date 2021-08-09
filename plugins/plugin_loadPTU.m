@@ -147,7 +147,7 @@ function [tcspcdata,resolution] = getTCSPC(inputfile,maxPhotons)
     
     mf = matfile(mfile);
     head = mf.head;
-    resolution = 1e9*head.MeasDesc_Resolution;
+    resolution = head.MeasDesc_Resolution; % in s
     
     tcspcdata = mf.im_tcspc(1:min(maxPhotons,size(mf,'im_tcspc',1)),1);
 end
