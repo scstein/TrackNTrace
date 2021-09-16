@@ -165,6 +165,8 @@ else
     end
     GUIinputs.candidateOptions_loaded = candidateOptions_loaded;
     GUIinputs.refinementOptions_loaded = refinementOptions_loaded;
+    GUIinputs.trackingOptions_loaded = trackingOptions_loaded;
+    GUIinputs.postprocOptions_loaded = postprocOptions_loaded;
     GUIinputs.show_candidateData_fromFile_cbx  =                                                 ~isempty(candidateData_loaded);
     GUIinputs.show_refinementData_fromFile_cbx = (GUIinputs.show_candidateData_fromFile_cbx   && ~isempty(refinementData_loaded)); % candidateData must always be there
     GUIinputs.show_trackingData_fromFile_cbx   = (GUIinputs.show_refinementData_fromFile_cbx  && ~isempty(trackingData_loaded));   % candidateData + refinementData must always be there
@@ -412,8 +414,12 @@ else
         if(GUIreturns.use_loaded_candidateData || GUIreturns.use_loaded_refinementData || GUIreturns.use_loaded_trackingData || GUIreturns.use_loaded_postprocData)
             struct_helper.movieSize = movieSize_loaded;
             struct_helper.firstFrame_lastFrame = firstFrame_lastFrame_loaded;
-            metadata =  metadata_loaded;
-            struct_helper.metadata = metadata_loaded;
+            if exist('metadata_loaded','var') && ~isempty('metadata_loaded')
+                % metadata_loaded is not always present for legacy files or when
+                % running TNT without the GUI (headless mode).
+                metadata =  metadata_loaded;
+            end
+            struct_helper.metadata = metadata;
             save(filename_TNTdata,'-append','-struct','struct_helper');
         end    
 

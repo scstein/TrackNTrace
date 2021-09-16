@@ -92,7 +92,7 @@ drawnow; % makes figure disappear instantly (otherwise it looks like it is exist
         % Note: Loading has to be done this way, as variables "can not be
         % added to a static workspace" (e.g. the one of this GUI).
         warning off
-        allOptions = load([path,infile],'globalOptions','importOptions','candidateOptions','refinementOptions','trackingOptions','postprocOptions','filename_movie','candidateData','refinementData','trackingData','postprocData','movieSize','firstFrame_lastFrame');
+        allOptions = load([path,infile],'globalOptions','importOptions','candidateOptions','refinementOptions','trackingOptions','postprocOptions','filename_movie','candidateData','refinementData','trackingData','postprocData','movieSize','firstFrame_lastFrame','metadata');
         warning on
         globalOptions   = allOptions.globalOptions;
         if isfield(allOptions,'importOptions')
