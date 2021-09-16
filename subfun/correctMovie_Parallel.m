@@ -35,6 +35,18 @@ usePhoton = globalOptions.usePhotonConversion;
 
 nImages = size(movieStack,3);
 
+if usePhoton && isinf(globalOptions.binFrame)
+    if globalOptions.photonBias == 0
+        % prevents errors (nan output) when Bias is 0 and Binning is inf.
+        globalOptions.binFrame = 1;
+    else 
+        % For Bias>0, we would need to know how many frames are acutually binned
+        % -> Acces to importPlugin/write to metadata. Warn for now
+        globalOptions.binFrame = 1;
+        warning('Error correcting the bias of the movie. Infinite frame binning not compatible with bias correction. Assuming frame binning 1.');
+    end
+end
+
 if correctDark
     if usePhoton
         correctedStack = (double(movieStack)-double(globalOptions.binFrame)*globalOptions.photonBias)*(globalOptions.photonSensitivity/globalOptions.photonGain)+repmat(imgCorrection,[1,1,nImages]);
