@@ -37,8 +37,8 @@ plugin.add_param('position',...
      'refitted with an isotropic, integrated MLE Gaussian on a sum image of all frames of the track.']);
 plugin.add_param('maskRadius',...
     'float',...
-    {2, 0, inf},...
-    'Mask radius in units of the PSF.');
+    {2, -inf, inf},...
+    'Mask radius in units of the PSF.\nSet Mask radius to 0 to only take 1 pixel.\n Set mask radius to a negative value to use nearest localisation when localisations overlap.');
 plugin.add_param('sumTCSPC',...
     'bool',...
     true,...
@@ -228,11 +228,16 @@ function [postprocData,options] = fitLT(trackingData,options)
             return;
         end
         % get sigma
-        if size(trackingData,2)<8
-            warning('TNT: The plugin ''%s'' expects a localization sigma in the 8th column. Setting sigma to 1.3. \n',options.plugin_name);
+        global trackingOptions;
+        sigma_idx = 8;
+        if isfield(trackingOptions,'outParamDescription')
+            sigma_idx = find(strcmpi(trackingOptions.outParamDescription,'sigma'),1);
+        end
+        if isempty(sigma_idx) || size(trackingData,2)<sigma_idx
+            warning('TNT: The plugin ''%s'' cannot find PSF sigma. Setting sigma to 1.3. \n',options.plugin_name,sigma_idx);
             c_simga = 1.3;
         else
-            c_simga = median(trackingData(:,8)); % Take the median sigma. If we are looking at something other than single molecules it would be necessary to take the fitted sigma for each.
+            c_simga = median(trackingData(:,sigma_idx)); % Take the median sigma. If we are looking at something other than single molecules it would be necessary to take the fitted sigma for each.
         end
         for cframe = trackingData(1,2):trackingData(end,2)% loop over frames
             % Output process every 0.5 seconds
@@ -258,9 +263,13 @@ function [postprocData,options] = fitLT(trackingData,options)
                 % empty frame
                 continue;
             end
-            masksz = ceil(c_simga*options.maskRadius);
-            [x,y] = meshgrid(-masksz:masksz,-masksz:masksz);
-            mask = ceil(sqrt(x.^2/masksz^2+y.^2/masksz^2))<2;
+            if options.maskRadius==0
+                mask = 1;
+            else
+                masksz = ceil(c_simga*abs(options.maskRadius));
+                [x,y] = meshgrid(-masksz:masksz,-masksz:masksz);
+                mask = ceil(sqrt(x.^2/masksz^2+y.^2/masksz^2))<2;
+            end
             
             % get TrackIDs
             if options.sumTCSPC
@@ -274,10 +283,18 @@ function [postprocData,options] = fitLT(trackingData,options)
             % construct mask (overlapping areas are removed from the mask)
             img_ind = zeros(imgSZ+2.*img_pad);
             img_ind(sub2ind(imgSZ+2.*img_pad,c_pos(:,2),c_pos(:,1))) = 1:numel(track_ids);
-            % exclude pixels with overlaping molecules
+            % treat with overlaping molecules
             img_mask = conv2(img_ind>0,mask,'same')==1;
             img_ind = conv2(img_ind,mask,'same');
-            img_ind(~img_mask) = 0;
+            if options.maskRadius>=0
+                % exclude pixels
+                img_ind(~img_mask) = 0;
+            else
+                %% assign to nearest localization
+                [o_y,o_x] = find(~img_mask & img_ind>0);
+                o_ind = knnsearch(img_pad+(trackingData(c_ind,3:4)),[o_x(:),o_y(:)]);
+                img_ind(sub2ind(size(img_ind),o_y,o_x)) = o_ind;
+            end
             img_ind = img_ind(img_pad+(1:imgSZ(1)),img_pad+(1:imgSZ(2)));
             
             tcpsc_frame = options.accumFunc(cacheORfile,{'tcspc_pix'},...
@@ -325,16 +342,18 @@ function [postprocData,options] = fitLT(trackingData,options)
                 [taus_pm,bgs_pm] = meshgrid(taus_pm(:),bgs_pm(:)');
                 taus_pm = taus_pm(:);
                 bgs_pm = bgs_pm(:);
-                taus_pm(end+1) = nan;
+                % add only background (for the calculation we need to set a finite lifetime for now)
+                taus_pm(end+1) = t(end);
                 bgs_pm(end+1) = 1;
                 
                 rewindMessages();
                 rewPrintf('TNT: PM: Calculating decay patterns\n');
-                t_delta = mean(diff(t));
+                t_pm = t(:)-t(1); % for analytic normalisation time needs to start at 0
+                t_delta = mean(diff(t_pm));
                 pfun_monoexp = @(tau,T,t) 1./tau.*exp(-t./tau)./(1-exp(-T./tau)) * t_delta; % Normalised monoexponetial decay
-                pfun_monoexpBG = @(tau,b)b./numel(t)+(1-b).*pfun_monoexp(tau,t(end),t(:)');
+                pfun_monoexpBG = @(tau,b)b./numel(t_pm)+(1-b).*pfun_monoexp(tau,t_pm(end),t_pm(:)');
                 monoexp_logdecays = log(pfun_monoexpBG(taus_pm,bgs_pm));
-                
+                                
                 bunch_sz = 1e4;
                 PM_ind = nan(size(tcspc_cut,1),1);
                 for idx = 1:ceil(numel(PM_ind)/bunch_sz)
@@ -350,7 +369,7 @@ function [postprocData,options] = fitLT(trackingData,options)
                 PM_bg = bgs_pm(PM_ind);
                 PM_np = sum(tcspc_cut,2);
                 
-                PM_tau(PM_np==0) = nan;
+                PM_tau(PM_np==0 | PM_bg==1) = nan;
                 PM_bg(PM_np==0) = nan;
                 
                 if strcmp(options.fitType,'monoexponential PM')
