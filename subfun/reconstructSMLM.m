@@ -71,7 +71,7 @@ if ~exist('modeOptions','var') || isempty(modeOptions)
 end
 
 % Calculate reconstruction
-intMap = zeros(orgSize(1:2)*magnification);
+intMap = zeros(ceil(orgSize(1:2)*magnification));
 zMap = intMap;
 
 if numel(weight)==1
@@ -86,10 +86,7 @@ switch lower(mode)
             precision = precision.*ones(size(xyz,1),1);
         end
         % filter localisations
-        valid_loc = ~isinf(precision)& ~isnan(precision)& ~isnan(weight)& ~any(isnan(xyz(:,1:2)),2);
-        if zFlag
-            valid_loc = valid_loc & ~isnan(xyz(:,3));
-        end
+        valid_loc = ~isinf(precision)& ~isnan(precision)& ~isnan(weight)& ~any(isnan(xyz),2);
         precision = precision(valid_loc,:);
         weight = weight(valid_loc,:);
         if zFlag
@@ -124,10 +121,7 @@ switch lower(mode)
             precision = precision.*ones(size(xyz,1),1);
         end
         % filter localisations
-        valid_loc = ~isinf(precision)&~isnan(precision)& ~isnan(weight);
-        if zFlag
-            valid_loc = valid_loc & ~isnan(xyz(:,3));
-        end
+        valid_loc = ~isinf(precision)& ~isnan(precision)& ~isnan(weight)& ~any(isnan(xyz),2);
         precision = precision(valid_loc,:);
         weight = weight(valid_loc,:);
         if zFlag
