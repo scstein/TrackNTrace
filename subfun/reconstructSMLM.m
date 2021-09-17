@@ -102,7 +102,7 @@ switch lower(mode)
                 % out of bounds
                 continue;
             end
-            img = weight(iPos)*gaussianMask(rem(pos(iPos,1),1),rem(pos(iPos,2),1),sigma,sigma,halfw);
+            img = weight(iPos)*gaussianMask(pos(iPos,1)-pos_idx(iPos,1),pos(iPos,2)-pos_idx(iPos,2),sigma,sigma,halfw);
             intMap(pos_idx(iPos,2)-halfw:pos_idx(iPos,2)+halfw,pos_idx(iPos,1)-halfw:pos_idx(iPos,1)+halfw) = intMap(pos_idx(iPos,2)-halfw:pos_idx(iPos,2)+halfw,pos_idx(iPos,1)-halfw:pos_idx(iPos,1)+halfw)...
                 +img;
             if zFlag
