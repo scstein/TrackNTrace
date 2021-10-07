@@ -125,12 +125,24 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
                 cax = gca;
             end
             
-            
             % Check for existing scalebar
             oldobj = getappdata(cax,'TNTscalebar');
-            if isempty(oldobj)
+            
+            % copied or loaded axes, try to preserve properties
+            copiedSB = ~isempty(oldobj) && (isprop(oldobj,'Parent') && ~isgraphics(oldobj.Parent));
+            if copiedSB
+                varargin = [...
+                    getifexist(oldobj,{'Position','Location','VerticalAlignment','HorizontalAlignment','Length','MinLength','LengthMode','Pixelsize','Numerals','Unit','NumberFormat','KeepOnTop','FontSize','FontName','FontWeight','LineWidth','Color','Visible','AutoUpdate'}),...
+                    varargin];
+                delete(oldobj.DeleteListener);
+                delete(oldobj.UpdateListener);
+            end
+            
+            if isempty(oldobj) || copiedSB
                 obj.Parent = cax;
             
+                % Delete old objects (might exist in copied axes)
+                delete(findall(obj.Parent,'Tag','TNTscalebar_Line','-or','Tag','TNTscalebar_Text'));
                 % Create objects
                 obj.Line = line(nan,nan,'Parent',obj.Parent,'LineStyle','-','LineWidth',5,'Color',[1 1 1],'Tag','TNTscalebar_Line','PickableParts','none','HandleVisibility','off');
                 obj.Line.Annotation.LegendInformation.IconDisplayStyle;
@@ -295,7 +307,7 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
             obj.UpdateListener.Enabled = logical(value);
         end % set.AutoUpdate
         function value = get.AutoUpdate( obj )
-            value = matlab.lang.OnOffSwitchState(obj.UpdateListener.Enabled);
+            value = matlab.lang.OnOffSwitchState(ishandle(obj.UpdateListener) && obj.UpdateListener.Enabled);
         end % get.AutoUpdate
     end % methods
     methods ( Access = protected )
@@ -316,7 +328,7 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
         end % setProperties
         
         function updatePosition(obj)
-            if ~isempty(obj.Parent) %obj.Parent can be empty when loading a saved figure
+            if ~isempty(obj.Parent) && ~isempty(obj.Length_) % can be empty when loading a saved figure and during initialization
                 xrange = xlim(obj.Parent);
                 yrange = ylim(obj.Parent);
                 
@@ -489,6 +501,16 @@ function mustBeMemberChari(value,list)
     mustBeMember(lower(value),lower(list));
 end
 
+function nv_cell = getifexist(obj,props)
+    nv_cell = {};
+    props = cellstr(props);
+    for pname = props(:)'
+        if isprop(obj,pname{1})
+            nv_cell = [nv_cell,pname,{obj.(pname{1})}];
+        end
+    end
+end
+
 function syncToogle(fig)
     % Synchronise the toogle with state of the scalebar in the current axes
     cax = get(fig,'CurrentAxes');
@@ -537,4 +559,3 @@ function icon = scalebar_icon()
         NaN 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5];
     icon = repmat(icon,1,1,3);
 end
-
