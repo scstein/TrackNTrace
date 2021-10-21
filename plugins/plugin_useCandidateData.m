@@ -33,7 +33,12 @@ end
 
 function refinementOptions = updateOutParamDescription(refinementOptions)
 global candidateOptions % Needed as we drag along names specified here
-if(numel(candidateOptions.outParamDescription)>2)
+refinementOptions.addedZ = true;
+if any(strcmpi(candidateOptions.outParamDescription,'z'))
+    % candidateData already have z data
+    refinementOptions.addedZ = false;
+    refinementOptions.outParamDescription = candidateOptions.outParamDescription;
+elseif(numel(candidateOptions.outParamDescription)>2)
     refinementOptions.outParamDescription = [candidateOptions.outParamDescription(1:2); 'z'; candidateOptions.outParamDescription(3:end)];
 else
     refinementOptions.outParamDescription = [candidateOptions.outParamDescription(1:2); 'z'];
@@ -44,7 +49,9 @@ end
 function [refinementData] = convert_candidateData(img,candidatePos,options,currentFrame)
 % We extend the candidate data with the z position column to adhere to TNT specifications of fitting data.
 % All additional columns are simply copied.
-if(size(candidatePos,2)>2)
+if ~refinementOptions.addedZ
+    refinementData = candidatePos;
+elseif(size(candidatePos,2)>2)
     refinementData = [candidatePos(:,1:2),zeros(size(candidatePos,1),1),candidatePos(:,3:end)]; %adding z = 0
 else
     refinementData = [candidatePos(:,1:2),zeros(size(candidatePos,1),1)]; %adding z = 0
