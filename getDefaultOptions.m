@@ -33,6 +33,7 @@ function [globalOptions, TNToptions] = getDefaultOptions()
 % saved along the other options
 TNToptions.enableParallelProcessing = true;
 TNToptions.closeMatlabpoolOnExit = false;
+TNToptions.showResultLinks = true;
 
 TNToptions.rememberSettingsForNextMovie = true; % If this is set to true, settings for the current movie are used as default for the next when pressing continue.
 

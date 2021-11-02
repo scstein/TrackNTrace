@@ -535,6 +535,14 @@ if parallelProcessingAvailable && TNToptions.closeMatlabpoolOnExit
     matlabpool('close');
 end
 
+if TNToptions.showResultLinks && numel(list_filenames_TNTdata)>0
+    fprintf('######\nTNT: Processed %i files:\n',numel(list_filenames_TNTdata));
+    for iMovie=1:numel(list_filenames_TNTdata)
+        [~,tnt_fname] = fileparts(list_filenames_TNTdata{iMovie});
+        fprintf('     <a href="matlab:TNTvisualizer(''%s'')">%s</a>\n',list_filenames_TNTdata{iMovie},tnt_fname);
+    end
+end
+
 % Return TNT files if requsted
 if nargout>0
     varargout{1} = list_filenames_TNTdata;
