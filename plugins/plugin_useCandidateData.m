@@ -49,7 +49,7 @@ end
 function [refinementData] = convert_candidateData(img,candidatePos,options,currentFrame)
 % We extend the candidate data with the z position column to adhere to TNT specifications of fitting data.
 % All additional columns are simply copied.
-if ~refinementOptions.addedZ
+if ~options.addedZ
     refinementData = candidatePos;
 elseif(size(candidatePos,2)>2)
     refinementData = [candidatePos(:,1:2),zeros(size(candidatePos,1),1),candidatePos(:,3:end)]; %adding z = 0
