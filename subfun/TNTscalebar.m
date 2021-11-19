@@ -147,22 +147,27 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
                 obj.Line = line(nan,nan,'Parent',obj.Parent,'LineStyle','-','LineWidth',5,'Color',[1 1 1],'Tag','TNTscalebar_Line','PickableParts','none','HandleVisibility','off');
                 obj.Line.Annotation.LegendInformation.IconDisplayStyle;
                 obj.Text = text(nan,nan,'','Parent',obj.Parent,'FontSize',14,'Color',obj.Line.Color,'Units','data','HorizontalAlignment','center','VerticalAlignment','top','Tag','TNTscalebar_Text','HandleVisibility','off');
-                
-                % Save in appdata
-                setappdata(obj.Parent,'TNTscalebar',obj);
-                % Delete the object if the scalebar is deleted (e.g. by a new plot)
-                obj.DeleteListener = listener(obj.Line,'ObjectBeingDestroyed', @obj.delete_callback);
-                %listener(obj.Text,'ObjectBeingDestroyed', @obj.delete);
-                obj.UpdateListener = listener(obj.Parent,{'XLim','YLim','Position'},'PostSet',@obj.autoupdate_callback);
-                % Note: This listener does not cover all cases. Setting
-                % xlim/ylim to automatic or restoring the initial view does
-                % not trigger the PostSet callback. Here a listener to the
-                % XRuler/YRuler MarkedClean event could help.
             else
                 % This destroys the just created new object and uses the
                 % existing one.
                 obj = oldobj;
             end
+            
+            % Save in appdata
+            setappdata(obj.Parent,'TNTscalebar',obj);
+            % Delete the object if the scalebar is deleted (e.g. by a new plot)
+            if isempty(obj.DeleteListener)
+                obj.DeleteListener = listener(obj.Line,'ObjectBeingDestroyed', @obj.delete_callback);
+                %listener(obj.Text,'ObjectBeingDestroyed', @obj.delete);
+            end
+            if isempty(obj.UpdateListener)
+                obj.UpdateListener = listener(obj.Parent,{'XLim','YLim','Position'},'PostSet',@obj.autoupdate_callback);
+                % Note: This listener does not cover all cases. Setting
+                % xlim/ylim to automatic or restoring the initial view does
+                % not trigger the PostSet callback. Here a listener to the
+                % XRuler/YRuler MarkedClean event could help.
+            end
+            
             % Set properties
             obj.setProperties(varargin{:});
             % 
