@@ -12,10 +12,13 @@ function [intMap,zMap] = reconstructSMLM(xyz,precision,weight,magnification,orgS
 %  mode             [char] One of the following options:
 %                   'Gaussian': Draws an pixel integrated gaussian with 
 %                       sigma=precision at each localisation's position.
+%                       (Default for precision > 0)
 %                   'Jitter': Draws a point with a normal distributed random
 %                       offset (sigma=precision) for each localisation. This is
 %                       repeated n (default: 5) times. n is set by modeOptions.
-%                   Otherwise: 2D histogram of localisation positions.
+%                   Otherwise: 2D histogram of localisation positions. If a
+%                       value for precision is supplied a Gaussian blur is
+%                       added. (Default for precision = 0)
 %
 % Code for Gaussian histogram and Jitter adapted form first TNT release.
 %
@@ -144,6 +147,7 @@ switch lower(mode)
             zMap(intMap>0) = zMap(intMap>0)./intMap(intMap>0);            
         end
     otherwise % Normal histogram
+        convolveFlag =  ~isempty(precision) && all(precision(1)==precision) && precision(1)>0;
         
         valid_loc = 0 < xyz(:,1) & xyz(:,1) <= orgSize(2) ...
                   & 0 < xyz(:,2) & xyz(:,2) <= orgSize(1) ...
@@ -155,8 +159,18 @@ switch lower(mode)
         pixpos = ceil(magnification*xyz(valid_loc,[2 1]));
         intMap = accumarray(pixpos,weight(valid_loc),orgSize(1:2)*magnification);
         
+        if convolveFlag
+            sigma = precision(1)*magnification;
+            halfw = ceil(3*sigma);
+            mask = gaussianMask(0,0,sigma,sigma,halfw);
+            intMap = conv2(intMap,mask,'same');
+        end       
+            
         if zFlag
             zMap = accumarray(pixpos,weight(valid_loc).*xyz(valid_loc,3),orgSize(1:2)*magnification);
+            if convolveFlag
+                zMap = conv2(zMap,mask,'same');
+            end
             zMap(intMap>0) = zMap(intMap>0)./intMap(intMap>0);            
         end
 end %SWITCH
