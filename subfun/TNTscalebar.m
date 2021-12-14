@@ -346,9 +346,9 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
                 length = obj.Length_/obj.Pixelsize;
                 width = max(length,obj.Text.Extent(3));
                 
-                line_y = [1 1].*sb_position(2)-height*pos_norm(4)+lineheight/2;
+                line_y = [1 1].*sb_position(2)-height*pos_norm(4)+sign(pos_norm(4))*lineheight/2;
                 line_x = sb_position(1)+length*[-0.5 0.5]-width*(pos_norm(3)-0.5);
-                text_y = sb_position(2)-height*pos_norm(4)+lineheight;
+                text_y = sb_position(2)-height*pos_norm(4)+sign(pos_norm(4))*lineheight;
                 text_x = mean(line_x);
                 
                 set(obj.Line,'XData',line_x,'YData',line_y);
@@ -413,12 +413,26 @@ classdef TNTscalebar < matlab.mixin.SetGet & handle
                 case 'bottom'
                     pos(4) = 1;
             end
+            % correct for non-standard axis direction
+            if strcmpi(obj.Parent.YDir,'normal')
+                pos(2) = 1-pos(2);
+                pos(4) = -pos(4);
+            end
+            if strcmpi(obj.Parent.XDir,'reverse')
+                pos([1 3]) = 1-pos([1 3]);                
+            end
         end % getLocation
         function [height,lineheight] = getHeight(obj)
             ppd = obj.getPointPerData();
             lineheight = ppd(2)*obj.Line.LineWidth;
-            upper = min(obj.Line.YData)-lineheight/2;
-            lower = obj.Text.Position(2)+obj.Text.Extent(4);
+            
+            if strcmpi(obj.Parent.YDir,'reverse')
+                upper = min(obj.Line.YData)-lineheight/2;
+                lower = obj.Text.Position(2)+obj.Text.Extent(4);
+            else
+                lower = min(obj.Line.YData)+lineheight/2;
+                upper = obj.Text.Position(2)-obj.Text.Extent(4);                
+            end
             height = lower-upper;
             if isnan(height)
                 % Guess based on font size and linewidth
