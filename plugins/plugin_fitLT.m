@@ -228,16 +228,17 @@ function [postprocData,options] = fitLT(trackingData,options)
             return;
         end
         % get sigma
-        global trackingOptions;
-        sigma_idx = 8;
-        if isfield(trackingOptions,'outParamDescription')
-            sigma_idx = find(strcmpi(trackingOptions.outParamDescription,'sigma'),1);
+        sigma_idx = find(strcmpi(options.outParamDescription,'sigma'),1);
+        if isempty(sigma_idx)
+            % astigmatic imaging? -> take average of both sigmas
+            % TODO implement elliptical mask
+            sigma_idx = find(strcmpi(options.outParamDescription,'sigma_x')|strcmpi(options.outParamDescription,'sigma_y'),1);
         end
-        if isempty(sigma_idx) || size(trackingData,2)<sigma_idx
+        if isempty(sigma_idx) || all(size(trackingData,2)<sigma_idx)
             warning('TNT: The plugin ''%s'' cannot find PSF sigma. Setting sigma to 1.3. \n',options.plugin_name,sigma_idx);
             c_simga = 1.3;
         else
-            c_simga = median(trackingData(:,sigma_idx)); % Take the median sigma. If we are looking at something other than single molecules it would be necessary to take the fitted sigma for each.
+            c_simga = mean(median(trackingData(:,sigma_idx))); % Take the median sigma. If we are looking at something other than single molecules it would be necessary to take the fitted sigma for each.
         end
         for cframe = trackingData(1,2):trackingData(end,2)% loop over frames
             % Output process every 0.5 seconds
