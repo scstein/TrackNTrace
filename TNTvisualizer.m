@@ -153,7 +153,9 @@ if nargin==0||(nargin==1 && ischar(movieOrTNTfile) && exist(movieOrTNTfile,'dir'
                 case '.mat'
                     movieOrTNTfile = [path,filename];
                 otherwise
-                    error('Only movies or TNT files are supported for loading!');
+                    warning('Only movies or TNT files are supported for loading!');
+                    importMode = true;
+                    movieOrTNTfile = [path,filename];
             end
         else
             importMode = true;
@@ -207,8 +209,8 @@ allFramesCandidateData = []; % Computed on demand for histogram plots
 allFramesRefinementData = []; % Computed on demand for histogram plots
 
 use_flim = false;                                                   % Plot FLIM image
-cm_maps = {@cmap_heat,'hot','gray','jet','hsv',@cmap_isoluminant65,@cmap_isoluminant75,@cmap_rainbow_bgyrm};% List of available colormaps
-cm_names = {'heat','hot','B/W','jet','hsv','iso65','iso75','Rainbow'};
+cm_maps = {@cmap_heat,'hot','gray','jet','hsv',@cmap_isoluminant65,@cmap_isoluminant75,@cmap_isoluminant70r,@cmap_rainbow_bgyrm};% List of available colormaps
+cm_names = {'heat','hot','B/W','jet','hsv','iso65','iso75','iso70r','Rainbow'};
 cm_ind = 1;                                                         % Default colormap
 cm_ind_inactive = 7;                                                % Default colormap for FLIM
 cm_invert = false;                                                  % invert colormap
@@ -277,6 +279,8 @@ driftpost  = driftcalc;
 reconstruction_maxPrecision = inf;      % nm, Accept all
 reconstruction_clusterMinMember = 0;    % Disable clustering
 reconstruction_clusterMaxDistance = 50; % nm
+% MIET conversion
+mietcurve = struct();
 % ---------------------------
 
 % Show the GUI!
@@ -297,7 +301,7 @@ set(h_all.button_postprocMode,'Callback', {@callback_changeMode,'postproc'});
 set(h_all.but_play,'Callback',@playCallback);
 set(h_all.but_contrast,'Callback',@contrastCallback);
 set(h_all.but_autocontrast,'Callback',@autocontrastCallback);
-set(h_all.but_autocontrast,'TooltipString',sprintf('Set contrast automatically.\n The used algorithm can be selected in the popup menu to the right.\n Press  and hold "Shift" key during playback to adjust contrast automatically for each frame.'));
+set(h_all.but_autocontrast,'TooltipString',sprintf('Set contrast automatically.\n The used algorithm can be selected in the popup menu to the right.\n Press and hold "Shift" key during playback to adjust contrast automatically for each frame.\n In FLIM mode, press "Ctrl" key to adjust intensity contrast.'));
 set(h_all.popup_autocontrast, 'TooltipString', sprintf('Algorithm used for autocontrast.\n   Spots: Emphasize highest 25%% intensity values.\n   Min/Max: Spans all values.\n   98%% range: Cuts the lower and upper 1%% of intensities. '));
 set(h_all.popup_export, 'TooltipString', sprintf('These options export an RGB image of either the current frame or the whole stack with the current display options (colormap, contrast/limits, zoom).\n The images contain the markers for the localisations/tracks and for single frames also any set datatips.\n - Tiff (Stack)\n - Gif (Stack); Note: the GIF''s playback speed is set to the current FPS.\n - Tiff (Frame)\n - Png (Frame)\n\nThese options export the raw data (intensity / fast lifetime) with the native resolution and scale and without any overlay.\n - Tiff (Stack, int)\n - Tiff (Stack, tau)\n - Workspace (int)\n - Workspace (tau)\n'));
 set(h_all.but_distribution,'Callback',@distributionCallback);
@@ -309,7 +313,7 @@ set(h_all.but_weighted_distribution,'Callback',@distributionWeightedCallback);
 hLstn = addlistener(h_all.slider,'ContinuousValueChange',@updateSlider); %#ok<NASGU> % Add event listener for continous update of the shown slider value
 
 % Edit fields
-set(h_all.edit_FPS,'String',sprintf('%i',FPS), 'Callback', @fpsCallback);
+set(h_all.edit_FPS,'String',sprintf('%.1f',FPS), 'Callback', @fpsCallback);
 set(h_all.edit_distributionBins, 'Callback', {@callback_IntEdit,1,inf});
 setNum(h_all.edit_distributionBins, 50, true);
 set(h_all.edit_distributionRange,'Callback',{@callback_FloatEdit,0,100});
@@ -381,6 +385,11 @@ set(h_all.edit_drift_rmax,'Callback',{@callback_FloatEdit,0.01,100});
 set(h_all.edit_drift_seg,'Callback',{@callback_IntEdit,1,100000});
 set(h_all.but_drift_export,'Callback',@callback_exportDrift);
 set(h_all.but_drift_import,'Callback',@callback_importDrift);
+
+% MIET panel
+set(h_all.but_MIET_apply,'Callback',@callback_applyMIETcurve);
+set(h_all.but_MIET_show,'Callback',@callback_showMIETcurve);
+set(h_all.but_MIET_file,'Callback',@callback_importMIETcurve);
 
 %  -- Candidate UI elements --
 
@@ -505,6 +514,7 @@ end
                 set(h_all.popup_filterParam, 'String', matlab.lang.makeValidName(candidateParams));
 %                 set(h_all.panel_histogram,'Visible','on');
                 set(h_all.panel_tabgroup,'Visible','on');
+                set(h_all.but_MIET_apply,'Enable','off');
             case 'refinement'
                 set(dcm_obj,'UpdateFcn',{@modeSpecificDatatipFunction});
                 set(h_all.button_refinementMode,'BackgroundColor', SELECTED_COLOR);
@@ -514,6 +524,7 @@ end
                 set(h_all.popup_filterParam, 'String', matlab.lang.makeValidName(refinementParams));
 %                 set(h_all.panel_histogram,'Visible','on');
                 set(h_all.panel_tabgroup,'Visible','on');
+                set(h_all.but_MIET_apply,'Enable','off');
             case 'tracking'
                 initializeLinehandles(); %Initializes all needed line handles, if this is uncommented, linehandles are created on the fly
                 
@@ -526,6 +537,7 @@ end
 %                 set(h_all.panel_histogram,'Visible','on');
 %                 set(h_all.panel_tracking,'Visible','on');  
                 set(h_all.panel_tabgroup,'Visible','on'); 
+                set(h_all.but_MIET_apply,'Enable','off');
             case 'postproc'
                 
                 set(dcm_obj,'UpdateFcn',{@modeSpecificDatatipFunction});
@@ -536,6 +548,9 @@ end
                 set(h_all.popup_filterParam, 'String', matlab.lang.makeValidName(postprocParams));
 %                 set(h_all.panel_histogram,'Visible','on');
                 set(h_all.panel_tabgroup,'Visible','on');
+                if isstruct(mietcurve) && isfield(mietcurve,'z_theo') && any(strcmp(postprocParams,'lt-tau'))
+                    set(h_all.but_MIET_apply,'Enable','on');
+                end                
             otherwise
                 error('Unkown mode ''%s''!', mode);
         end
@@ -819,6 +834,9 @@ end
             if ~isempty(movieLT)
                 firstImg = movieLT(:,:,1);
                 zl_alpha = [min(firstImg(:)), max(firstImg(:))];% remeber zl when switching to FLIM
+                if zl_alpha(1)==zl_alpha(2)
+                    zl_alpha = zl_alpha + [0 1];
+                end
             end
             
             plotFrame(frame);
@@ -924,7 +942,7 @@ end
             case 'movie'
                 % Nothing additional to draw.
             case 'candidate'
-                if(isempty(candidateData{iF}))
+                if iF>numel(candidateData) || isempty(candidateData{iF})
                     if dothandle_cand ~= -1 % Skip uninitialized handles (must be drawn once)
                         set(dothandle_cand,'xdata',[],'ydata',[]);
                     end
@@ -942,7 +960,7 @@ end
                 
                 
             case 'refinement'
-                if(isempty(refinementData{iF}))
+                if iF>numel(refinementData) || isempty(refinementData{iF})
                     if dothandle_fit ~= -1 % Skip uninitialized handles (must be drawn once)
                         set(dothandle_fit,'xdata',[],'ydata',[]);
                     end
@@ -1083,7 +1101,9 @@ end
 
     % Stop playing, set contrast to match image min/max values, continue
     function autocontrastCallback(~, ~)
-%         axes(h_all.axes);
+        modifiers = get(h_main,'currentModifier');
+        ctrlIsPressed = ismember('control',modifiers);
+        
         xl = xlim(h_all.axes); % update the axis limits in case the user zoomed
         yl = ylim(h_all.axes);
         
@@ -1091,7 +1111,7 @@ end
         % Take visible image cutout for autocontrast
         visibleXRange = max(1,floor(xl(1))):min(size(movie,2),ceil(xl(2)));
         visibleYRange = max(1,floor(yl(1))):min(size(movie,1),ceil(yl(2)));
-        if use_flim
+        if use_flim && ~ctrlIsPressed
             currImg = movieLT(visibleYRange,visibleXRange,frame);
         else
             currImg = movie(visibleYRange,visibleXRange,frame).^img_gamma;            
@@ -1101,7 +1121,7 @@ end
 
         switch selected_method
             case 1 % Focus on spots (upper quartil / 25% of data)
-                if use_flim
+                if use_flim && ~ctrlIsPressed
                     currImgLT = currImg;
                     currImg = movie(visibleYRange,visibleXRange,frame).^img_gamma;
                 end
@@ -1110,7 +1130,7 @@ end
                 if minIdx == 0; minIdx = 1; end
                 minval = sortedIntensities( minIdx );
                 maxval = sortedIntensities( end );
-                if use_flim
+                if use_flim && ~ctrlIsPressed
                     % take bounds centre of centre 75% lifetime values of
                     % the brightest 25% pixels.
                     sortedIntensitiesLTs = sort(currImgLT(currImg>=minval & currImg<=maxval));                
@@ -1139,7 +1159,11 @@ end
         end
         if minval<=maxval % this also excudes NaNs
             zl = double([minval, maxval]);
-            caxis(h_all.axes,zl);
+            if use_flim && ctrlIsPressed
+                alim(h_all.axes,zl);
+            else
+                caxis(h_all.axes,zl);
+            end
         end
     end
 
@@ -1327,7 +1351,7 @@ end
         set(h_all.popup_colormap,'Value',cm_ind);
         setColormap();
         
-        %swap zl and zl_inactive
+        %swap zl and zl_alpha
         zl_temp = zl;
         zl = zl_alpha;
         zl_alpha = zl_temp;
@@ -1431,6 +1455,9 @@ end
         if FPS>1000
             FPS = 1000;
             warning('Max FPS is 1000 due to timer precision');
+        elseif FPS<0.1
+            FPS = 0.1;
+            warning('Min FPS is 0.1 due to timer precision');
         end
         timePerFrame = round(1/FPS*1000)/1000; % limit to millisecond precision
         set(h_all.timer,'Period', timePerFrame);
@@ -1504,19 +1531,20 @@ end
             cellfun(@(n)sprintf('posData(:,%i)',n),num2cell(1:numel(paramsNames)),'UniformOutput',false),...
             'ignorecase')]);
         try
+            %%
             switch mode
                 case 'movie'
                     % Do nothing. UI should be hiden in this case.
                 case 'candidate'
                     filter_ind = cellfun(getFilterFun(candidateParams),candidateData,'UniformOutput',false); % get logical vector of applied filter
                     candidateData = cellfun(@(d,ind)d(ind,:),candidateData,filter_ind,'UniformOutput',false);% apply to data
-                    candidateDataFilter = cellfun(@(f_all,f_new)accumarray(find(f_all),f_new,size(f_all)),candidateDataFilter,filter_ind,'UniformOutput',false); % merge new filter with previous filters to keep track of relation to unfiltered data
+                    candidateDataFilter = cellfun(@(f_all,f_new)accumarray(find(f_all,numel(f_new)),f_new,size(f_all)),candidateDataFilter,filter_ind,'UniformOutput',false); % merge new filter with previous filters to keep track of relation to unfiltered data
                     allFramesCandidateData = [];
                 case 'refinement'
                     empty_ind = cellfun(@numel,refinementData)==0;
                     filter_ind = cellfun(getFilterFun(refinementParams),refinementData(~empty_ind),'UniformOutput',false);
                     refinementData(~empty_ind) = cellfun(@(d,ind)d(ind,:),refinementData(~empty_ind),filter_ind,'UniformOutput',false);
-                    refinementDataFilter(~empty_ind) = cellfun(@(f_all,f_new)accumarray(find(f_all),f_new,size(f_all)),refinementDataFilter(~empty_ind),filter_ind,'UniformOutput',false);
+                    refinementDataFilter(~empty_ind) = cellfun(@(f_all,f_new)accumarray(find(f_all,numel(f_new)),f_new,size(f_all)),refinementDataFilter(~empty_ind),filter_ind,'UniformOutput',false);
                     allFramesRefinementData = [];
                 case 'tracking'
                     filter_ind = feval(getFilterFun(trackingParams),trackingData);
@@ -1746,9 +1774,13 @@ end
                 % no localsiations to process
                 return
             case 'candidate'
-                %TODO
+                ind = ~cellfun(@isempty,candidateData);
+                posdata = cellfun(@(d,n)[d(:,1:2) + driftcand(n,:), n.*ones(size(d,1),1)],candidateData(ind),num2cell(find(ind)),'UniformOutput',false);
+                posdata = vertcat(posdata{:});
             case 'refinement'
-                %TODO
+                ind = ~cellfun(@isempty,refinementData);
+                posdata = cellfun(@(d,n)[d(:,1:2) + driftref(n,:), n.*ones(size(d,1),1)],refinementData(ind),num2cell(find(ind)),'UniformOutput',false);
+                posdata = vertcat(posdata{:});
             case 'tracking'
                 posdata = [trackingData(:,3:4) + drifttrack(trackingData(:,2),:),trackingData(:,2)]; % Remove any old drift correction
             case 'postproc'
@@ -1828,12 +1860,12 @@ end
         else
             %%
             hdl = scatter(ax,driftcalc(:,2), driftcalc(:,1),1,1:size(driftcalc,1));
-            title('Drift with respect to first frame');
-            xlabel('x (px)');
-            ylabel('y (px)');
-            axis image;
-            axis ij; % flip y-axis upside down
-            colorbar();
+            title(ax,'Drift with respect to first frame');
+            xlabel(ax,'x (px)');
+            ylabel(ax,'y (px)');
+            axis(ax,'image');
+            axis(ax,'ij'); % flip y-axis upside down
+            colorbar(ax);
         end
     end
 
@@ -1855,6 +1887,22 @@ end
             xpos = find(containsIsolated(datatab.Properties.VariableNames,'x'));
             ypos = find(containsIsolated(datatab.Properties.VariableNames,'y'));
             fpos = find(containsIsolated(datatab.Properties.VariableNames,'frame'));
+            
+            if isempty(fpos) && size(datatab.Variables,2)==3
+                % try to guess order of columns
+                data = datatab.Variables;
+                if issorted(data(:,1))
+                    % [frame, x, y]
+                    xpos = 2;
+                    ypos = 3;
+                    fpos = 1;
+                elseif issorted(data(:,3))
+                    % [x, y, frame]
+                    xpos = 1;
+                    ypos = 2;
+                    fpos = 3;
+                end                
+            end
             
             if ~isempty(xpos)&&~isempty(ypos)&&~isempty(fpos)
                 data = datatab.Variables;
@@ -1912,9 +1960,21 @@ end
                 % no localsiations to process
                 return
             case 'candidate'
-                %TODO
+                if islogical(driftold) && driftold
+                    driftold = driftcand;
+                end
+                ind = find(~cellfun(@isempty,candidateData));
+                candidateData(ind) = cellfun(@(d,drift)[d(:,1:2)+drift(:)', d(:,3:end)],candidateData(ind),num2cell(driftold(ind,:)-driftnew(ind,:),2),'UniformOutput',false);
+                driftcand = driftnew;
+                updateFrameDisplay();
             case 'refinement'
-                %TODO
+                if islogical(driftold) && driftold
+                    driftold = driftref;
+                end
+                ind = find(~cellfun(@isempty,refinementData));
+                refinementData(ind) = cellfun(@(d,drift)[d(:,1:2)+drift(:)', d(:,3:end)],refinementData(ind),num2cell(driftold(ind,:)-driftnew(ind,:),2),'UniformOutput',false);
+                driftref = driftnew;
+                updateFrameDisplay();
             case 'tracking'
                 if islogical(driftold) && driftold
                     driftold = drifttrack;
@@ -1975,8 +2035,11 @@ end
         end
         if nargin>2 && numel(sthist_zParam)==1 && sthist_zParam
             sthist_zParam = get(h_all.popup_reconstruct_mean,'Value');
+            params = get(h_all.popup_reconstruct_mean,'String');
+            sthist_title = ['Reconstruction ',params{sthist_zParam}];
         else
             sthist_zParam = false;
+            sthist_title = 'Reconstruction';
         end
         sthist_z = [];
         sthist_size = size(movie);
@@ -2142,9 +2205,126 @@ end
         end
         
         [sthist_map{:}] = reconstructSMLM(locData,sthist_locprec,sthist_weight,sthist_superRes,sthist_size,sthist_mode);
-                
-        TNTvisualizer(sthist_map,struct('title','Reconstruction','metadata',struct('pixelsize',pixelSize/sthist_superRes*1e-3,'pixelsize_unit',[char(181) 'm'])));
+        
+        TNTvisualizer(sthist_map,struct('title',sthist_title,'metadata',struct('pixelsize',pixelSize/sthist_superRes*1e-3,'pixelsize_unit',[char(181) 'm'])));
 
+    end
+
+%% MIET conversion
+    function callback_importMIETcurve(~,~)
+        if isfield(mietcurve,'file') && exist(mietcurve.file,'file')
+            [importFile,importPath] = uigetfile({'*.mat';'*.csv';'*.tsv';'*.xlsx'}, 'Import MIET curve...',mietcurve.file);            
+        else
+            [importFile,importPath] = uigetfile({'*.mat';'*.csv';'*.tsv';'*.xlsx'}, 'Import MIET curve...');
+        end
+        
+        if isnumeric(importFile)
+            return
+        else
+            try
+                if endsWith(importFile,'.mat')
+                    mietcurve = load(fullfile(importPath,importFile));
+                else
+                    % csv or xls file
+                    wstate = warning('off','MATLAB:table:ModifiedAndSavedVarnames');
+                    datatab = readtable(fullfile(importPath,importFile),'ReadVariableNames',true);
+                    warning(wstate);
+                    
+                    % try to find columns
+                    containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['(?<![a-zA-Z0-9])' x '(?![a-zA-Z0-9])'],'forcecelloutput'));
+                    zpos = find(containsIsolated(datatab.Properties.VariableNames,'z'));
+                    lt = find(containsIsolated(datatab.Properties.VariableNames,'tau'));
+                    assert(~isempty(zpos) && ~isempty(lt));
+                    mietcurve = struct('z_theo',datatab{:,zpos},'abs_ltr',datatab{:,lt});
+                end
+            catch
+                warning('Cannot read MIET curve from file (%s).', importFile);
+                return
+            end
+        end
+        if isstruct(mietcurve) && isfield(mietcurve,'calibrationCurve') && ~isempty(mietcurve.calibrationCurve)
+            % MIET curve calculated with the MIET-GUI
+            mietcurve = struct('z_theo',mietcurve.calibrationCurve(:,1),'abs_ltr',mietcurve.calibrationCurve(:,2));
+        end
+        
+        % set UI
+        if ~isempty(mietcurve) && isfield(mietcurve,'z_theo') && ~isempty(mietcurve.z_theo) && isfield(mietcurve,'abs_ltr') && ~isempty(mietcurve.abs_ltr)
+            mietcurve.file = fullfile(importPath,importFile);
+            set(h_all.edit_MIET_file,'String',importFile);
+            set(h_all.edit_MIET_file,'Tooltip',mietcurve.file);
+            
+            set(h_all.but_MIET_show,'Enable','on');
+            
+            if any(strcmp(postprocParams,'lt-tau'))
+                set(h_all.cb_MIET_allLoc,'Enable','on');
+                if strcmpi(mode,'postproc')
+                    set(h_all.but_MIET_apply,'Enable','on');
+                end
+            end
+        else
+            set(h_all.but_MIET_show,'Enable','off');
+            set(h_all.cb_MIET_allLoc,'Enable','off');
+            set(h_all.but_MIET_apply,'Enable','off');
+            
+            set(h_all.edit_MIET_file,'String',['Invalid file: ' importFile]);
+        end
+        
+        % display information about the sample if available from mat file
+        hasSample = isstruct(mietcurve) && isfield(mietcurve,'sample');
+        if hasSample && isfield(mietcurve.sample,'lambda')
+            set(h_all.edit_MIET_lambda,'String',sprintf('%.0f',mietcurve.sample.lambda));
+        else
+            set(h_all.edit_MIET_lambda,'String','NaN');
+        end
+        if hasSample && isfield(mietcurve.sample,'QY')
+            set(h_all.edit_MIET_QY,'String',sprintf('%.3f',mietcurve.sample.QY));
+        else
+            set(h_all.edit_MIET_QY,'String','NaN');
+        end
+        if hasSample && isfield(mietcurve.sample,'tau_free')
+            set(h_all.edit_MIET_tau,'String',sprintf('%.2f',mietcurve.sample.tau_free));
+        else
+            set(h_all.edit_MIET_tau,'String','NaN');
+        end
+    end
+
+    function callback_applyMIETcurve(~,~)
+        if ~isempty(mietcurve)
+            applyToAll  = get(h_all.cb_MIET_allLoc,'Value');
+            
+            lt_idx = find(strcmpi(postprocParams,'lt-tau'),1);
+            z_idx = find(strcmpi(postprocParams,'z'),1);
+            % Take the MIET curve from 0 to the minium the first maximum
+            [~,lt_max_pos] = max(mietcurve.abs_ltr);
+            ind = mietcurve.z_theo>0 & mietcurve.z_theo<=mietcurve.z_theo(lt_max_pos);
+            LT2z = @(lt)interp1(mietcurve.abs_ltr(ind),mietcurve.z_theo(ind),lt);
+            
+            if applyToAll
+                postprocDataUnfiltered(:,z_idx) = LT2z(postprocDataUnfiltered(:,lt_idx));
+            else
+                if all(postprocDataUnfiltered(:,z_idx)==0)
+                    % change default from 0 to nan
+                    postprocDataUnfiltered(:,z_idx)=nan;
+                end
+                postprocDataUnfiltered(postprocDataFilter,z_idx) = LT2z(postprocDataUnfiltered(postprocDataFilter,lt_idx));
+            end
+            postprocData=postprocDataUnfiltered(postprocDataFilter,:);
+            
+            % Reapply current drift correction (also updates frame display)
+            applyDrift(true,false);
+        else
+            warning('No MIET curve loaded.');
+        end
+    end
+
+    function callback_showMIETcurve(~,~)
+        fig = figure;
+        ax = axes(fig);
+        %%
+        hdl = plot(ax,mietcurve.z_theo,mietcurve.abs_ltr);
+        ylabel(ax,'lifetime (ns)');
+        xlabel(ax,'height (nm)');
+        title(ax,'MIET curve');
     end
 
 %% I/O
@@ -2423,15 +2603,18 @@ end
             set(h_all.but_play,'Enable','off');
             return;
         end
-        if importMode && ischar(fileORmovie) && ~endsWith(fileORmovie,'.mat')
+        if importMode && ischar(fileORmovie)
             [importPlugins,importFormats] = loadImportPlugins();
             
-            if isfile(fileORmovie)
+            if isfile(fileORmovie)    
+                warnstate = warning('backtrace');
+                warning off backtrace;
                 importPlugin = selectImportPlugin(fileORmovie,importPlugins);
+                warning(warnstate);
                 if importPlugin>0
                     importPlugin = importPlugins(importPlugin);
                 else
-                    error('Unsupported file type.');
+                    return;
                 end
             end
             [~,filename,ext] = fileparts(fileORmovie);
@@ -2461,7 +2644,8 @@ end
         elseif(isnumeric(fileORmovie)||iscell(fileORmovie)) % movie OR FLIM movie was given
             movie = fileORmovie;
         elseif (ischar(fileORmovie)||isstruct(fileORmovie)) % path was given
-            if ischar(fileORmovie) && ~endsWith(fileORmovie,'.mat','IgnoreCase',true)
+            if ischar(fileORmovie) && ~endsWith(fileORmovie,'.mat','IgnoreCase',true) ...
+                || endsWith(fileORmovie,'.mat','IgnoreCase',true) && ~ismember('filename_movie',{whos('-file',fileORmovie).name})
                 % Not a TNT file. Try importMode for import with Plugin
                 importMode = true;
                 loadMovie(fileORmovie)
@@ -2719,6 +2903,7 @@ end
                 nax(1).Position(3:4) = max(h_all.axes.Position(3:4));
                 nax(1).Position(1:2) = (nax(1).Parent.InnerPosition(4)-nax(1).Position(4))/2;
                 h_all.axes.Units = temp_unit;
+                nax.Units = 'normalized';
                 % Recreate colorbar if visible to keep it interactive
                 if isgraphics(imagehandle.Parent.Colorbar,'Colorbar')
                     colorbar(nax(1),'Location',imagehandle.Parent.Colorbar.Location);
@@ -2727,6 +2912,7 @@ end
                 delete(findall(nax,'Tag','TNTscalebar_Line','-or','Tag','TNTscalebar_Text'));
                 if ~isempty(sb_obj) && strcmpi(sb_obj.Visible,'on')
                     TNTscalebar(findobj(nax,'Type','axes'),'Pixelsize',sb_obj.Pixelsize,'Unit',sb_obj.Unit);
+                    TNTscalebar.addToogle(nfig);
                 end
                 nfig.Visible = 'on';
                 return
@@ -3033,6 +3219,20 @@ if(percentOfData<100)
         data2 = data2(minIdx:maxIdx);
         data1 = data1(ord);
         data1 = data1(minIdx:maxIdx);
+    end
+end
+% if the data are integer and the number of discrete bins is less than double
+% nbins use the discrete bins of the data to avoid binning artefacts
+if ~isempty(data1) && all(isnan(data1)|data1==round(data1))
+    tempbin = max(data1)-min(data1)+1;
+    if 2*nbins(1)>tempbin
+        nbins(1) = tempbin;
+    end
+end
+if is2D&& ~isempty(data2) && all(isnan(data2)|data2==round(data2))
+    tempbin = max(data2)-min(data2)+1;
+    if 2*nbins(2)>tempbin
+        nbins(2) = tempbin;
     end
 end
 
