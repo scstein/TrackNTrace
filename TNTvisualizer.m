@@ -2718,13 +2718,20 @@ end
     function loadMovieWithPlugin(TNTdata,TNTfile)
         [~,fname,ext] = fileparts(TNTdata.filename_movie);
         if ~exist(TNTdata.filename_movie,'file')
-            [filename, path] = uigetfile({['*' ext],'Movie files';'*.*','All files'},['File ' fname ext ' not found.'],TNTdata.filename_movie);
-            if isfloat(filename)
-                movie = zeros(TNTdata.movieSize);
-                warning('File not found: %s',TNTdata.filename_movie);
-                return;                
+            % file not found: check folder of TNT file
+            tntfolder = fileparts(TNTfile);
+            if exist([tntfolder,filesep,filename],'file')
+                TNTdata.filename_movie = [tntfolder,filesep,fname,ext];
             else
-                TNTdata.filename_movie = [path,filename];
+                % file still not found: ask user for file path
+                [filename, path] = uigetfile({['*' ext],'Movie files';'*.*','All files'},['File ' fname ext ' not found.'],TNTdata.filename_movie);
+                if isfloat(filename)
+                    movie = zeros(TNTdata.movieSize);
+                    warning('File not found: %s',TNTdata.filename_movie);
+                    return;
+                else
+                    TNTdata.filename_movie = [path,filename];
+                end
             end
         end
         try
