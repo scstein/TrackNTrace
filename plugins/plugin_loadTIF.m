@@ -42,7 +42,8 @@ function [movie,metadata] = read_tiff_helper(~,filename_movie, frame_range, fram
     movie = read_tiff(filename_movie, false, frame_range);
     % Bin movie if requested.
     if nargin>=4 && ~isempty(frame_binning) && frame_binning > 1
-        movie(:,:,end+1:size(movie,3):frame_binning) = 0; % Pad the 3rd dimensions with zeros to ensure a multiple of the binning
+        frame_binning = min(frame_binning,size(movie,3));
+        movie(:,:,(end+1):(frame_binning*ceil(end/frame_binning))) = 0; % Pad the 3rd dimensions with zeros to ensure a multiple of the binning
         movie = permute(sum(reshape(movie,size(movie,1),size(movie,2),frame_binning,size(movie,3)/frame_binning),3),[1 2 4 3]);
     end
     movie = {movie};
