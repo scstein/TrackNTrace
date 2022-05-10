@@ -213,7 +213,7 @@ end
 
 
 Resolution = 1e9*head.MeasDesc_Resolution;
-Ngate   = head.MeasDesc_Ngate;
+Ngate   = double(head.MeasDesc_Ngate);
 maxch_n = head.MeasDesc_Nchan; % Only one channel
 
 if (islogical(timegate) && ~timegate) || isempty(mf.dt)
