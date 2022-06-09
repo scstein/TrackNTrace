@@ -520,7 +520,7 @@ for iMovie=1:numel(list_filenames_TNTdata)
     end
     
     % Load options and data needed for processing
-    load(list_filenames_TNTdata{iMovie},'postprocOptions');
+    load(list_filenames_TNTdata{iMovie},'postprocOptions','importOptions');
     
     % Compute trajectories
     fprintf('######\nTNT: Postproccessing tracks in movie %s.\n',filename_movie);
