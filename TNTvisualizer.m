@@ -1422,7 +1422,7 @@ end
     % Update image gamma. Gamma always acts only the intensity component,
     % not on the lifetime.
     function gammaCallback(hObj, ~)
-        callback_FloatEdit(hObj,[], 1e-3, 1e3);
+        callback_FloatEdit(hObj,[], 1e-2, 1e3);
         value = str2double(get(hObj,'String'));
         if ~isnan(value)
             old_gamma = img_gamma;
