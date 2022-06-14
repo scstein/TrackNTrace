@@ -131,39 +131,33 @@ end
 importMode = false;
 importFormats = {};
 importPlugin = [];
-if nargin==0||(nargin==1 && ischar(movieOrTNTfile) && exist(movieOrTNTfile,'dir'))
+
+if nargin==0 || ~(isnumeric(movieOrTNTfile)||iscell(movieOrTNTfile))
+    % If we do not have a movie, prompt for file intput
+    filename = 0;
+    path = '';
     if nargin==0
-        [filename, path,filterindex] = uigetfile({'*.mat;*.tif','Visualizer files';'*.*','All files'},'Select movie or TNT file to visualize.');
-    else
+        % no input
+        movieOrTNTfile = '';
+    elseif nargin==1 && ischar(movieOrTNTfile) && exist(movieOrTNTfile,'dir')
+        % input is folder
         if ~endsWith(movieOrTNTfile,filesep)
             movieOrTNTfile(end+1) = filesep;
         end
-        [filename, path,filterindex] = uigetfile({'*.mat;*.tif','Visualizer files';'*.*','All files'},'Select movie or TNT file to visualize.',movieOrTNTfile);        
+    end
+    if exist(movieOrTNTfile,'file')==2
+        [path,filename,ex] = fileparts(movieOrTNTfile);
+        path = [path filesep ex];
+    else
+        [filename, path] = selectFile();
     end
     if isfloat(filename)
-        % User clicked cancel
         importMode = true;
         movieOrTNTfile = '';
-    else 
-        [~,~,ext] = fileparts(filename);
-        if filterindex == 1
-            switch ext
-                case '.tif'
-                    movieOrTNTfile = [path,filename];
-                case '.mat'
-                    movieOrTNTfile = [path,filename];
-                otherwise
-                    warning('Only movies or TNT files are supported for loading!');
-                    importMode = true;
-                    movieOrTNTfile = [path,filename];
-            end
-        else
-            importMode = true;
-            movieOrTNTfile = [path,filename];
-        end
+    else
+        movieOrTNTfile = [path,filename];
     end
 end
-
 
 % -- Preparing the GUI --
 h_main = openfig(['subfun',filesep,'TNTvisualizer_Layout.fig'],'new','invisible');
@@ -2790,36 +2784,39 @@ end
         loadMovie(tempmovie);
         initPlot();
     end
-
-    function callback_selectFile(~,~)
-        modifiers = get(h_main,'currentModifier');
-        ctrlIsPressed = ismember('control',modifiers);
-        
+    function [newMovie, newPath] = selectFile()
         if isempty(importFormats)
             [~,importFormats] = loadImportPlugins();
             importFormats{1,1} = [importFormats{1,1},';*.mat'];
             importFormats = [importFormats;{'*.mat','Visualizer files';'*.*','All files'}];
         end
-        newpath = pwd;
+        newPath = pwd;
         if ~isempty(movieOrTNTfile)
-            [newpath,~,~] = fileparts(movieOrTNTfile);
+            [newPath,~,~] = fileparts(movieOrTNTfile);
         end
-        [newMovie, newpath] = uigetfile(importFormats,'Select files to load',[newpath,filesep]);
+        [newMovie, newPath] = uigetfile(importFormats,'Select movie or TNT file to visualize',[newPath,filesep]);
+    end
+
+    function callback_selectFile(~,~)
+        modifiers = get(h_main,'currentModifier');
+        ctrlIsPressed = ismember('control',modifiers);
+        
+        [newMovie, newPath] = selectFile();
         if ~isfloat(newMovie)
             if endsWith(newMovie,'.mat') %% TNT file
                 if ctrlIsPressed
-                    TNTvisualizer([newpath,newMovie]);
+                    TNTvisualizer([newPath,newMovie]);
                 else
                     enabledUI = findall(h_main,'Enable','on','Type','UIControl','-not','Style','text');
                     set(enabledUI,'Enable','off'); % Disable the old GUI since it will be deleted anyway
-                    TNTvisualizer([newpath,newMovie]);
+                    TNTvisualizer([newPath,newMovie]);
                     delete(h_main);
                 end
             elseif ctrlIsPressed %% import plugin
-                TNTvisualizer([newpath,newMovie]);
+                TNTvisualizer([newPath,newMovie]);
             else
-                movieOrTNTfile = [newpath,newMovie];
-                path = newpath;
+                movieOrTNTfile = [newPath,newMovie];
+                path = newPath;
                 loadMovie(movieOrTNTfile);
                 resizeGUIforMode();
             end
