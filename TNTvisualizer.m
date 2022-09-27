@@ -147,7 +147,8 @@ if nargin==0 || ~(isnumeric(movieOrTNTfile)||iscell(movieOrTNTfile))
     end
     if exist(movieOrTNTfile,'file')==2
         [path,filename,ex] = fileparts(movieOrTNTfile);
-        path = [path filesep ex];
+        filename = [filename ex];
+        path = [path filesep];
     else
         [filename, path] = selectFile();
     end
@@ -241,6 +242,9 @@ if importMode
     set(h_all.edit_tgStart, 'Callback', {@callback_IntEdit,0,inf});
     set(h_all.edit_tgEnd, 'Callback', {@callback_IntEdit,0,inf});
     set(h_all.button_showTCSPC, 'Callback', @callback_showTCSPC);
+    
+    % disable player GUI 
+    set(findall(h_all.panel_player,'Enable','on','Type','UIControl','-not','Style','text'),'Enable','off');
     
 else
     createTabs(h_all.panel_tabgroup,h_all.panel_tabs); % Create tabbed UI
@@ -822,9 +826,6 @@ end
             yl = [0.5,size(movie,1)+0.5];
             firstImg = movie(:,:,1).^img_gamma;
             zl = [min(firstImg(:)), max(firstImg(:))];
-            if zl(1)==zl(2)
-                zl = zl + [0 1];
-            end
             if ~isempty(movieLT)
                 firstImg = movieLT(:,:,1);
                 zl_alpha = [min(firstImg(:)), max(firstImg(:))];% remeber zl when switching to FLIM
@@ -832,12 +833,23 @@ end
                     zl_alpha = zl_alpha + [0 1];
                 end
             end
+            if zl(1)==zl(2)
+                zl = zl + [0 1];
+            end
             
             plotFrame(frame);
             
             xlim(h_all.axes,xl);
             ylim(h_all.axes,yl);
+            if use_flim
+                zl_temp = zl;
+                zl = zl_alpha;
+                zl_alpha = zl_temp;
+            end
             caxis(h_all.axes,zl);
+            if ~isempty(movieLT)
+                alim(h_all.axes,zl_alpha);
+            end
         end
         
         updateTopText();
@@ -1153,6 +1165,9 @@ end
         end
         if minval<=maxval % this also excudes NaNs
             zl = double([minval, maxval]);
+            if zl(1)==zl(2)
+                zl = zl + [-1 1]*eps(zl(1));
+            end
             if use_flim && ctrlIsPressed
                 alim(h_all.axes,zl);
             else
@@ -1324,7 +1339,7 @@ end
             stop(h_all.timer);
         end
         
-        use_flim = ~use_flim;
+        use_flim = get(h_all.cb_flim,'Value');
               
         if use_flim
             % Set up the image and axis for FLIM plotting
@@ -2593,8 +2608,7 @@ end
     
     function loadMovie(fileORmovie,num_argin)
         if isempty(fileORmovie)
-            set(h_all.slider,'Enable','off');
-            set(h_all.but_play,'Enable','off');
+            set(findall(h_all.panel_player,'Enable','on','Type','UIControl','-not','Style','text'),'Enable','off');
             return;
         end
         if importMode && ischar(fileORmovie)
@@ -2692,19 +2706,30 @@ end
             if iscell(movie) % FLIM movie
                 if numel(movie)>1
                     movieLT = movie{2};
+                else
+                    movieLT = [];
                 end
                 movie = movie{1};
-                if ~isempty(movieLT)
-                    set(h_all.cb_flim, 'Enable', 'on');
+                if isempty(movie)
+                    set(findall(h_all.panel_player,'Enable','on','Type','UIControl','-not','Style','text'),'Enable','off');
+                else
+                    set(findall(h_all.panel_player,'Enable','off','Type','UIControl','-not','Style','text'),'Enable','on');
+                    
+                    if isempty(movieLT)
+                        set(h_all.cb_flim, 'Enable', 'off');
+                        set(h_all.cb_flim, 'Value', false);
+                        flimCallback([],[]);
+                    end
+                    
+                    if(size(movie,3)>1)
+                        set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(movie,3) 1/size(movie,3)],'Callback', @sliderCallback);
+                        set(h_all.slider,'Enable','on');
+                        set(h_all.but_play,'Enable','on');
+                    else % For single images we disable slider and play button
+                        set(h_all.slider,'Enable','off');
+                        set(h_all.but_play,'Enable','off');
+                    end
                 end
-            end
-            if(size(movie,3)>1)
-                set(h_all.slider,'Value',1, 'Min',1,'Max',size(movie,3),'SliderStep',[1/size(movie,3) 1/size(movie,3)],'Callback', @sliderCallback);
-                set(h_all.slider,'Enable','on');
-                set(h_all.but_play,'Enable','on');
-            else % For single images we disable slider and play button
-                set(h_all.slider,'Enable','off');
-                set(h_all.but_play,'Enable','off');
             end
         end
     end
