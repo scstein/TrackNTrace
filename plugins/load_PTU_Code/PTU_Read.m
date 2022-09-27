@@ -28,6 +28,8 @@ rtTimeHarp260NT3 = hex2dec('00010305');
 rtTimeHarp260NT2 = hex2dec('00010205');
 rtTimeHarp260PT3 = hex2dec('00010306');
 rtTimeHarp260PT2 = hex2dec('00010206');
+rtMultiHarpT3    = hex2dec('00010307');
+rtMultiHarpT2    = hex2dec('00010207');
 
 
 if (nargin<3)||(isempty(head))
@@ -100,7 +102,7 @@ if ~isempty(head)
                     
                     ind  = ((chan==15) & bitand(tcspc,15)==0);
                     
-                case {rtHydraHarpT3, rtHydraHarp2T3, rtTimeHarp260NT3, rtTimeHarp260PT3}
+                case {rtHydraHarpT3, rtHydraHarp2T3, rtTimeHarp260NT3, rtTimeHarp260PT3, rtMultiHarpT3}
                     
                     WRAPAROUND=1024;
 
@@ -126,7 +128,7 @@ if ~isempty(head)
 
                     special = special.*chan;
                                         
-                case {rtHydraHarp2T2, rtTimeHarp260NT2, rtTimeHarp260PT2}
+                case {rtHydraHarp2T2, rtTimeHarp260NT2, rtTimeHarp260PT2, rtMultiHarpT2}
 
                     WRAPAROUND=33554432;
                     
