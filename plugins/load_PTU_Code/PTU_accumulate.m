@@ -1,4 +1,4 @@
-function [varargout] = PTU_accumulate(inputfile, outputs, framebinning, pixelbinning, timegate,BidirectShift)
+function [varargout] = PTU_accumulate(inputfile, outputs, framebinning, pixelbinning, timegate, BidirectShift, channelmap)
 % function [varargout] = PTU_accumulate(inputfile, outputs, framebinning, pixelbinning, timegate,BidirectShift)
 % PTU_accumulate Generates the requsted outputs by accumulating the photons from
 % the inputfile using an intermediate index (see PTU_index).
@@ -32,12 +32,18 @@ function [varargout] = PTU_accumulate(inputfile, outputs, framebinning, pixelbin
 %                bidirectional scans. Can be false/0 for no shift, a float
 %                with the shift in pixels or true (logical) to determine
 %                the shift automatically.
+% channelmap   - A vector of logicals with true for the channels to include. 
+%                Disabled channels are removed from the output. By default all 
+%                non-empty channels are included.
+%              - Alternatively, channels can be merged by providing a vector of
+%                indeces. E.g. [1 0 2 2] excludes the second channel and merges
+%                the third and fourth channel.
 %
 % (C) Christoph Thiele, 2020.
 
 %%
 % inputfile = 'W:\Christoph\190426_Silicarhodamine_beads\data.sptw\Vero-cells_Alexa647_11.ptu';
-narginchk(2,6);
+narginchk(2,7);
 if nargin < 3 || isempty(framebinning)
     framebinning = 1;
 end
@@ -196,12 +202,31 @@ Resolution = max(1e9*head.MeasDesc_Resolution);
 % SyncRate   = 1./head.MeasDesc_GlobalResolution;
 Ngate   = ceil(1e9*head.MeasDesc_GlobalResolution./Resolution);
 
-if isfield(head,'MeasDesc_Nchan')
-    maxch_n = head.MeasDesc_Nchan;
-else
-    dind    = double(unique(mf.im_chan(1:min(1e6,mysize(mf,'im_chan',1)),1)));
-    maxch_n = numel(dind);
-    head.MeasDesc_Nchan = maxch_n;
+%
+dind = double(unique(mf.im_chan(1:min(1e6,mysize(mf,'im_chan',1)),1)));
+if nargin < 7 || isempty(channelmap)
+    if isfield(head,'MeasDesc_Nchan')
+        maxch_n = head.MeasDesc_Nchan;
+        if maxch_n ~= numel(dind)
+            warning('Channel number in header does not match with channel indecs.');
+        end
+    else
+        maxch_n = numel(dind);
+        head.MeasDesc_Nchan = maxch_n;
+    end
+    channelmap = zeros(max(dind),1);
+    channelmap(dind) = 1:numel(dind);
+else % determine number of output channels from channelmap argument
+    if islogical(channelmap)
+        % one channel for each true channelmap 
+        maxch_n = sum(channelmap);
+        channelmap = find(channelmap);
+    else
+        % number of channels is maxium index in channelmap
+        maxch_n = max(channelmap);
+    end
+    % extend to number of channels with zeros
+    channelmap(end+1:max(dind)) = 0;
 end
 
 if nargin>4 && ~isempty(timegate)
@@ -283,6 +308,7 @@ else
     pyx_lookup = @(y,x)[py_lookup(y) px_lookup(x)];
 end
 
+c_lookup = cast(channelmap(:),sub_class);
 
 % Add the end of the last frame, select the binned frame_indeces and apply 
 % the selection of first and last frame.
@@ -317,7 +343,7 @@ while cframe<=lastframe_binned
     subs = [
             pyx_lookup(mf.im_line(ind,1),...
                        mf.im_col(ind,1))...
-            cast(mf.im_chan(ind,1),sub_class),...
+            c_lookup(mf.im_chan(ind,1)),...
             frame_fun(mf.im_frame(ind,1))];
         
     if accum_arrival
