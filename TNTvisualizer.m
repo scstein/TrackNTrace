@@ -1929,7 +1929,7 @@ end
                 return
             end
             
-            %containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['(?<![a-zA-Z0-9])' x '(?![a-zA-Z0-9])'],'forcecelloutput'));
+            %containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['(?<![a-zA-Z0-9_])' x '(?![a-zA-Z0-9_])'],'forcecelloutput'));
             
             xpos = find(contains(datatab.Properties.VariableNames,'x'));
             if isempty(xpos)
@@ -1964,8 +1964,7 @@ end
             
             if any(contains(datatab.Properties.VariableNames, "nm"))
                 % convert nm to px
-                pixelSize = str2double(get(h_all.edit_reconstruct_pixelsize, 'String')); %nm
-                datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} = datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} ./ pixelSize;
+                datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} = datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} ./ metadata.pixelsize;
                 %disp("Converted nm to px");
             end
 
