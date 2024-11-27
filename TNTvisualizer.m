@@ -1929,11 +1929,22 @@ end
                 return
             end
             
-            containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['(?<![a-zA-Z0-9])' x '(?![a-zA-Z0-9])'],'forcecelloutput'));
+            %containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['(?<![a-zA-Z0-9])' x '(?![a-zA-Z0-9])'],'forcecelloutput'));
             
-            xpos = find(containsIsolated(datatab.Properties.VariableNames,'x'));
-            ypos = find(containsIsolated(datatab.Properties.VariableNames,'y'));
-            fpos = find(containsIsolated(datatab.Properties.VariableNames,'frame'));
+            xpos = find(contains(datatab.Properties.VariableNames,'x'));
+            if isempty(xpos)
+                xpos = find(contains(datatab.Properties.VariableNames,'X'));
+            end
+
+            ypos = find(contains(datatab.Properties.VariableNames,'y'));
+            if isempty(ypos)
+                ypos = find(contains(datatab.Properties.VariableNames,'Y'));
+            end
+
+            fpos = find(contains(datatab.Properties.VariableNames,'frame'));
+            if isempty(fpos)
+                fpos = find(contains(datatab.Properties.VariableNames,'Frame'));
+            end
             
             if isempty(fpos) && size(datatab.Variables,2)==3
                 % try to guess order of columns
@@ -1951,6 +1962,13 @@ end
                 end                
             end
             
+            if any(contains(datatab.Properties.VariableNames, "nm"))
+                % convert nm to px
+                pixelSize = str2double(get(h_all.edit_reconstruct_pixelsize, 'String')); %nm
+                datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} = datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} ./ pixelSize;
+                %disp("Converted nm to px");
+            end
+
             if ~isempty(xpos)&&~isempty(ypos)&&~isempty(fpos)
                 data = datatab.Variables;
                 driftcalc = interp1(data(:,fpos),data(:,[xpos ypos]),(1:size(driftcalc,1)),'spline','extrap');
