@@ -89,12 +89,16 @@ if strcmp(name(end-2:end),'ptu')
             im_frame = [];
             im_frame_index = [];            
         elseif head.TNTident == 6 ...% SingleFrame Scan (Piezo) 
-            || head.TNTident == 9    % MultiFrame Scan (FLIMbee)
-            
+            || head.TNTident == 9 ...% MultiFrame Scan (FLIMbee)
+            || head.TNTident == 1    % SingleFrame Scan (Old Piezo)
+
             nx    = head.TNTpixX;
             ny    = head.TNTpixY;
             
             if head.TNTident == 6 % Piezo measurment single frame
+                nz = 1;
+                BidirectShift = false; % disable shift correction
+            elseif head.TNTident == 1 % Piezo measurment single frame
                 nz = 1;
                 BidirectShift = false; % disable shift correction
             elseif isfield(head,'ImgHdr_MaxFrames')

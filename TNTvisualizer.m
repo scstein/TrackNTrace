@@ -342,6 +342,7 @@ set(h_all.but_showList, 'Callback', @showList);
 set(h_all.but_exportList, 'Callback', @exportList);
 set(h_all.but_exportWS, 'Callback', @exportWS);
 set(h_all.but_resetFilter, 'Callback', @resetFilter);
+set(h_all.but_exportThunderStorm, 'Callback', @exportThunderStorm);
 
 % Reconstruction panel
 set(h_all.but_reconstruct,'Callback',@callback_reconstruct);
@@ -1721,6 +1722,43 @@ end
         assignin('base','TNT_metaData',metadata);
             
     end
+
+    function exportThunderStorm(~,~)
+        %Tunder Storm need positions in [nm]
+        TSpixSize = metadata.pixelsize*1e3;
+        modifiers = get(h_main,'currentModifier');
+        ctrlIsPressed = ismember('control',modifiers);
+        showFiltered = ctrlIsPressed;     
+        
+        % export to file
+        [exportFile,exportPath] = uiputfile({'*.csv'}, 'Export data...');
+        
+        if ~isnumeric(exportFile)
+            exportFile = fullfile(exportPath,exportFile);
+            
+            [data,~,header] = generateList(mode,showFiltered);
+            data = array2table(data,'VariableNames',matlab.lang.makeValidName(header));
+
+            if isempty(data)
+                fprintf('No localizations found to export.\n');
+                return
+            end
+            
+            if ismember('nphoton',data.Properties.VariableNames)
+                TStable = table(data.Frame, data.x*TSpixSize,...
+                    data.y*TSpixSize,data.z,data.nphoton, ...
+                    'VariableNames',{'frame';'x [nm]';'y [nm]';'z [nm]';'nphoton'});
+            else
+                TStable = table(data.Frame, data.x*TSpixSize,...
+                    data.y*TSpixSize,data.z, ...
+                    'VariableNames',{'frame';'x [nm]';'y [nm]';'z [nm]'});
+            end
+        end
+        % writetable is working but very slow and requires sanitisation
+        % of paramNames
+        writetable(TStable,exportFile,'Delimiter',',','FileType','text');
+    end
+
     function exportList(~,~)
         modifiers = get(h_main,'currentModifier');
         ctrlIsPressed = ismember('control',modifiers);
@@ -1891,7 +1929,7 @@ end
                 return
             end
             
-            containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['(?<![a-zA-Z0-9])' x '(?![a-zA-Z0-9])'],'forcecelloutput'));
+            containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['((?<![a-zA-Z0-9])|(?<=drift))' x '(?![a-zA-Z0-9])'],'forcecelloutput'));
             
             xpos = find(containsIsolated(datatab.Properties.VariableNames,'x'));
             ypos = find(containsIsolated(datatab.Properties.VariableNames,'y'));
@@ -1913,6 +1951,12 @@ end
                 end                
             end
             
+            if any(contains(datatab.Properties.VariableNames, "nm"))
+                % convert nm to px
+                datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} = 1e-3 .* datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} ./ metadata.pixelsize;
+                %disp("Converted nm to px");
+            end
+
             if ~isempty(xpos)&&~isempty(ypos)&&~isempty(fpos)
                 data = datatab.Variables;
                 driftcalc = interp1(data(:,fpos),data(:,[xpos ypos]),(1:size(driftcalc,1)),'spline','extrap');
