@@ -1929,22 +1929,11 @@ end
                 return
             end
             
-            %containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['(?<![a-zA-Z0-9_])' x '(?![a-zA-Z0-9_])'],'forcecelloutput'));
+            containsIsolated = @(str,x)~cellfun(@isempty,regexpi(str, ['((?<![a-zA-Z0-9])|(?<=drift))' x '(?![a-zA-Z0-9])'],'forcecelloutput'));
             
-            xpos = find(contains(datatab.Properties.VariableNames,'x'));
-            if isempty(xpos)
-                xpos = find(contains(datatab.Properties.VariableNames,'X'));
-            end
-
-            ypos = find(contains(datatab.Properties.VariableNames,'y'));
-            if isempty(ypos)
-                ypos = find(contains(datatab.Properties.VariableNames,'Y'));
-            end
-
-            fpos = find(contains(datatab.Properties.VariableNames,'frame'));
-            if isempty(fpos)
-                fpos = find(contains(datatab.Properties.VariableNames,'Frame'));
-            end
+            xpos = find(containsIsolated(datatab.Properties.VariableNames,'x'));
+            ypos = find(containsIsolated(datatab.Properties.VariableNames,'y'));
+            fpos = find(containsIsolated(datatab.Properties.VariableNames,'frame'));
             
             if isempty(fpos) && size(datatab.Variables,2)==3
                 % try to guess order of columns
@@ -1964,7 +1953,7 @@ end
             
             if any(contains(datatab.Properties.VariableNames, "nm"))
                 % convert nm to px
-                datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} = datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} ./ metadata.pixelsize;
+                datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} = 1e-3 .* datatab{:,[datatab.Properties.VariableNames(xpos) datatab.Properties.VariableNames(ypos)]} ./ metadata.pixelsize;
                 %disp("Converted nm to px");
             end
 
