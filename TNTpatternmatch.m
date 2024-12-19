@@ -231,8 +231,9 @@ initgui()
         for fn = infile(:)
             try
                 outfiles{end+1} = applyPM([path filesep fn{1}]);
-            catch
+            catch err
                 fprintf('TNT: Error proccessing file: %s.\n', fn{1});
+                disp( getReport( err, 'extended', 'hyperlinks', 'on' ) )
             end
         end
         set(enabledUI,'Enable','on');
@@ -344,7 +345,7 @@ initgui()
         % fQMLE = exp(QMLE)./(sum(exp(QMLE),2)); % P(S1)/(P(S1)+P(S2))
         fQMLE = exp(QMLE-mean(QMLE,2))./(sum(exp(QMLE-mean(QMLE,2)),2)); % Avoids nans due to overflowing floats
         
-        newParamDescription = [{'pm-id','pm-pmax'} arrayfun(@(n)sprintf('pm-p%i',n),pm_ids,'UniformOutput',false)];
+        newParamDescription = [{'pm-id';'pm-pmax'}; arrayfun(@(n)sprintf('pm-p%i',n),pm_ids(:),'UniformOutput',false)];
         newCols = [pm_ids(QMLE_ind) max(fQMLE,[],2) fQMLE];
         if max(tntres.postprocData(:,1))==size(tcspc_mix,1)
             % one TCSPC per track
@@ -356,7 +357,7 @@ initgui()
             fprintf('TNT: Cannot match TCSPC with loc data in file: %s.\n', file);
         end
         tntres.postprocData = [tntres.postprocData newCols];
-        tntres.postprocOptions.outParamDescription = [tntres.postprocOptions.outParamDescription; newParamDescription'];
+        tntres.postprocOptions.outParamDescription = [tntres.postprocOptions.outParamDescription; newParamDescription];
         % save results
         newfile = [file(1:end-4) 'pm.mat'];
         try
