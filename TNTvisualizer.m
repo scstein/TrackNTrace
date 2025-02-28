@@ -2760,9 +2760,12 @@ end
                     set(findall(h_all.panel_player,'Enable','off','Type','UIControl','-not','Style','text'),'Enable','on');
                     
                     if isempty(movieLT)
+                        was_flim = get(h_all.cb_flim,'Value');
                         set(h_all.cb_flim, 'Enable', 'off');
                         set(h_all.cb_flim, 'Value', false);
-                        flimCallback([],[]);
+                        if was_flim && imagehandle ~= -1
+                            flimCallback([],[]);
+                        end
                     end
                 end
             end
